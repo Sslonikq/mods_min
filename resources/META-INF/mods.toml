@@ -4,7 +4,7 @@ license="MIT"
 
 [[mods]]
 modId="explosionwand"
-version="2.2.0"
+version="2.3.0"
 displayName="Magic Wands"
 description='''Волшебная палочка, стреляющая огромным взрывом.'''
 
@@ -19,5 +19,12 @@ description='''Волшебная палочка, стреляющая огро�
     modId="minecraft"
     mandatory=true
     versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.explosionwand]]
+    modId="jei"
+    mandatory=false
+    versionRange="[15,)"
     ordering="NONE"
     side="BOTH"

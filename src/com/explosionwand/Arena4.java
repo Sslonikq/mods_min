@@ -64,7 +64,7 @@ final class Arena4 {
             else s = (Math.sin(x * 0.45) + Math.cos(z * 0.38) > 0.6) ? snow : white;
             level.m_7731_(new BlockPos(x, FLOOR - 1, z), s, 18);
             level.m_7731_(new BlockPos(x, FLOOR - 2, z), white, 18);
-            for (int y = FLOOR; y <= FLOOR + 3; y++) level.m_7731_(new BlockPos(x, y, z), air, 18);
+            for (int y = FLOOR; y <= FLOOR + 3; y++) { BlockPos bp = new BlockPos(x, y, z); if (!Loot.isChest(level, bp)) level.m_7731_(bp, air, 18); }
             // облачная «подушка» под платформой
             if (d < R - 3 && rng.nextInt(9) == 0) for (int y = 3; y <= 3 + rng.nextInt(3); y++) level.m_7731_(new BlockPos(x, FLOOR - y, z), wool, 18);
         }

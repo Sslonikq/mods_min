@@ -429,6 +429,15 @@ public class Boss {
         actionbar("Сердце под щитом! Разбей 4 аметистовых кристалла на столбах!", "light_purple");
     }
 
+    /** Аметистовое ядро пилона активного щита: его должны уметь разбить игроки/взрывы. */
+    static boolean isPylonCore(ServerLevel lvl, BlockPos pos) {
+        Boss b = ACTIVE;
+        if (b == null || b.level != lvl || !b.shield || pos.m_123342_() != FLOOR + 2) return false;
+        for (int i = 0; i < 4; i++)
+            if (b.pylonAlive[i] && b.pylons[i][0] == pos.m_123341_() && b.pylons[i][1] == pos.m_123343_()) return true;
+        return false;
+    }
+
     void tickShield() {
         int alive = 0;
         for (int i = 0; i < 4; i++) {
@@ -513,13 +522,12 @@ public class Boss {
             Fx.send(level, Fx.particle("reverse_portal"), bx, c, bz, 400, 1, 1, 1, 3.0);
             Fx.sound(level, bx, c, bz, "entity.generic.explode", 20.0F, 0.6F);
             Fx.sound(level, bx, c, bz, "ui.toast.challenge_complete", 10.0F, 1.0F);
-            String at = Cmd.f(AX) + " " + (FLOOR + 1) + " " + Cmd.f(AZ);
-            Cmd.run(level, AX, FLOOR, AZ, "summon item " + at + " {Item:{id:\"explosionwand:rift_core\",Count:1b},PickupDelay:20}");
-            Cmd.run(level, AX, FLOOR, AZ, "summon item " + at + " {Item:{id:\"minecraft:diamond\",Count:8b}}");
-            Cmd.run(level, AX, FLOOR, AZ, "summon item " + at + " {Item:{id:\"minecraft:netherite_ingot\",Count:1b}}");
-            Cmd.run(level, AX, FLOOR, AZ, "summon item " + at + " {Item:{id:\"minecraft:amethyst_shard\",Count:32b}}");
+            Loot.pillar(level, 0, FLOOR, 5);
+            Loot.chest(level, 0, FLOOR, 5, "Добыча Сердца Разлома", List.of(
+                    "explosionwand:rift_core", "8 minecraft:diamond", "minecraft:netherite_ingot", "32 minecraft:amethyst_shard"));
+            String at = Cmd.f(AX) + " " + (FLOOR + 1) + " " + Cmd.f(AZ + 3);
             for (int i = 0; i < 6; i++) Cmd.run(level, AX, FLOOR, AZ, "summon experience_orb " + at + " {Value:250}");
-            Cmd.run(level, AX, FLOOR, AZ, "title @a[x=0,y=64,z=0,distance=..150] subtitle {\"text\":\"Портал домой открыт в центре арены\",\"color\":\"gray\"}");
+            Cmd.run(level, AX, FLOOR, AZ, "title @a[x=0,y=64,z=0,distance=..150] subtitle {\"text\":\"Добыча в сундуке, портал домой — в центре\",\"color\":\"gray\"}");
             Cmd.run(level, AX, FLOOR, AZ, "title @a[x=0,y=64,z=0,distance=..150] title {\"text\":\"Сердце Разлома повержено\",\"color\":\"gold\",\"bold\":true}");
             Arena.cleared = true;
             return true;

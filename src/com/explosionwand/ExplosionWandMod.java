@@ -75,6 +75,9 @@ public class ExplosionWandMod {
         MinecraftForge.EVENT_BUS.addListener(Comet::onHurt);
         MinecraftForge.EVENT_BUS.addListener(Boss4::onHurt);
         MinecraftForge.EVENT_BUS.addListener(Maze::onBreak);
+        MinecraftForge.EVENT_BUS.addListener(ArenaGuard::onBreak);
+        MinecraftForge.EVENT_BUS.addListener(ArenaGuard::onPlace);
+        MinecraftForge.EVENT_BUS.addListener(ArenaGuard::onDetonate);
         MinecraftForge.EVENT_BUS.addListener(ArcaneSet::onHurt);
     }
 }

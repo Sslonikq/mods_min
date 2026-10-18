@@ -58,7 +58,7 @@ final class Arena3 {
             else s = ((int) (d) % 2 == 0) ? black : deep;
             level.m_7731_(new BlockPos(x, FLOOR - 1, z), s, 18);
             level.m_7731_(new BlockPos(x, FLOOR - 2, z), obs, 18);
-            for (int y = FLOOR; y <= FLOOR + 3; y++) level.m_7731_(new BlockPos(x, y, z), air, 18);
+            for (int y = FLOOR; y <= FLOOR + 3; y++) { BlockPos bp = new BlockPos(x, y, z); if (!Loot.isChest(level, bp)) level.m_7731_(bp, air, 18); }
         }
         // руны-столбы по краю
         for (int i = 0; i < 8; i++) {

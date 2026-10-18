@@ -1,5 +1,6 @@
 package com.explosionwand;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
 import java.util.List;
@@ -8,6 +9,10 @@ import java.util.List;
 final class Loot {
     /** items: массив строк вида "4 minecraft:diamond" или "minecraft:netherite_ingot". */
     static void chest(ServerLevel level, int x, int y, int z, String name, List<String> items) {
+        // старый (несобранный) сундук не затираем: новый ставим в ближайшую свободную клетку рядом по X
+        for (int dx : new int[]{0, 1, -1, 2, -2, 3, -3}) {
+            if (!isChest(level, new BlockPos(x + dx, y, z))) { x += dx; break; }
+        }
         Cmd.run(level, x, y, z, "setblock " + x + " " + y + " " + z + " minecraft:air");
         Cmd.run(level, x, y, z, "setblock " + x + " " + y + " " + z
                 + " minecraft:chest{CustomName:'{\"text\":\"" + name + "\",\"color\":\"gold\",\"bold\":true}'}");
@@ -23,6 +28,11 @@ final class Loot {
         // маяк-луч, чтобы сундук было видно
         Fx.send(level, Fx.particle("end_rod"), x + 0.5, y + 1, z + 0.5, 30, 0.3, 1.5, 0.3, 0.05);
         Fx.sound(level, x, y, z, "block.chest.open", 2.0F, 0.8F);
+    }
+
+    /** Клетка занята сундуком (добыча): перестройка арены не должна её затирать. */
+    static boolean isChest(ServerLevel level, BlockPos pos) {
+        return level.m_8055_(pos).m_60734_() == Fx.state("chest").m_60734_();
     }
 
     static void pillar(ServerLevel level, int x, int y, int z) {

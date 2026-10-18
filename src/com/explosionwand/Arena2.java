@@ -77,7 +77,7 @@ final class Arena2 {
             else s = ((int) (Math.atan2(z, x) / (Math.PI / 8) + 16) % 2 == 0) ? pb : bs;
             level.m_7731_(new BlockPos(x, FLOOR - 1, z), s, 18);
             level.m_7731_(new BlockPos(x, FLOOR - 2, z), obs, 18);
-            for (int y = FLOOR; y <= FLOOR + 4; y++) level.m_7731_(new BlockPos(x, y, z), (d >= R - 0.5 && y <= FLOOR + 1) ? bricks : air, 18);
+            for (int y = FLOOR; y <= FLOOR + 4; y++) { BlockPos bp = new BlockPos(x, y, z); if (!Loot.isChest(level, bp)) level.m_7731_(bp, (d >= R - 0.5 && y <= FLOOR + 1) ? bricks : air, 18); }
         }
         for (int i = 0; i < 12; i++) {
             double a = i * Math.PI * 2 / 12;

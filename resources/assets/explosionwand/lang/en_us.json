@@ -11,9 +11,9 @@
   "item.explosionwand.tesseract_wand": "Tesseract Wand",
   "item.explosionwand.rift_key": "Rift Key",
   "item.explosionwand.rift_core": "Rift Core",
-  "item.explosionwand.portal_gun": "Portal Gun",
+  "item.explosionwand.portal_gun": "Portal Wand",
   "item.explosionwand.possess_wand": "Possession Wand",
-  "item.explosionwand.fist_wand": "Fist of the Heavens",
+  "item.explosionwand.fist_wand": "Heavenly Fist Wand",
   "item.explosionwand.timestop_wand": "Time Stop Wand",
   "item.explosionwand.eclipse_seal": "Eclipse Seal",
   "item.explosionwand.eclipse_heart": "Eclipse Heart",
@@ -28,5 +28,10 @@
   "item.explosionwand.arcane_chestplate": "Archmage Robe",
   "item.explosionwand.arcane_leggings": "Archmage Leggings",
   "item.explosionwand.arcane_boots": "Archmage Boots",
-  "itemGroup.explosionwand.magic": "Magic"
+  "itemGroup.explosionwand.magic": "Magic",
+  "explosionwand.jei.rift_core": "Dropped in the loot chest of the Rift Heart. Use the Rift Key and defeat the Heart in its dimension to reach it.",
+  "explosionwand.jei.eclipse_heart": "Dropped in the loot chest of the Eclipse King. The boss is summoned with the Eclipse Seal, which requires a Rift Core.",
+  "explosionwand.jei.dream_staff": "Found in the loot chest of the Dream Monolith together with the Dreaming Eye. The Monolith is summoned with the Dreamers Seal, crafted from an Eclipse Heart.",
+  "explosionwand.jei.dreaming_eye": "Dropped in the loot chest of the Dream Monolith. Needed for the Sky Seal, which summons the Sky Whale.",
+  "explosionwand.jei.whale_staff": "Found in the loot chest of the Sky Whale. Summon it with the Sky Seal, which requires a Dreaming Eye."
 }
