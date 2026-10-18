@@ -1,0 +1,1 @@
+package net.minecraft.server.level; public abstract class ServerPlayer extends net.minecraft.world.entity.player.Player { public void m_8999_(ServerLevel l,double x,double y,double z,float yaw,float pitch){} }

@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "  T",
+    " M ",
+    "S  "
+  ],
+  "key": {
+    "T": {
+      "item": "minecraft:book"
+    },
+    "M": {
+      "item": "minecraft:ender_pearl"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "result": {
+    "item": "explosionwand:tesseract_wand",
+    "count": 1
+  }
+}

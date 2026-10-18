@@ -1,0 +1,1 @@
+package net.minecraft.network.chat; public class MutableComponent implements Component { public MutableComponent m_130940_(net.minecraft.ChatFormatting f){return this;} public MutableComponent m_7220_(Component c){return this;} public MutableComponent m_130946_(String s){return this;} }

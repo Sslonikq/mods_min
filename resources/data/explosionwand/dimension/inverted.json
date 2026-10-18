@@ -1,0 +1,11 @@
+{
+  "type": "explosionwand:inverted",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "explosionwand:inverted",
+    "biome_source": {
+      "type": "minecraft:fixed",
+      "biome": "explosionwand:inverted"
+    }
+  }
+}

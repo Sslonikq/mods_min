@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "  T",
+    " G ",
+    "S  "
+  ],
+  "key": {
+    "T": { "item": "minecraft:tnt" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "S": { "item": "minecraft:stick" }
+  },
+  "result": { "item": "explosionwand:explosion_wand", "count": 1 }
+}

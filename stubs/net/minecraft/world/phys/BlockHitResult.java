@@ -1,0 +1,1 @@
+package net.minecraft.world.phys; public class BlockHitResult extends HitResult { public net.minecraft.core.Direction m_82434_(){return null;} public net.minecraft.core.BlockPos m_82425_(){return null;} }

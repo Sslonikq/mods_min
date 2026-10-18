@@ -1,0 +1,1 @@
+package net.minecraft.world.entity.item; public class ItemEntity extends net.minecraft.world.entity.Entity { public ItemEntity(net.minecraft.world.level.Level l,double x,double y,double z,net.minecraft.world.item.ItemStack s){} }

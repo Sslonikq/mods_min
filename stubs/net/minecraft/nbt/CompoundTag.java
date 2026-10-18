@@ -1,0 +1,1 @@
+package net.minecraft.nbt; public class CompoundTag { public void m_128359_(String k, String v){} public String m_128461_(String k){return null;} public void m_128405_(String k,int v){} public int m_128451_(String k){return 0;} public void m_128473_(String k){} public boolean m_128441_(String k){return false;} }

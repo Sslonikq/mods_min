@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "  T",
+    " M ",
+    "S  "
+  ],
+  "key": {
+    "T": {
+      "item": "minecraft:quartz_block"
+    },
+    "M": {
+      "item": "minecraft:gold_block"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "result": {
+    "item": "explosionwand:fist_wand",
+    "count": 1
+  }
+}

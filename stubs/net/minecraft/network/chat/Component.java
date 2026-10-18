@@ -1,0 +1,1 @@
+package net.minecraft.network.chat; public interface Component { static MutableComponent m_237113_(String s){return null;} static MutableComponent m_237115_(String s){return null;} }

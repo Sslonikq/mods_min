@@ -1,0 +1,11 @@
+{
+  "type": "explosionwand:void",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "explosionwand:void",
+    "biome_source": {
+      "type": "minecraft:fixed",
+      "biome": "explosionwand:void"
+    }
+  }
+}

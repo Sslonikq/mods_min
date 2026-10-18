@@ -1,0 +1,31 @@
+package com.explosionwand;
+
+import net.minecraft.server.level.ServerLevel;
+
+import java.util.List;
+
+/** Ставит сундук с добычей (через серверные команды — без прямого NBT API). */
+final class Loot {
+    /** items: массив строк вида "4 minecraft:diamond" или "minecraft:netherite_ingot". */
+    static void chest(ServerLevel level, int x, int y, int z, String name, List<String> items) {
+        Cmd.run(level, x, y, z, "setblock " + x + " " + y + " " + z + " minecraft:air");
+        Cmd.run(level, x, y, z, "setblock " + x + " " + y + " " + z
+                + " minecraft:chest{CustomName:'{\"text\":\"" + name + "\",\"color\":\"gold\",\"bold\":true}'}");
+        int slot = 0;
+        for (String it : items) {
+            if (slot >= 27) break;
+            String id; int count = 1;
+            String[] parts = it.trim().split("\\s+");
+            if (parts.length == 2) { count = Integer.parseInt(parts[0]); id = parts[1]; } else id = parts[0];
+            Cmd.run(level, x, y, z, "item replace block " + x + " " + y + " " + z + " container." + slot + " with " + id + " " + count);
+            slot++;
+        }
+        // маяк-луч, чтобы сундук было видно
+        Fx.send(level, Fx.particle("end_rod"), x + 0.5, y + 1, z + 0.5, 30, 0.3, 1.5, 0.3, 0.05);
+        Fx.sound(level, x, y, z, "block.chest.open", 2.0F, 0.8F);
+    }
+
+    static void pillar(ServerLevel level, int x, int y, int z) {
+        Cmd.run(level, x, y, z, "setblock " + x + " " + (y - 1) + " " + z + " minecraft:glowstone");
+    }
+}

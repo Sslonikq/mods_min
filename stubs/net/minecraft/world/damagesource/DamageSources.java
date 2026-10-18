@@ -1,0 +1,1 @@
+package net.minecraft.world.damagesource; public class DamageSources { public DamageSource m_269425_(){return null;} public DamageSource m_269109_(){return null;} public DamageSource m_269075_(net.minecraft.world.entity.player.Player p){return null;} }

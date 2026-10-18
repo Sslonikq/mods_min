@@ -1,0 +1,1 @@
+package net.minecraftforge.eventbus.api; public class Event { public void setCanceled(boolean c){} }

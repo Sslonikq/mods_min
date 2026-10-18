@@ -1,0 +1,1 @@
+package net.minecraft.world.entity.projectile; public abstract class Projectile extends net.minecraft.world.entity.Entity { public boolean m_150171_(net.minecraft.world.entity.Entity e){return false;} }

@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "  T",
+    " M ",
+    "S  "
+  ],
+  "key": {
+    "T": {
+      "item": "explosionwand:dreaming_eye"
+    },
+    "M": {
+      "item": "minecraft:heart_of_the_sea"
+    },
+    "S": {
+      "item": "minecraft:prismarine_crystals"
+    }
+  },
+  "result": {
+    "item": "explosionwand:sky_seal",
+    "count": 1
+  }
+}

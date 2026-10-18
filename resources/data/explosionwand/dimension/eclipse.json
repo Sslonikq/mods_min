@@ -1,0 +1,18 @@
+{
+  "type": "explosionwand:eclipse",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "explosionwand:eclipse",
+      "features": false,
+      "lakes": false,
+      "layers": [
+        {
+          "block": "minecraft:air",
+          "height": 1
+        }
+      ],
+      "structure_overrides": []
+    }
+  }
+}

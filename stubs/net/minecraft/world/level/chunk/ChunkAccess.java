@@ -1,0 +1,1 @@
+package net.minecraft.world.level.chunk; public abstract class ChunkAccess {}

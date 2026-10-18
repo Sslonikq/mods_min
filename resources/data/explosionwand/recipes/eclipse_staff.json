@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "  T",
+    " M ",
+    "S  "
+  ],
+  "key": {
+    "T": {
+      "item": "explosionwand:eclipse_heart"
+    },
+    "M": {
+      "item": "explosionwand:rift_core"
+    },
+    "S": {
+      "item": "minecraft:netherite_ingot"
+    }
+  },
+  "result": {
+    "item": "explosionwand:eclipse_staff",
+    "count": 1
+  }
+}

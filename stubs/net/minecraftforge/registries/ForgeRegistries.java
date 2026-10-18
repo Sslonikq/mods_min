@@ -1,0 +1,3 @@
+package net.minecraftforge.registries; import net.minecraft.world.item.Item; import net.minecraft.core.particles.ParticleType; import net.minecraft.sounds.SoundEvent;
+public class ForgeRegistries { public static final IForgeRegistry<Item> ITEMS=null; public static final IForgeRegistry<ParticleType<?>> PARTICLE_TYPES=null; public static final IForgeRegistry<SoundEvent> SOUND_EVENTS=null;
+ public static final IForgeRegistry<net.minecraft.world.level.block.Block> BLOCKS=null; public static final IForgeRegistry<net.minecraft.world.entity.EntityType<?>> ENTITY_TYPES=null; public static final IForgeRegistry<net.minecraft.world.effect.MobEffect> MOB_EFFECTS=null; }

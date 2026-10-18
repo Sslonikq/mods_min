@@ -1,0 +1,1 @@
+package net.minecraft.core.particles; public class BlockParticleOption implements ParticleOptions { public BlockParticleOption(ParticleType<BlockParticleOption> t, net.minecraft.world.level.block.state.BlockState s){} }

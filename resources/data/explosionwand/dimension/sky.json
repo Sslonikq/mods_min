@@ -1,0 +1,18 @@
+{
+  "type": "explosionwand:sky",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "explosionwand:sky",
+      "features": false,
+      "lakes": false,
+      "layers": [
+        {
+          "block": "minecraft:air",
+          "height": 1
+        }
+      ],
+      "structure_overrides": []
+    }
+  }
+}
