@@ -202,22 +202,25 @@ public class RiftMobsTest {
         Pose p = new Pose();
         p.cocoon = 0;
         double[][] open = RiftModels.pose(Kind.ARCHER, p);
-        check(open[8][3] == 0 && open[8][4] == 0, "лучник открыт: кокон нулевого размера");
+        check(open[10][3] == 0 && open[10][4] == 0 && open[11][4] == 0, "лучник открыт: кокон и клинки нулевого размера");
         p.cocoon = 1;
         double[][] closed = RiftModels.pose(Kind.ARCHER, p);
-        check(closed[8][3] >= 1.0 && closed[8][4] >= 2.0, "лучник закрыт: кокон выше человека");
+        check(closed[10][3] >= 0.9 && closed[10][4] >= 1.9 && closed[11][4] >= 1.9, "лучник закрыт: оболочка и клинки выше человека");
+        p.cocoon = 0;
+        double[][] st = RiftModels.pose(Kind.ARCHER, p);
+        double minY = 9;
+        for (int i = 0; i < 9; i++) minY = Math.min(minY, st[i][1] - st[i][4] / 2);
+        check(minY >= -0.01, "лучник стоит на колонне: ни одна часть тела не ниже верха блока (парения и плит нет): " + minY);
         // Тень: до появления нет ни фигуры, ни трещины
         p = new Pose(); p.e = 0; p.crack = 0;
         double[][] hid = RiftModels.pose(Kind.SHADE, p);
         double sum = 0;
         for (double[] r : hid) sum += r[3] * r[4] * r[5];
         check(sum < 1e-9, "Тень спрятана: объём всех частей нулевой");
-        p.crack = 1; p.e = 0;
-        double[][] crack = RiftModels.pose(Kind.SHADE, p);
-        check(crack[0][3] > 1.5 && crack[2][4] == 0, "трещина открыта, фигуры ещё нет");
+        check(RiftModels.Kind.SHADE.parts() == 8, "у Тени нет плит под ногами: 8 частей");
         p.e = 1;
         double[][] full = RiftModels.pose(Kind.SHADE, p);
-        check(full[4][1] > 2.0, "Тень выше двух блоков");
+        check(full[2][1] > 2.0, "Тень выше двух блоков");
         // Голем: сломанный кристалл исчезает, остальные на месте
         p = new Pose(); p.cr = new double[]{0, 1, 1};
         double[][] gg = RiftModels.pose(Kind.GOLEM, p);
@@ -271,7 +274,7 @@ public class RiftMobsTest {
             check(s.contains("ewrh21_40_-7"), k + ": точка появления в тегах (в полублоках)");
         }
         check(RiftMobs.kindOfMark("explosionwand:echo_eater") == Kind.EATER && RiftMobs.kindOfMark("zombie") == null && RiftMobs.kindOfMark("explosionwand:nope") == null, "метки spawn: свои и ванильные");
-        check(RiftMobs.lift(Kind.ARCHER) > 0 && RiftMobs.lift(Kind.SHARDLING) == 0, "лучник поднят над меткой (колонна), остальные на ней");
+        check(RiftMobs.lift(Kind.ARCHER) == 0 && RiftMobs.lift(Kind.SHARDLING) == 0, "лучник стоит на метке (верх колонны), без подъёма");
         check(RiftMobs.PFX.equals("explosionwand:"), "префикс меток");
     }
 

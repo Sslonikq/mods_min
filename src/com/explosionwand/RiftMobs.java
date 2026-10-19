@@ -50,10 +50,11 @@ final class RiftMobs {
 
     static void init() {
         if (VIO != null) return;
-        VIO = new DustParticleOptions(new Vector3f(0.7F, 0.35F, 1.0F), 1.2F);
-        WHT = new DustParticleOptions(new Vector3f(1, 1, 1), 1.3F);
-        DRK = new DustParticleOptions(new Vector3f(0.25F, 0.05F, 0.4F), 1.7F);
-        PNK = new DustParticleOptions(new Vector3f(0.95F, 0.4F, 0.9F), 1.2F);
+        // мелкие частицы: у dust круглый спрайт, вблизи крупный выглядит «красным кольцом»; цвета только фиолетово-белые
+        VIO = new DustParticleOptions(new Vector3f(0.65F, 0.35F, 1.0F), 0.7F);
+        WHT = new DustParticleOptions(new Vector3f(0.9F, 0.85F, 1.0F), 0.7F);
+        DRK = new DustParticleOptions(new Vector3f(0.3F, 0.1F, 0.55F), 0.8F);
+        PNK = new DustParticleOptions(new Vector3f(0.8F, 0.5F, 1.0F), 0.7F);
     }
 
     static final class Noise {
@@ -93,8 +94,8 @@ final class RiftMobs {
 
     static String newId() { return Long.toHexString(RNG.nextLong() & 0xFFFFFFFFFFL); }
 
-    /** Часть, поднятая над точкой метки (лучник стоит на колонне выше пола). */
-    static double lift(Kind k) { return k == Kind.ARCHER ? 0.9 : 0.0; }
+    /** Подъём хоста над меткой: лучник стоит прямо на верху колонны (метка на ней), парения нет. */
+    static double lift(Kind k) { return 0.0; }
 
     static Mob spawnKind(ServerLevel sl, Kind k, double x, double y, double z, String hallTag) {
         init();
@@ -604,7 +605,7 @@ final class RiftMobs {
 
         double[] tip() {
             double fx = Math.sin(yaw), fz = Math.cos(yaw);
-            return new double[]{x + Math.cos(yaw) * 0.3 + fx * 1.6, y + 1.5, z - Math.sin(yaw) * 0.3 + fz * 1.6};
+            return new double[]{x + Math.cos(yaw) * 0.31 + fx * 1.3, y + 1.0, z - Math.sin(yaw) * 0.31 + fz * 1.3};
         }
 
         double[] dir(double[] tip) {
@@ -659,8 +660,8 @@ final class RiftMobs {
                     tm++;
                     pose.crack = Math.min(1, tm / 12.0); pose.e = 0;
                     if (tm % 2 == 0) {
-                        ring(DRK, x, y + 0.1, z, 1.2, 14);
-                        Fx.send(level, Fx.particle("reverse_portal"), x, y + 0.2, z, 3, 0.5, 0.1, 0.5, 0.05);
+                        Fx.send(level, Fx.particle("reverse_portal"), x, y + 0.15, z, 6, 0.6, 0.05, 0.6, 0.04);
+                        Fx.send(level, Fx.particle("large_smoke"), x, y + 0.1, z, 3, 0.5, 0.02, 0.5, 0.01);
                     }
                     if (tm == 14) sound("block.respawn_anchor.charge", 1.2F, 0.6F);
                     if (tm >= 28) { st = ShadeState.EMERGE; tm = 0; sound("entity.enderman.teleport", 1.0F, 0.6F); }
