@@ -225,7 +225,7 @@ final class WhaleStaff {
                 Fx.sound(l, x, y, z, "block.beacon.activate", 1.5F, 1.4F);
                 for (LivingEntity e : around(l, p, x, y, z, 3.5 * rm)) { e.m_6469_(src, 16.0F * dm); e.m_20254_(8); }
             }
-            case "possess_wand", "mimic_wand" -> {     // метка: подсветка и слабость
+            case "mimic_wand" -> {     // метка: подсветка и слабость
                 Fx.send(l, Fx.particle("witch"), x, y + 1, z, 60, 4, 1, 4, 0.05);
                 Fx.sound(l, x, y, z, "entity.illusioner.cast_spell", 1.2F, 0.9F);
                 var glow = Fx.effect("glowing"); var weak = Fx.effect("weakness");

@@ -58,21 +58,30 @@ final class RiftStaff {
         AABB box = new AABB(Math.min(a.f_82479_, b.f_82479_) - WIDTH, Math.min(a.f_82480_, b.f_82480_) - WIDTH, Math.min(a.f_82481_, b.f_82481_) - WIDTH,
                 Math.max(a.f_82479_, b.f_82479_) + WIDTH, Math.max(a.f_82480_, b.f_82480_) + WIDTH, Math.max(a.f_82481_, b.f_82481_) + WIDTH);
         for (Entity e : l.m_6249_(p, box, e -> e.m_6084_() && !e.m_5833_() && e instanceof LivingEntity && !(e instanceof Player))) {
-            if (!Minions.controllable(e)) continue;
-            if (e.m_19880_().contains("ewd")) continue;   // мобы данжа, хосты боссов и ew-существа не трогаем (в данже посох и так запрещён)
-            if (e instanceof AbstractVillager) continue;               // жители и торговцы
-            if (e instanceof TamableAnimal t && (t.m_21830_(p) || t.m_21824_())) continue;   // свои и чужие ручные питомцы
-            Vec3 c = e.m_20182_();
-            double ex = c.f_82479_, ey = c.f_82480_ + e.m_20206_() / 2.0D, ez = c.f_82481_;
-            double t = Math.max(0.0D, Math.min(len, (ex - a.f_82479_) * ux + (ey - a.f_82480_) * uy + (ez - a.f_82481_) * uz));
-            double qx = a.f_82479_ + ux * t, qy = a.f_82480_ + uy * t, qz = a.f_82481_ + uz * t;
-            double dx = qx - ex, dy = qy - ey, dz = qz - ez, d = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            if (d > WIDTH) continue;
-            double k = Math.min(1.1D, 0.25D + d * 0.35D) / Math.max(0.3D, d);
-            e.m_20256_(new Vec3(dx * k, dy * k * 0.6D + 0.1D, dz * k)); e.f_19864_ = true;
-            e.m_6469_(l.m_269111_().m_269104_(p, p), DAMAGE);
-            Fx.send(l, VIOLET, ex, ey, ez, 12, 0.3, 0.5, 0.3, 0);
+            // сбой на одном мобе не должен ронять игру: логируем один раз и идём дальше
+            try { pull(l, p, e, a, ux, uy, uz, len); }
+            catch (RuntimeException | LinkageError ex) { if (!warned) { warned = true; System.err.println("[explosionwand] Посох Разлома: сбой на мобе " + e.m_19880_() + ": " + ex); ex.printStackTrace(); } }
         }
+    }
+
+    static boolean warned = false;
+
+    /** Затянуть одного моба к трещине и ударить (урон - как удар игрока, проверенный источник). */
+    private static void pull(ServerLevel l, ServerPlayer p, Entity e, Vec3 a, double ux, double uy, double uz, double len) {
+        if (!Minions.controllable(e)) return;
+        if (e.m_19880_().contains("ewd")) return;   // мобы данжа, хосты боссов и ew-существа не трогаем (в данже посох и так запрещён)
+        if (e instanceof AbstractVillager) return;               // жители и торговцы
+        if (e instanceof TamableAnimal t && (t.m_21830_(p) || t.m_21824_())) return;   // свои и чужие ручные питомцы
+        Vec3 c = e.m_20182_();
+        double ex = c.f_82479_, ey = c.f_82480_ + e.m_20206_() / 2.0D, ez = c.f_82481_;
+        double t = Math.max(0.0D, Math.min(len, (ex - a.f_82479_) * ux + (ey - a.f_82480_) * uy + (ez - a.f_82481_) * uz));
+        double qx = a.f_82479_ + ux * t, qy = a.f_82480_ + uy * t, qz = a.f_82481_ + uz * t;
+        double dx = qx - ex, dy = qy - ey, dz = qz - ez, d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (d > WIDTH) return;
+        double k = Math.min(1.1D, 0.25D + d * 0.35D) / Math.max(0.3D, d);
+        e.m_20256_(new Vec3(dx * k, dy * k * 0.6D + 0.1D, dz * k)); e.f_19864_ = true;
+        e.m_6469_(l.m_269111_().m_269075_(p), DAMAGE);
+        Fx.send(l, VIOLET, ex, ey, ez, 12, 0.3, 0.5, 0.3, 0);
     }
 
     /** Шаг сквозь разлом: ищем самую дальнюю точку до 8 блоков, где помещается игрок (2 клетки воздуха). */

@@ -549,6 +549,7 @@ final class Dungeons {
         RiftMobs.clear();
         Boss.clear();
         Later.TASKS.clear();
+        Earth.clear();
         warned = false; warnedMech = false; warnedMobs = false; warnedBoss = false;
         LAST_HALL.clear();
     }
@@ -845,7 +846,7 @@ final class Dungeons {
     }
 
     /**
-     * Временная добыча сундуков Разлома (ванильные ценности; материалы данжей появятся в 4.11). Тир берётся из метки сундука
+     * Ванильная часть добычи сундуков (материалы данжей добавляет Mats.chestLoot). Тир берётся из метки сундука
      * ("Название|тир"): 1 — боковые комнаты и залы, 2 — логова и склад, 3 — секретные комнаты.
      */
     static final List<List<String>> LOOT = List.of(
@@ -870,6 +871,7 @@ final class Dungeons {
         if (h.boss != null) out.addAll(Boss.LOOT);
         if (d != null && d == SLEEP) out.addAll(City.extra(h.id));
         out.addAll(LOOT.get(tier - 1));
+        if (d != null) out.addAll(Mats.chestLoot(Mats.dungeonOf(d), tier, Mats.RNG));   // материалы данжа (4.11)
         return out;
     }
 

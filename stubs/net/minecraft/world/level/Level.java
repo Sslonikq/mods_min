@@ -1,6 +1,6 @@
 package net.minecraft.world.level; import net.minecraft.world.entity.Entity; import net.minecraft.world.entity.player.Player; import net.minecraft.sounds.*;
 import net.minecraft.world.phys.AABB; import java.util.List; import java.util.function.Predicate; import net.minecraft.core.BlockPos; import net.minecraft.world.level.block.state.BlockState;
-public abstract class Level implements LevelReader { public boolean f_46443_;
+public abstract class Level implements LevelReader { public boolean f_46443_; public net.minecraft.util.RandomSource f_46441_;
  public static final net.minecraft.resources.ResourceKey<Level> f_46428_ = null;
  public net.minecraft.resources.ResourceKey<Level> m_46472_(){return null;}
  public BlockPos m_220360_(){return null;}
@@ -15,4 +15,4 @@ public abstract class Level implements LevelReader { public boolean f_46443_;
  public boolean m_7967_(Entity e){return false;} public long m_46467_(){return 0;} public boolean m_46462_(){return false;} public boolean m_46471_(){return false;}
  public boolean m_46961_(BlockPos p, boolean drop){return false;}
  public net.minecraft.world.Difficulty m_46791_(){return null;}
- public enum ExplosionInteraction { TNT } }
+ public enum ExplosionInteraction { TNT, NONE } }

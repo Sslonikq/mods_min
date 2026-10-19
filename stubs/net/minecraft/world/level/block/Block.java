@@ -1,2 +1,2 @@
-package net.minecraft.world.level.block; public class Block { public final net.minecraft.world.level.block.state.BlockState m_49966_(){return null;}
+package net.minecraft.world.level.block; public class Block { public static void m_49881_(net.minecraft.world.level.block.state.BlockState s, net.minecraft.world.level.Level l, net.minecraft.core.BlockPos p, net.minecraft.world.level.block.entity.BlockEntity be, net.minecraft.world.entity.Entity e, net.minecraft.world.item.ItemStack tool){} public final net.minecraft.world.level.block.state.BlockState m_49966_(){return null;}
  public net.minecraft.world.level.block.state.StateDefinition<Block, net.minecraft.world.level.block.state.BlockState> m_49965_(){return null;} }

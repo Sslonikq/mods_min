@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "EM ",
+    " C ",
+    "R  "
+  ],
+  "key": {
+    "E": {
+      "item": "explosionwand:echo_crystal"
+    },
+    "M": {
+      "item": "explosionwand:rift_marrow"
+    },
+    "C": {
+      "item": "explosionwand:crystal_core"
+    },
+    "R": {
+      "item": "explosionwand:magic_rod"
+    }
+  },
+  "result": {
+    "item": "explosionwand:crystal_spikes_wand",
+    "count": 1
+  }
+}

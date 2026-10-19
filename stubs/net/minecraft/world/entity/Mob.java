@@ -1,1 +1,1 @@
-package net.minecraft.world.entity; public abstract class Mob extends LivingEntity { public void m_21557_(boolean b){} public void m_21530_(){} public boolean m_21525_(){return false;} }
+package net.minecraft.world.entity; public abstract class Mob extends LivingEntity { public void m_21557_(boolean b){} public void m_21530_(){} public boolean m_21525_(){return false;} public void m_6710_(LivingEntity t){} public LivingEntity m_5448_(){return null;} }

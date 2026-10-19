@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "FP ",
+    " C ",
+    "R  "
+  ],
+  "key": {
+    "F": {
+      "item": "explosionwand:smoldering_feather"
+    },
+    "P": {
+      "item": "explosionwand:phoenix_spark"
+    },
+    "C": {
+      "item": "explosionwand:fire_core"
+    },
+    "R": {
+      "item": "explosionwand:magic_rod"
+    }
+  },
+  "result": {
+    "item": "explosionwand:spark_wand",
+    "count": 1
+  }
+}

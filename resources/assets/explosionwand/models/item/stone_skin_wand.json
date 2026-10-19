@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "explosionwand:item/stone_skin_wand"
+  }
+}

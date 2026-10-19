@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "  X",
+    " C ",
+    "R  "
+  ],
+  "key": {
+    "C": {
+      "item": "explosionwand:simple_core"
+    },
+    "R": {
+      "item": "explosionwand:magic_rod"
+    },
+    "X": {
+      "item": "minecraft:bone_block"
+    }
+  },
+  "result": {
+    "item": "explosionwand:growth_wand",
+    "count": 1
+  }
+}

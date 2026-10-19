@@ -100,9 +100,10 @@ final class DungeonGuard {
     /** Палочки и посохи, которые телепортируют, открывают порталы или правят блоки напрямую (взрывные работают: блоки держит onDetonate). */
     static boolean forbidden(Item i) {
         return i instanceof PortalWandItem || i instanceof PortalGunItem || i instanceof TesseractWandItem || i instanceof MimicWandItem
-                || i instanceof PossessWandItem || i instanceof RiftWandItem || i instanceof BlackHoleWandItem || i instanceof IceStormWandItem
+                || i instanceof RiftWandItem || i instanceof BlackHoleWandItem || i instanceof IceStormWandItem
                 || i instanceof ChronosWandItem || i instanceof SkySealItem || i instanceof EclipseSealItem || i instanceof DreamSealItem
-                || i instanceof EclipseStaffItem || i instanceof WhaleStaffItem || i instanceof RiftStaffItem;
+                || i instanceof EclipseStaffItem || i instanceof WhaleStaffItem || i instanceof RiftStaffItem
+                || (i instanceof EarthWandItem w && w.kind.noDungeon);
     }
 
     static void onUseItem(PlayerInteractEvent.RightClickItem ev) {

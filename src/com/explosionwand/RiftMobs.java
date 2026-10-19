@@ -313,6 +313,13 @@ final class RiftMobs {
         BY_ID.remove(m.id);
         try { m.die(); }
         catch (RuntimeException e) { if (!warned) { warned = true; e.printStackTrace(); } }
+        try {   // материалы данжа (4.11): только за убийство игроком (не лава, не падение)
+            Entity killer = ev.getSource() == null ? null : ev.getSource().m_7639_();
+            if (killer instanceof ServerPlayer && m.level != null) {
+                LivingEntity h = ev.getEntity();
+                Mats.onMobDeath(m.level, m.kind, h.m_20185_(), h.m_20186_(), h.m_20189_());
+            }
+        } catch (RuntimeException e) { if (!warned) { warned = true; e.printStackTrace(); } }
         m.discardParts();
     }
 

@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "DXD",
+    "DRD"
+  ],
+  "key": {
+    "D": {
+      "item": "minecraft:diamond"
+    },
+    "X": {
+      "item": "explosionwand:rift_dust"
+    },
+    "R": {
+      "item": "explosionwand:magic_rod"
+    }
+  },
+  "result": {
+    "item": "explosionwand:digger_wand",
+    "count": 1
+  }
+}

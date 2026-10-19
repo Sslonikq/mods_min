@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "PT ",
+    " C ",
+    "R  "
+  ],
+  "key": {
+    "P": {
+      "item": "minecraft:ender_pearl"
+    },
+    "T": {
+      "item": "explosionwand:teal_stitch"
+    },
+    "C": {
+      "item": "explosionwand:wind_core"
+    },
+    "R": {
+      "item": "explosionwand:magic_rod"
+    }
+  },
+  "result": {
+    "item": "explosionwand:pull_wand",
+    "count": 1
+  }
+}

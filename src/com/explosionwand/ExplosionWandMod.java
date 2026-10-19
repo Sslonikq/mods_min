@@ -28,7 +28,6 @@ public class ExplosionWandMod {
 
     public static final RegistryObject<Item> RIFT_CORE = ITEMS.register("rift_core", () -> new RiftCoreItem(new Item.Properties().m_41487_(16).m_41497_(Rarity.valueOf("EPIC"))));
     public static final RegistryObject<Item> PORTAL_GUN = ITEMS.register("portal_gun", () -> new PortalGunItem(props()));
-    public static final RegistryObject<Item> POSSESS_WAND = ITEMS.register("possess_wand", () -> new PossessWandItem(props()));
     public static final RegistryObject<Item> FIST_WAND = ITEMS.register("fist_wand", () -> new FistWandItem(props()));
 
     public static final RegistryObject<Item> TIMESTOP_WAND = ITEMS.register("timestop_wand", () -> new TimeStopWandItem(props()));
@@ -56,6 +55,44 @@ public class ExplosionWandMod {
     /** Печать Храма (Город Спящих, 4.5): лежит в сундуке склепа, отпирает дверь храма. Не крафтится. */
     public static final RegistryObject<Item> TEMPLE_SEAL = ITEMS.register("temple_seal", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("EPIC")), "sleep_temple", "temple_seal", true));
 
+    // ---- 4.11: палочки Земли (16 штук, части B и C) регистрируются ЗДЕСЬ, до материалов: во вкладке «Магия» палочки идут раньше ингредиентов.
+
+    /** Палочки Земли, часть B (4.11): стартовые и Копатель. Взрывная - EXPLOSION_WAND выше (переделана). Часть C регистрирует остальные ниже. */
+    public static final RegistryObject<Item> LIGHT_WAND = ITEMS.register("light_wand", () -> new EarthWandItem(earthProps("UNCOMMON"), EarthLogic.Kind.LIGHT));
+    public static final RegistryObject<Item> FROST_WAND = ITEMS.register("frost_wand", () -> new EarthWandItem(earthProps("UNCOMMON"), EarthLogic.Kind.FROST));
+    public static final RegistryObject<Item> GROWTH_WAND = ITEMS.register("growth_wand", () -> new EarthWandItem(earthProps("UNCOMMON"), EarthLogic.Kind.GROWTH));
+    public static final RegistryObject<Item> GATHER_WAND = ITEMS.register("gather_wand", () -> new EarthWandItem(earthProps("UNCOMMON"), EarthLogic.Kind.GATHER));
+    public static final RegistryObject<Item> RETURN_WAND = ITEMS.register("return_wand", () -> new EarthWandItem(earthProps("UNCOMMON"), EarthLogic.Kind.RETURN));
+    public static final RegistryObject<Item> SIGNAL_WAND = ITEMS.register("signal_wand", () -> new EarthWandItem(earthProps("UNCOMMON"), EarthLogic.Kind.SIGNAL));
+    public static final RegistryObject<Item> DIGGER_WAND = ITEMS.register("digger_wand", () -> new EarthWandItem(earthProps("RARE"), EarthLogic.Kind.DIGGER));
+    // ---- 4.11 часть C: палочки 9-16 (данжи Разлома, Города, Святилища).
+    public static final RegistryObject<Item> SPIKES_WAND = ITEMS.register("crystal_spikes_wand", () -> new EarthWandItem(earthProps("RARE"), EarthLogic.Kind.SPIKES));
+    public static final RegistryObject<Item> STONE_SKIN_WAND = ITEMS.register("stone_skin_wand", () -> new EarthWandItem(earthProps("RARE"), EarthLogic.Kind.SKIN));
+    public static final RegistryObject<Item> WIND_WAND = ITEMS.register("wind_wand", () -> new EarthWandItem(earthProps("RARE"), EarthLogic.Kind.WIND));
+    public static final RegistryObject<Item> VINE_WAND = ITEMS.register("vine_wand", () -> new EarthWandItem(earthProps("RARE"), EarthLogic.Kind.VINE));
+    public static final RegistryObject<Item> PULL_WAND = ITEMS.register("pull_wand", () -> new EarthWandItem(earthProps("RARE"), EarthLogic.Kind.PULL));
+    public static final RegistryObject<Item> DECOY_WAND = ITEMS.register("decoy_wand", () -> new EarthWandItem(earthProps("RARE"), EarthLogic.Kind.DECOY));
+    public static final RegistryObject<Item> SPARK_WAND = ITEMS.register("spark_wand", () -> new EarthWandItem(earthProps("RARE"), EarthLogic.Kind.SPARKS));
+    public static final RegistryObject<Item> HEAT_WAND = ITEMS.register("heat_wand", () -> new EarthWandItem(earthProps("RARE"), EarthLogic.Kind.HEAT));
+
+    /** Основа крафта (4.11): Магический стержень и ядра. Схема: docs/world.md, «Крафт — в несколько шагов». */
+    public static final RegistryObject<Item> MAGIC_ROD = ITEMS.register("magic_rod", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("UNCOMMON")), "magic_rod"));
+    public static final RegistryObject<Item> SIMPLE_CORE = ITEMS.register("simple_core", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("UNCOMMON")), "simple_core"));
+    public static final RegistryObject<Item> CRYSTAL_CORE = ITEMS.register("crystal_core", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("RARE")), "crystal_core"));
+    public static final RegistryObject<Item> WIND_CORE = ITEMS.register("wind_core", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("RARE")), "wind_core"));
+    public static final RegistryObject<Item> FIRE_CORE = ITEMS.register("fire_core", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("RARE")), "fire_core"));
+
+    /** Материалы данжей (4.11): обычный (мобы) / редкий (сундуки побочных комнат) / очень редкий (секретные комнаты). Добыча — Mats. */
+    public static final RegistryObject<Item> RIFT_DUST = ITEMS.register("rift_dust", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("COMMON")), "rift_dust"));
+    public static final RegistryObject<Item> ECHO_CRYSTAL = ITEMS.register("echo_crystal", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("UNCOMMON")), "echo_crystal"));
+    public static final RegistryObject<Item> RIFT_MARROW = ITEMS.register("rift_marrow", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("RARE")), "rift_marrow"));
+    public static final RegistryObject<Item> SLEEP_THREAD = ITEMS.register("sleep_thread", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("COMMON")), "sleep_thread"));
+    public static final RegistryObject<Item> TEAL_STITCH = ITEMS.register("teal_stitch", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("UNCOMMON")), "teal_stitch"));
+    public static final RegistryObject<Item> SLEEPER_TEAR = ITEMS.register("sleeper_tear", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("RARE")), "sleeper_tear"));
+    public static final RegistryObject<Item> ASH_COAL = ITEMS.register("ash_coal", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("COMMON")), "ash_coal"));
+    public static final RegistryObject<Item> SMOLDERING_FEATHER = ITEMS.register("smoldering_feather", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("UNCOMMON")), "smoldering_feather"));
+    public static final RegistryObject<Item> PHOENIX_SPARK = ITEMS.register("phoenix_spark", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("RARE")), "phoenix_spark"));
+
     /** Отдельная вкладка «Магия» — всё содержимое мода в порядке регистрации. */
     public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.f_279569_, "explosionwand");
     public static final RegistryObject<CreativeModeTab> MAGIC_TAB = TABS.register("magic", () -> CreativeModeTab.builder()
@@ -63,6 +100,8 @@ public class ExplosionWandMod {
             .m_257737_(() -> new ItemStack(ECLIPSE_STAFF.get()))
             .m_257501_((params, out) -> { for (RegistryObject<Item> r : ITEMS.getEntries()) out.m_246326_(r.get()); })
             .m_257652_());
+
+    static Item.Properties earthProps(String rarity) { return new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf(rarity)); }
 
     static Item.Properties props() { return new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("EPIC")); }
 
@@ -85,6 +124,8 @@ public class ExplosionWandMod {
         MinecraftForge.EVENT_BUS.addListener(ArenaGuard::onPlace);
         MinecraftForge.EVENT_BUS.addListener(ArenaGuard::onDetonate);
         MinecraftForge.EVENT_BUS.addListener(ArcaneSet::onHurt);
+        MinecraftForge.EVENT_BUS.addListener(Earth::onHurt);
+        MinecraftForge.EVENT_BUS.addListener(Earth::onStopping);
         MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onBreak);
         MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onPlace);
         MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onDetonate);

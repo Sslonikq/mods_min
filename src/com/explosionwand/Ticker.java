@@ -35,10 +35,10 @@ public final class Ticker {
         if (Boss4.ACTIVE != null && Boss4.ACTIVE.level == sl && Boss4.ACTIVE.tick()) Boss4.ACTIVE = null;
         DreamStaff.tick(sl);
         ArcaneSet.tick(sl);
+        Earth.tick(sl);
         WhaleStaff.tick(sl);
         run(Comet.ACTIVE, sl, c -> c.level, Comet::tick);
         PortalGun.tick(sl);
-        Possess.tick(sl);
         Later.tick(sl);
         Dims.tickFixes(sl);
         if (ticks % 20 == 0) Dims.evacuateOldArena(sl);

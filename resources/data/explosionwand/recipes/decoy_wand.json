@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "GS ",
+    " C ",
+    "R  "
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "S": {
+      "item": "explosionwand:sleeper_tear"
+    },
+    "C": {
+      "item": "explosionwand:wind_core"
+    },
+    "R": {
+      "item": "explosionwand:magic_rod"
+    }
+  },
+  "result": {
+    "item": "explosionwand:decoy_wand",
+    "count": 1
+  }
+}
