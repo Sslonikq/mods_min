@@ -17,11 +17,13 @@ final class Debris {
     /** count попыток в шаре радиуса r (только оболочка от rMin), сила разлёта power. */
     static int fling(ServerLevel l, double cx, double cy, double cz, double rMin, double r, int count, double power, double up) {
         int done = 0;
+        Dungeons.Shield sh = Dungeons.shield(l);
         for (int i = 0; i < count; i++) {
             double[] u = Fx.unit();
             double d = rMin + (r - rMin) * Math.cbrt(Fx.RNG.nextDouble());
             int x = (int) Math.floor(cx + u[0] * d), y = (int) Math.floor(cy + u[1] * d * 0.7), z = (int) Math.floor(cz + u[2] * d);
             BlockPos p = new BlockPos(x, y, z);
+            if (sh.at(p)) continue;
             BlockState s = l.m_8055_(p);
             if (!movable(l, p, s)) continue;
             FallingBlockEntity fb = FallingBlockEntity.m_201971_(l, p, s);
