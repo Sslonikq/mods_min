@@ -146,6 +146,7 @@ public class IceStorm {
         if (ICE == null) return;
         long[] offs = Fx.sphere(FREEZE_R);
         int target = (int) Math.min(offs.length, (long) offs.length * t / FREEZE_TICKS);
+        Dungeons.Shield shield = Dungeons.shield(level);
         for (; freezeIdx < target; freezeIdx++) {
             long v = offs[freezeIdx];
             BlockPos p = new BlockPos(bx + Fx.sx(v, FREEZE_R), by + Fx.sy(v, FREEZE_R), bz + Fx.sz(v, FREEZE_R));
@@ -154,7 +155,7 @@ public class IceStorm {
             if (s.m_60795_()) continue;
             Block b = s.m_60734_();
             if (b == ICE_BLOCK || b == PACKED_BLOCK) continue;
-            if (s.m_60800_(level, p) < 0.0F) continue;     // бедрок и т.п.
+            if (s.m_60800_(level, p) < 0.0F || shield.at(p)) continue;     // бедрок и т.п., данжи
             level.m_7731_(p, ICE, 18);
         }
     }
@@ -165,6 +166,7 @@ public class IceStorm {
         int x = (int) Math.floor(cx + Math.cos(a) * rr), z = (int) Math.floor(cz + Math.sin(a) * rr);
         int top = by + 24, bottom = by - 24, ground = Integer.MIN_VALUE;
         if (!level.m_46805_(new BlockPos(x, by, z))) return;
+        Dungeons.Shield shield = Dungeons.shield(level);
         for (int y = top; y >= bottom; y--) {
             BlockState s = level.m_8055_(new BlockPos(x, y, z));
             if (s.m_60795_() || s.m_60734_() == SNOW_LAYER) continue;
@@ -176,6 +178,7 @@ public class IceStorm {
             BlockPos p = new BlockPos(x, ground + i, z);
             BlockState s = level.m_8055_(p);
             if (!s.m_60795_() && s.m_60734_() != SNOW_LAYER) break;
+            if (shield.at(p)) break;
             level.m_46597_(p, PACKED_ICE);
             spikes.add(p);
         }

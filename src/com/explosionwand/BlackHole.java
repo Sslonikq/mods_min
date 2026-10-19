@@ -132,9 +132,11 @@ public class BlackHole {
     void ripBlocks(double grow) {
         if (ripped >= MAX_BLOCKS) return;
         double r = RIP_RADIUS * grow;
+        Dungeons.Shield shield = Dungeons.shield(level);
         for (int i = 0; i < 3; i++) {
             double[] u = Fx.unit(); double rr = r * Math.cbrt(RNG.nextDouble());
             BlockPos p = new BlockPos((int) Math.floor(cx + u[0] * rr), (int) Math.floor(cy + u[1] * rr), (int) Math.floor(cz + u[2] * rr));
+            if (shield.at(p)) continue;
             BlockState s = level.m_8055_(p);
             if (s.m_60795_() || s.m_155947_() || !s.m_60819_().m_76178_()) continue;
             float h = s.m_60800_(level, p);
@@ -204,13 +206,14 @@ public class BlackHole {
         int end = Math.min(offs.length, carveIdx + CARVE_PER_TICK);
         int bx = (int) Math.floor(cx), by = (int) Math.floor(cy), bz = (int) Math.floor(cz);
         double shell = 0;
+        Dungeons.Shield shield = Dungeons.shield(level);
         for (; carveIdx < end; carveIdx++) {
             long v = offs[carveIdx];
             shell = Fx.sd(v);
             BlockPos p = new BlockPos(bx + Fx.sx(v, CRATER), by + Fx.sy(v, CRATER), bz + Fx.sz(v, CRATER));
             if (!level.m_46805_(p)) continue;
             BlockState s = level.m_8055_(p);
-            if (s.m_60795_() || s.m_60800_(level, p) < 0.0F) continue;
+            if (s.m_60795_() || s.m_60800_(level, p) < 0.0F || shield.at(p)) continue;
             level.m_7731_(p, AIR, 18);
         }
         var exp = Fx.particle("explosion"); var smoke = Fx.particle("large_smoke");

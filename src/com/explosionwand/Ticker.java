@@ -42,6 +42,7 @@ public final class Ticker {
         Possess.tick(sl);
         Later.tick(sl);
         Dims.tickFixes(sl);
+        Dungeons.tick(sl);
         if (Dims.is(sl, Dims.VOID)) VoidWorld.tick(sl, ticks);
         else if (Dims.is(sl, Dims.HAUNT)) Haunt.tick(sl);
         else if (Dims.is(sl, Dims.INVERTED)) Inverted.tick(sl, ticks);

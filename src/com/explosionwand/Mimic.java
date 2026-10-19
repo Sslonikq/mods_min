@@ -150,10 +150,12 @@ public class Mimic {
         int x = (int) Math.floor(pos.f_82479_), z = (int) Math.floor(pos.f_82481_);
         int y = level.m_141937_() + 7;
         BlockState wall = Fx.state("deepslate"), air = Fx.state("air");
-        if (wall == null || air == null) { sky(p); return; }
+        if (wall == null || air == null || Dungeons.protectedAt(level, new BlockPos(x, y, z))) { sky(p); return; }
+        Dungeons.Shield shield = Dungeons.shield(level);
         for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) for (int dy = -1; dy <= 2; dy++) {
             boolean inside = dx == 0 && dz == 0 && (dy == 0 || dy == 1);
-            level.m_7731_(new BlockPos(x + dx, y + dy, z + dz), inside ? air : wall, 3);
+            BlockPos wp = new BlockPos(x + dx, y + dy, z + dz);
+            if (!shield.at(wp)) level.m_7731_(wp, inside ? air : wall, 3);
         }
         p.m_6021_(x + 0.5, y, z + 0.5);
         p.f_19789_ = 0;

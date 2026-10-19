@@ -114,9 +114,11 @@ final class EclipseStaff {
         void burn() {
             BlockState air = Fx.state("air"), fire = Fx.state("fire");
             int cx = (int) Math.floor(hx), cy = (int) Math.floor(hy), cz = (int) Math.floor(hz);
+            Dungeons.Shield shield = Dungeons.shield(level);
             for (int x = -2; x <= 2; x++) for (int y = -2; y <= 1; y++) for (int z = -2; z <= 2; z++) {
                 if (x * x + y * y + z * z > 4.5) continue;
                 BlockPos p = new BlockPos(cx + x, cy + y, cz + z);
+                if (shield.at(p)) continue;
                 BlockState s = level.m_8055_(p);
                 if (s.m_60795_() || s.m_155947_()) continue;
                 float h = s.m_60800_(level, p);
@@ -127,6 +129,7 @@ final class EclipseStaff {
                 int fx = cx + Fx.RNG.nextInt(7) - 3, fz = cz + Fx.RNG.nextInt(7) - 3;
                 for (int y = cy + 2; y > cy - 4; y--) {
                     BlockPos p = new BlockPos(fx, y, fz);
+                    if (shield.at(p)) break;
                     if (level.m_8055_(p).m_60795_() && !level.m_8055_(new BlockPos(fx, y - 1, fz)).m_60795_()) { if (fire.m_60710_(level, p)) level.m_7731_(p, fire, 3); break; }
                 }
             }
@@ -224,12 +227,13 @@ final class EclipseStaff {
             BlockState air = Fx.state("air");
             int end = Math.min(offs.length, carve + 9000);
             int bx = (int) Math.floor(x), by = (int) Math.floor(y), bz = (int) Math.floor(z);
+            Dungeons.Shield shield = Dungeons.shield(level);
             for (; carve < end; carve++) {
                 long v = offs[carve];
                 BlockPos p = new BlockPos(bx + Fx.sx(v, R), by + Fx.sy(v, R), bz + Fx.sz(v, R));
                 if (!level.m_46805_(p)) continue;
                 BlockState s = level.m_8055_(p);
-                if (s.m_60795_() || s.m_60800_(level, p) < 0) continue;
+                if (s.m_60795_() || s.m_60800_(level, p) < 0 || shield.at(p)) continue;
                 level.m_7731_(p, air, 18);
             }
             return carve >= offs.length;

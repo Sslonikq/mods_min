@@ -114,6 +114,7 @@ public class Chronos {
         long[] offs = Fx.sphere(R);
         int end = Math.max(-1, restoreIdx - RESTORE_PER_TICK);
         double shell = 0; int changed = 0;
+        Dungeons.Shield shield = Dungeons.shield(level);
         var rp = Fx.particle("reverse_portal");
         for (; restoreIdx > end; restoreIdx--) {
             BlockState want = snap[restoreIdx];
@@ -121,7 +122,7 @@ public class Chronos {
             long v = offs[restoreIdx];
             shell = Fx.sd(v);
             BlockPos p = new BlockPos(bx + Fx.sx(v, R), by + Fx.sy(v, R), bz + Fx.sz(v, R));
-            if (!level.m_46805_(p)) continue;
+            if (!level.m_46805_(p) || shield.at(p)) continue;
             if (level.m_8055_(p) != want) {
                 level.m_7731_(p, want, 18);
                 if (changed++ < 40 && RNG.nextInt(4) == 0) Fx.send(level, rp, bx + Fx.sx(v, R) + 0.5, by + Fx.sy(v, R) + 0.5, bz + Fx.sz(v, R) + 0.5, 4, 0.3, 0.3, 0.3, 0.1);

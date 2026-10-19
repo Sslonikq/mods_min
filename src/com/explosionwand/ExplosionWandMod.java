@@ -50,6 +50,8 @@ public class ExplosionWandMod {
     public static final RegistryObject<Item> ARCANE_LEGGINGS = ITEMS.register("arcane_leggings", () -> new ArcaneArmorItem(ArmorItem.Type.valueOf("LEGGINGS"), new Item.Properties().m_41497_(Rarity.valueOf("EPIC"))));
     public static final RegistryObject<Item> ARCANE_BOOTS = ITEMS.register("arcane_boots", () -> new ArcaneArmorItem(ArmorItem.Type.valueOf("BOOTS"), new Item.Properties().m_41497_(Rarity.valueOf("EPIC"))));
 
+    public static final RegistryObject<Item> SEAL_SHARD_RIFT = ITEMS.register("seal_shard_rift", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "rift"));
+
     /** Отдельная вкладка «Магия» — всё содержимое мода в порядке регистрации. */
     public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.f_279569_, "explosionwand");
     public static final RegistryObject<CreativeModeTab> MAGIC_TAB = TABS.register("magic", () -> CreativeModeTab.builder()
@@ -79,5 +81,15 @@ public class ExplosionWandMod {
         MinecraftForge.EVENT_BUS.addListener(ArenaGuard::onPlace);
         MinecraftForge.EVENT_BUS.addListener(ArenaGuard::onDetonate);
         MinecraftForge.EVENT_BUS.addListener(ArcaneSet::onHurt);
+        MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onBreak);
+        MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onPlace);
+        MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onDetonate);
+        MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onPearl);
+        MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onChorus);
+        MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onUseItem);
+        MinecraftForge.EVENT_BUS.addListener(Dungeons::onRightClick);
+        MinecraftForge.EVENT_BUS.addListener(Dungeons::onDeath);
+        MinecraftForge.EVENT_BUS.addListener(Dungeons::onRespawn);
+        MinecraftForge.EVENT_BUS.addListener(Dungeons::onStopped);
     }
 }

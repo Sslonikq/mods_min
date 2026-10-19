@@ -82,6 +82,7 @@ public class Rift {
 
     void cut(double from, double to) {
         if (AIR == null) return;
+        Dungeons.Shield shield = Dungeons.shield(level);
         for (double s = from; s < to; s += 0.5D) {
             double cx = ox + dx * s, cz = oz + dz * s;
             for (double l = -CUT_HALF; l <= CUT_HALF; l += 0.5D) {
@@ -91,7 +92,7 @@ public class Rift {
                 for (int y = base - CUT_DOWN; y <= base + CUT_UP; y++) {
                     BlockPos p = new BlockPos(x, y, z);
                     BlockState st = level.m_8055_(p);
-                    if (st.m_60795_() || st.m_60800_(level, p) < 0.0F) continue;
+                    if (st.m_60795_() || st.m_60800_(level, p) < 0.0F || shield.at(p)) continue;
                     level.m_7731_(p, AIR, 18);
                 }
             }
