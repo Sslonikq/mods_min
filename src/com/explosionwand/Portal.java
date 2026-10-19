@@ -131,6 +131,7 @@ public class Portal {
         double R = PULL_RADIUS;
         AABB box = new AABB(cx - R, cy - R, cz - R, cx + R, cy + R, cz + R);
         for (Entity e : level.m_6249_(null, box, e -> e.m_6084_() && !e.m_5833_())) {
+            if (!Minions.controllable(e)) continue;   // хосты боссов/мобов Разлома (теги ew*) не затягиваем и не уносим
             Vec3 pp = e.m_20182_();
             double ex = pp.f_82479_, ey = pp.f_82480_ + 0.9, ez = pp.f_82481_;
             double dx = cx - ex, dy = cy - ey, dz = cz - ez;
