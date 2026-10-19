@@ -5,7 +5,7 @@ public abstract class Entity { public boolean f_19864_; public float f_19789_;
  public final Vec3 m_20182_(){return null;} public Vec3 m_20184_(){return null;} public void m_20256_(Vec3 v){} public void m_20242_(boolean b){}
  public boolean m_6084_(){return false;} public boolean m_6469_(DamageSource s,float f){return false;}
  public int m_146888_(){return 0;} public void m_146917_(int i){} public int m_146891_(){return 0;} public boolean m_146890_(){return false;}
- public boolean m_20069_(){return false;}
+ public boolean m_20069_(){return false;} public boolean m_20142_(){return false;}
  public void m_20225_(boolean b){} public void m_20331_(boolean b){} public void m_6034_(double x,double y,double z){} public void m_146922_(float f){} public void m_146926_(float f){} public void m_5616_(float f){}
  public void m_6593_(net.minecraft.network.chat.Component c){} public void m_20340_(boolean b){} public void m_8061_(net.minecraft.world.entity.EquipmentSlot s, net.minecraft.world.item.ItemStack st){}
  public float m_20205_(){return 0;} public float m_20206_(){return 0;} public float m_146909_(){return 0;} public void m_20095_(){} public boolean m_6060_(){return false;} public boolean m_6144_(){return false;}

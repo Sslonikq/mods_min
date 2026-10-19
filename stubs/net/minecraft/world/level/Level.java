@@ -10,6 +10,7 @@ public abstract class Level implements LevelReader { public boolean f_46443_;
  public net.minecraft.world.damagesource.DamageSources m_269111_(){return null;}
  public boolean m_7731_(BlockPos p, BlockState s, int f){return false;}
  public boolean m_46597_(BlockPos p, BlockState s){return false;}
+ public void m_46672_(BlockPos p, net.minecraft.world.level.block.Block b){}
  public boolean m_7967_(Entity e){return false;} public long m_46467_(){return 0;} public boolean m_46462_(){return false;}
  public boolean m_46961_(BlockPos p, boolean drop){return false;}
  public net.minecraft.world.Difficulty m_46791_(){return null;}

@@ -3,10 +3,10 @@
 import json, re, sys
 from pathlib import Path
 
-CHECKS = [('sound_event', r'Fx\.sound\([^;]*?"([a-z0-9_.]+)"'), ('particle_type', r'Fx\.particle\("([a-z_]+)"\)'),
-          ('block', r'(?:Fx\.state|Fx\.block|Disp\.block)\("([a-z_]+)"\)'), ('block', r'BLOCKS\[[^\]]+\]\s*=\s*(?:BLOCKS\[[^\]]+\]\s*=\s*)*"([a-z_]+)"'),
-          ('mob_effect', r'Fx\.effect\("([a-z_]+)"\)'), ('entity_type', r'summon minecraft:([a-z_]+)'), ('entity_type', r'Minions\.spawn\(level, "([a-z_]+)"'),
-          ('item', r'"(?:\d+ )?minecraft:([a-z_]+)"'), ('item', r'id:\\"minecraft:([a-z_]+)\\"'), ('block', r'setblock [^"]*?minecraft:([a-z_]+)'), ('block', r'Dungeons\.state\("(?:minecraft:)?([a-z_]+)')]
+CHECKS = [('sound_event', r'Fx\.sound\([^;]*?"([a-z0-9_.]+)"'), ('particle_type', r'Fx\.particle\("([a-z0-9_]+)"\)'),
+          ('block', r'(?:Fx\.state|Fx\.block|Disp\.block)\("([a-z0-9_]+)"\)'), ('block', r'BLOCKS\[[^\]]+\]\s*=\s*(?:BLOCKS\[[^\]]+\]\s*=\s*)*"([a-z0-9_]+)"'),
+          ('mob_effect', r'Fx\.effect\("([a-z0-9_]+)"\)'), ('entity_type', r'summon minecraft:([a-z_]+)'), ('entity_type', r'Minions\.spawn\(level, "([a-z_]+)"'),
+          ('item', r'"(?:\d+ )?minecraft:([a-z_]+)"'), ('item', r'id:\\"minecraft:([a-z_]+)\\"'), ('block', r'setblock [^"]*?minecraft:([a-z_]+)'), ('block', r'Dungeons\.state\("(?:minecraft:)?([a-z0-9_]+)')]
 # склейки строк, а не настоящие ID
 SKIP = {('Minions.java', 'leather_'), ('Possess.java', 'ravager'), ('Possess.java', 'goat')}
 
