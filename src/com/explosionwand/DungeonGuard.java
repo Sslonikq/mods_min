@@ -1,11 +1,15 @@
 package com.explosionwand;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.event.entity.EntityTeleportEvent;
+import net.minecraftforge.event.entity.living.MobSpawnEvent;
+import net.minecraftforge.event.entity.player.FillBucketEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.level.ExplosionEvent;
@@ -27,6 +31,33 @@ final class DungeonGuard {
         if (!(ev.getEntity() instanceof ServerPlayer p) || p.m_7500_()) return;
         if (Dungeons.inside(p.m_9236_(), ev.getPos())) ev.setCanceled(true);
     }
+
+    /** Ведро воды/лавы (и черпание) с целью в данже или рядом с его границей: Forge шлёт FillBucketEvent, а не EntityPlaceEvent. */
+    static void onBucket(FillBucketEvent ev) {
+        if (!(ev.getEntity() instanceof ServerPlayer p) || p.m_7500_()) return;
+        if (!(ev.getTarget() instanceof BlockHitResult hit)) return;
+        BlockPos pos = hit.m_82425_();
+        // запас 1: вода ставится в соседний с кликом блок
+        if (Dungeons.near(p.m_9236_(), pos.m_123341_() + 0.5, pos.m_123342_() + 0.5, pos.m_123343_() + 0.5, 1)) ev.setCanceled(true);
+    }
+
+    /** Естественный спавн, подкрепления и патрули в границах данжа отменяются; мобы залов идут через /summon и сюда не попадают. */
+    static void onSpawn(MobSpawnEvent.FinalizeSpawn ev) {
+        try {
+            String type = ev.getSpawnType().name();
+            // CHUNK_GENERATION не трогаем: он приходит из потока генерации чанков (там нельзя читать реестр данжей), а спавнит только животных
+            if (!type.equals("NATURAL") && !type.equals("REINFORCEMENT") && !type.equals("PATROL") && !type.equals("JOCKEY")) return;
+            if (ev.getEntity().m_19880_().contains("ewd")) return;
+            if (Dungeons.at(ev.getLevel().m_6018_(), ev.getX(), ev.getY(), ev.getZ()) != null) {
+                try { ev.setSpawnCancelled(true); }
+                catch (LinkageError e) { ev.setCanceled(true); }   // запасной путь, если нет setSpawnCancelled: только пропустит finalizeSpawn, моба не уберёт
+            }
+        } catch (LinkageError | RuntimeException e) {   // исключение в обработчике ушло бы дальше в натуральный спавн в тике
+            if (!spawnWarned) { spawnWarned = true; System.err.println("[explosionwand] защита от спавна в данжах отключена: " + e); }
+        }
+    }
+
+    private static boolean spawnWarned = false;
 
     static void onDetonate(ExplosionEvent.Detonate ev) {
         if (ev.getLevel() instanceof ServerLevel sl && Dims.is(sl, net.minecraft.world.level.Level.f_46428_)) {

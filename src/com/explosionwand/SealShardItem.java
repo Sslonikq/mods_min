@@ -29,7 +29,13 @@ public class SealShardItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> m_7203_(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.m_21120_(hand);
-        if (!level.f_46443_ && level instanceof ServerLevel sl && player instanceof ServerPlayer sp && sp.m_7500_() && sp.m_6144_()) Dungeons.locate(sl, sp, dungeon);
+        if (!level.f_46443_ && level instanceof ServerLevel sl && player instanceof ServerPlayer sp && sp.m_7500_() && sp.m_6144_()) {
+            Dungeons.locate(sl, sp, dungeon);
+            return InteractionResultHolder.m_19092_(stack, level.f_46443_);
+        }
+        // на сервере: вне творческого режима клик ничего не делает, если данж не рядом. На клиенте данных о данжах нет (near всегда false),
+        // поэтому там рука не машет; дверь обрабатывает серверный RightClickBlock
+        if (!player.m_7500_() && !Dungeons.near(level, player, 8)) return InteractionResultHolder.m_19098_(stack);
         return InteractionResultHolder.m_19092_(stack, level.f_46443_);
     }
 

@@ -87,9 +87,13 @@ public class ExplosionWandMod {
         MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onPearl);
         MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onChorus);
         MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onUseItem);
+        MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onBucket);
+        MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onSpawn);
         MinecraftForge.EVENT_BUS.addListener(Dungeons::onRightClick);
         MinecraftForge.EVENT_BUS.addListener(Dungeons::onDeath);
         MinecraftForge.EVENT_BUS.addListener(Dungeons::onRespawn);
         MinecraftForge.EVENT_BUS.addListener(Dungeons::onStopped);
+        MinecraftForge.EVENT_BUS.addListener(RiftMobs::onHurt);
+        MinecraftForge.EVENT_BUS.addListener(RiftMobs::onDeath);
     }
 }
