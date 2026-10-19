@@ -8,7 +8,7 @@
 Сетка внутри стены (x и z одинаково): запад -42..-30 (кварталы), улица -29..-25, центр -24..24, улица 25..29, восток 30..42.
   - 4 угловых квартала: по дому 9x9; 4 боковых квартала: по 4 дома 9x11; юг (за воротами): проспект x -5..5 и по 2 дома по сторонам.
   - центр: храм (север, с шпилем Монолита), библиотека (северо-восток), обсерватория (северо-запад), площадь с фонтанами и картой на полу.
-Залы (метки hall): 1..6 улицы и площадь, 7..18 дома с мобами, 19 библиотека (ловушка с печатью), 20 логово храма (заглушка до 4.7),
+Залы (метки hall): 1..6 улицы и площадь (на площади, зал 6, один Колыбельщик), 7..18 дома с мобами, 19 библиотека (ловушка с печатью), 20 логово храма (заглушка до 4.7),
 21 склеп, 22 обсерватория, 23..25 тайники.
 """
 import math
@@ -166,15 +166,17 @@ def build_city(gd):
     add_house("NW", -35, -35, 9, 9, "E"); add_house("NE", 35, -35, 9, 9, "W")
     add_house("SW", -35, 35, 9, 9, "E"); add_house("SE", 35, 35, 9, 9, "W")
 
-    SL_, ST_, DR_, BK_, SS_ = "stub:sleeper", "stub:stitch", "stub:dreamer", "stub:bookguard", "stub:statue"
+    # 4.6: все мобы Города настоящие (CityMobs, CityMobsB): метки explosionwand:<вид>, заглушек нет
+    SL_, ST_, DR_, MT_ = "explosionwand:lunatic", "explosionwand:stitch_guard", "explosionwand:drowsy", "explosionwand:night_moth"
+    DM_, BK_, SS_, CR_ = "explosionwand:dreamer", "explosionwand:book_guard", "explosionwand:statue_guard", "explosionwand:cradler"
     # name: (вид обстановки, мобы, сундук или None)
     MOB_HOUSES = [
         ("NW", "bed", [SL_, SL_, ST_], "Дом Ткача"), ("NE", "study", [SL_, ST_, DR_], "Дом Переписчика"),
         ("SW", "kitchen", [SL_, SL_, ST_], "Дом Пекаря"), ("SE", "bed", [SL_, ST_, SL_], "Дом Лекаря"),
-        ("N1", "ruin", [SL_, SL_, ST_], None), ("N3", "kitchen", [SL_, DR_, SL_], "Дом Фонарщика"),
+        ("N1", "ruin", [SL_, SL_, ST_], None), ("N3", "kitchen", [SL_, MT_, SL_], "Дом Фонарщика"),
         ("S1", "bed", [SL_, SL_, DR_], None), ("S4", "study", [SL_, ST_, SL_], "Дом Звонаря"),
         ("W1", "kitchen", [SL_, SL_, DR_], None), ("W4", "bed", [SL_, DR_, ST_], "Дом Кузнеца"),
-        ("E1", "ruin", [SL_, ST_, SL_], None), ("E4", "study", [SL_, SL_, DR_], None)]
+        ("E1", "ruin", [SL_, ST_, SL_], None), ("E4", "study", [SL_, SL_, DM_], None)]
     EMPTY_HOUSES = {"N2": "bed", "N4": "ruin", "S2": "kitchen", "W2": "ruin", "E2": "study"}
     LEVERS = {"N4": "bed", "W2": "bell"}                             # дом -> id тайника, который открывает рычаг
     CRYPT_HOUSE = "W3"
@@ -330,7 +332,7 @@ def build_city(gd):
         g.set(-22, CS, 21, bm("lectern[facing=north]"))
     C.add("deco", crypt)
     hall(21, -43, CS - 1, 14, 11, CH + 2, 17)
-    for (x, z) in ((-40, 16), (-36, 17), (-40, 21), (-37, 24), (-40, 27), (-36, 28)): g.mark("spawn", x, CS, z, SS_)
+    for (x, z) in ((-36, 17), (-40, 21), (-37, 24), (-40, 27), (-36, 28)): g.mark("spawn", x, CS, z, SS_)
     chest(-38, CS, 29, "Склеп Спящих", 2)
     g.mark("secret", -32, CS, 17, "crypt", (1, 3, 3))
     hall(25, -26, CS - 1, 14, 9, CH + 2, 9)
@@ -367,7 +369,7 @@ def build_city(gd):
     C.add("deco", obs_deco)
     g.mark("lever", OCX, 1, -23, "crypt")
     hall(22, OX1 + 1, -1, -23, 9, 8, 15)
-    for m, (x, z) in zip((DR_, DR_, ST_, ST_), ((-21, -20), (-17, -20), (-21, -13), (-17, -13))): g.mark("spawn", x, 0, z, m)
+    for m, (x, z) in zip((DM_, DR_, ST_, ST_), ((-21, -20), (-17, -20), (-21, -13), (-17, -13))): g.mark("spawn", x, 0, z, m)
     chest(-19, 0, -21, "Обсерватория", 2)
 
     # ------------------------------------------------------------------ библиотека (северо-восток центра): ловушка с печатью
@@ -389,7 +391,7 @@ def build_city(gd):
     C.add("deco", lib_deco)
     g.mark("seal", 18, 0, -11, "19,polished_blackstone_bricks", (3, 3, 1))
     hall(19, LX1 + 1, -1, -23, 9, 8, 12)
-    for (x, z) in ((17, -15), (21, -15), (17, -19), (21, -19), (19, -13)): g.mark("spawn", x, 0, z, BK_)
+    for (x, z) in ((17, -15), (21, -15), (17, -19), (21, -19)): g.mark("spawn", x, 0, z, BK_)
     chest(19, 0, -22, "Библиотека Спящих", 2)
 
     # ------------------------------------------------------------------ храм (север центра) и шпиль Монолита
@@ -432,7 +434,7 @@ def build_city(gd):
         g.mark("brazier", -9, 0, -9, "1,0,0")
         g.mark("seal", -1, 0, -11, "20,polished_blackstone_bricks", (3, 3, 1))
         hall(20, -10, -1, -22, 21, 14, 11)
-        for m, (x, z) in zip((ST_, ST_, ST_, DR_, DR_, DR_), ((-8, -16), (8, -16), (-4, -20), (4, -20), (-5, -13), (5, -13))): g.mark("spawn", x, 0, z, m)
+        for m, (x, z) in zip((ST_, ST_, ST_, DR_, DM_, DR_), ((-8, -16), (8, -16), (-4, -20), (4, -20), (-5, -13), (5, -13))): g.mark("spawn", x, 0, z, m)
         chest(0, 0, -21, "Логово Монолита", 2)
         LAYOUT.append(("temple", -12, -24, 12, -6))
     temple()
@@ -441,15 +443,16 @@ def build_city(gd):
     hall(1, -5, -1, 30, 11, 11, 13)
     for (x, z) in ((-2, 34), (3, 37), (0, 40)): g.mark("spawn", x, 0, z, SL_)
     hall(2, -29, -1, 25, 59, 11, 5)
-    for m, (x, z) in zip((SL_, DR_, SL_, DR_), ((-20, 27), (-8, 27), (8, 27), (22, 27))): g.mark("spawn", x, 0, z, m)
+    for m, (x, z) in zip((SL_, DR_, MT_, DR_), ((-20, 27), (-8, 27), (8, 27), (22, 27))): g.mark("spawn", x, 0, z, m)
     hall(3, -29, -1, -29, 59, 11, 5)
-    for m, (x, z) in zip((SL_, DR_, SL_, DR_), ((-20, -27), (-8, -27), (8, -27), (22, -27))): g.mark("spawn", x, 0, z, m)
+    for m, (x, z) in zip((SL_, DR_, MT_, DR_), ((-20, -27), (-8, -27), (8, -27), (22, -27))): g.mark("spawn", x, 0, z, m)
     hall(4, -29, -1, -24, 5, 11, 49)
     for m, (x, z) in zip((SL_, SL_, DR_), ((-27, -16), (-27, 0), (-27, 16))): g.mark("spawn", x, 0, z, m)
     hall(5, 25, -1, -24, 5, 11, 49)
     for m, (x, z) in zip((SL_, SL_, DR_), ((27, -16), (27, 0), (27, 16))): g.mark("spawn", x, 0, z, m)
     hall(6, -24, -1, -5, 49, 11, 30)
-    for m, (x, z) in zip((SL_, DR_, SL_, DR_), ((-12, 6), (12, 6), (0, 22), (-20, 18))): g.mark("spawn", x, 0, z, m)
+    for m, (x, z) in zip((SL_, DR_, MT_, DR_), ((-12, 6), (12, 6), (0, 22), (-20, 18))): g.mark("spawn", x, 0, z, m)
+    g.mark("spawn", 0, 0, 12, CR_)                                   # Колыбельщик (элита, один на город): центр площади, на карте на полу (пол вровень)
     LAYOUT.append(("plaza", -24, -7, 24, 24))
 
     g.mark("brazier", 4, 0, 38, "-1,0,0")

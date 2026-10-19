@@ -11,14 +11,14 @@ import java.util.*;
  * Город Спящих (фаза 4.5): всё, что нужно городу сверх общего конвейера данжей.
  *  - Сонный туман: на улицах (под открытым небом внутри стены) игрок, простоявший на месте дольше 3 секунд, замедляется,
  *    дольше 6 секунд — слепнет. Стоять нельзя, надо двигаться; в домах, храме, склепе и во рву у ворот тумана нет.
- *  - Мобы-заглушки (метки spawn вида "stub:<вид>"): обычные ванильные мобы с именами будущих мобов Города; настоящие мобы — фаза 4.6.
+ *  - Мобы Города (Лунатик, Дремотник, Страж Шва, Ночная моль, Сновидец, Книжный страж, Статуя-страж, Колыбельщик) — метки spawn explosionwand:<вид>,
+ *    см. CityMobs и CityMobsB (заглушки stub:<вид> убраны в 4.6); Туманный странник живёт в обычном мире (CityMobsB.tickWorld).
  *  - Особая добыча сундуков (книги Архимага, Печать Храма).
  * Чистые правила (пороги тумана, зона) вынесены в статические методы для теста.
  */
 final class City {
     private City() {}
 
-    static final String STUB = "stub:";
     /** Внутренняя сторона стены: туман действует при |x|,|z| не больше этого значения (в координатах данжа). */
     static final int INNER = 42;
     /** Период опроса (тиков), порог «стоит» (0,5 с ходьбы медленнее 0,5 блока), пороги стадий тумана в тиках. */
@@ -64,35 +64,6 @@ final class City {
     static final String BOOK_LAST = "minecraft:written_book{title:\"Последняя запись\",author:\"Последний Архимаг\",pages:["
             + page("Я остался в Городе один. Спящие дышат ровно, и это единственное, что меня радует. Печать Храма открывает храм, но не закрывает того, что внутри.") + ","
             + page("Если Монолит падёт, его осколок укажет путь дальше, к огню под землёй. Но берегись: то, что горит там, проснулось раньше срока.") + "]}";
-
-    // ================================================================ мобы-заглушки
-    /** Тип хоста и NBT заглушки: {тип, дополнительный NBT} (имя, ХП, снаряжение). */
-    static String[] stub(String id) {
-        switch (id) {
-            case "stub:stitch":
-                return new String[]{"husk", Minions.name("Страж Шва", "dark_aqua") + ",IsBaby:0b,Attributes:[{Name:\"minecraft:generic.max_health\",Base:30d}],Health:30f,"
-                        + "ArmorItems:[" + Minions.dyed("boots", TEAL) + "," + Minions.dyed("leggings", TEAL) + "," + Minions.dyed("chestplate", TEAL)
-                        + ",{id:\"minecraft:warped_wart_block\",Count:1b}],ArmorDropChances:[0f,0f,0f,0f],HandItems:[{id:\"minecraft:iron_sword\",Count:1b},{}],HandDropChances:[0f,0f]"};
-            case "stub:dreamer":
-                return new String[]{"vex", Minions.name("Дремотник", "aqua") + ",HandItems:[{id:\"minecraft:echo_shard\",Count:1b},{}],HandDropChances:[0f,0f]"};
-            case "stub:bookguard":
-                return new String[]{"vex", Minions.name("Книжный страж", "gold") + ",HandItems:[{id:\"minecraft:book\",Count:1b},{}],HandDropChances:[0f,0f]"};
-            case "stub:statue":
-                return new String[]{"skeleton", Minions.name("Статуя-страж", "gray") + ",HandItems:[{id:\"minecraft:stone_sword\",Count:1b},{}],HandDropChances:[0f,0f]"};
-            default:   // stub:sleeper и неизвестные: безоружный лунатик
-                return new String[]{"husk", Minions.name("Лунатик", "aqua") + ",IsBaby:0b"};
-        }
-    }
-
-    static final int TEAL = 0x2A9D8F;
-
-    /** Ставит заглушку: ванильный моб с тегами зала (как у мобов Разлома: ewd и ewd<хеш>h<зал>), без добычи и подбора вещей. */
-    static void spawnStub(ServerLevel sl, String id, double x, double y, double z, String hallTag) {
-        String[] t = stub(id);
-        Cmd.run(sl, x, y, z, "summon minecraft:" + t[0] + " " + Cmd.f(x) + " " + Cmd.f(y) + " " + Cmd.f(z)
-                + " {Tags:[\"ewd\",\"" + hallTag + "\"],PersistenceRequired:1b,CanPickUpLoot:0b,DeathLootTable:\"minecraft:empty\"," + t[1] + "}");
-        Fx.send(sl, Fx.particle("poof"), x, y + 1, z, 8, 0.3, 0.5, 0.3, 0.02);
-    }
 
     // ================================================================ сонный туман
     /** UUID игрока -> {x, z последнего опроса, тики без движения}. */

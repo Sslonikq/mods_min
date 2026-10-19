@@ -114,7 +114,7 @@ final class DungeonMech {
      * Дверь-печать закрыта, пока зал разбужен (бит spawned), не зачищен (бит cleared) и в нём стоит живой игрок (inside).
      * Погиб и возродился у жаровни — в зале никого, дверь открыта: можно войти снова (или зал сбросится сам, Dungeons.hallStale).
      */
-    static boolean sealWanted(int spawned, int cleared, int hall, boolean inside) { int bit = 1 << hall; return inside && (spawned & bit) != 0 && (cleared & bit) == 0; }
+    static boolean sealWanted(long spawned, long cleared, int hall, boolean inside) { long bit = 1L << hall; return inside && (spawned & bit) != 0 && (cleared & bit) == 0; }
 
     /** Платформа: a = "±x|±z,длина,блок" -> {dx, dz, длина}; null при ошибке. */
     static int[] platCfg(String a) {

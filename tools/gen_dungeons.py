@@ -22,7 +22,7 @@
             platform (p+s: платформа в начальном положении; a: "+x|-x|+z|-z,длина,блок"; ходит туда-сюда),
             lever (p: рычаг; a: id), secret (p+s: стена, исчезает по id от lever или решённой головоломки mirror),
             seal (p+s: проём двери; a: "номер зала,блок"; закрывается, пока зал разбужен и не зачищен).
-Город Спящих (фаза 4.5) строит модуль tools/gen_city.py (метки spawn вида "stub:<вид>" — заглушки мобов Города, см. STUB_MOBS).
+Город Спящих (фаза 4.5) строит модуль tools/gen_city.py (метки spawn: explosionwand:<вид> — мобы Города, см. RIFT_MOBS; заглушек stub:<вид> больше нет).
 Файлы детерминированы (gzip без времени), поэтому --check сравнивает байты.
 """
 import gzip, io, json, math, random, struct, sys, zlib
@@ -36,8 +36,6 @@ SPLITS = (24, 100)   # части Разлома режутся по z: z<24 —
 PARTS = ("rift_entrance", "rift_mid", "rift_deep")
 CITY_SPLITS = (-16, 16)   # части Города Спящих (фаза 4.5): z<-16, -16..15, z>=16
 CITY_PARTS = ("sleep_north", "sleep_mid", "sleep_south")
-# мобы-заглушки Города Спящих (4.5, пока нет настоящих мобов 4.6): id метки spawn -> сколько клеток воздуха нужно над меткой
-STUB_MOBS = {"stub:sleeper": 2, "stub:stitch": 2, "stub:dreamer": 2, "stub:bookguard": 2, "stub:statue": 2}
 
 
 # ---------------------------------------------------------------- NBT (минимальный писатель)
@@ -781,7 +779,10 @@ def temple_seal_png():
 # ---------------------------------------------------------------- проверки
 # мобы Разлома (RiftMobs, фаза 4.3): id метки spawn -> сколько клеток воздуха нужно над меткой
 RIFT_MOBS = {"explosionwand:shardling": 2, "explosionwand:crystal_archer": 5, "explosionwand:rift_shade": 3,
-             "explosionwand:prism": 6, "explosionwand:echo_eater": 3, "explosionwand:amethyst_golem": 4}
+             "explosionwand:prism": 6, "explosionwand:echo_eater": 3, "explosionwand:amethyst_golem": 4,
+             # Город Спящих (4.6)
+             "explosionwand:lunatic": 2, "explosionwand:drowsy": 3, "explosionwand:stitch_guard": 2, "explosionwand:night_moth": 3,
+             "explosionwand:dreamer": 3, "explosionwand:book_guard": 3, "explosionwand:statue_guard": 3, "explosionwand:cradler": 5}
 BOSS_KINDS = ("rift_heart",)   # виды босса для метки boss (4.4)
 MECH_TYPES = ("steps", "beams", "mirror", "platform", "lever", "secret", "seal")
 
@@ -797,7 +798,7 @@ def validate(g):
         n = b.split("[")[0]
         if not n.startswith("minecraft:") or n[10:] not in reg["block"]: bad.append("блока нет в реестре: " + b)
     for (t, a, p, s) in g.marks:
-        if t == "spawn" and a not in RIFT_MOBS and a not in STUB_MOBS and a not in reg["entity_type"]: bad.append("моба нет в реестре: " + a)
+        if t == "spawn" and a not in RIFT_MOBS and a not in reg["entity_type"]: bad.append("моба нет в реестре: " + a)
         if t not in ("start", "door", "brazier", "hall", "spawn", "chest", "boss") + MECH_TYPES: bad.append("неизвестная метка: " + t)
         if t == "boss" and a not in BOSS_KINDS: bad.append(f"boss {p}: неизвестный босс '{a}'")
     halls = [(int(a), p, s) for (t, a, p, s) in g.marks if t == "hall"]
@@ -842,10 +843,7 @@ def validate_mobs(g, halls):
             for dy in range(RIFT_MOBS[a]):
                 if g.cells.get((p[0], p[1] + dy, p[2]), AIR) != AIR: bad.append(f"spawn {p} {a}: над меткой занято (+{dy})")
             if a.endswith("crystal_archer") and g.cells.get((p[0], p[1] - 1, p[2])) != bm("amethyst_block"): bad.append(f"spawn {p}: под лучником нет колонны")
-        elif a.startswith("stub:"):
-            if a not in STUB_MOBS: bad.append(f"spawn {p}: неизвестная заглушка {a}"); continue
-            for dy in range(STUB_MOBS[a]):
-                if g.cells.get((p[0], p[1] + dy, p[2]), AIR) != AIR: bad.append(f"spawn {p} {a}: над меткой занято (+{dy})")
+        elif a.startswith("stub:"): bad.append(f"spawn {p}: заглушки мобов убраны, нужен explosionwand:<вид> ({a})")
     return bad
 
 

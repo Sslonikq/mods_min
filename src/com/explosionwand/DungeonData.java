@@ -22,8 +22,8 @@ final class DungeonData extends SavedData {
         /** Подпись раскладки шаблонов, по которой данж строился (Def.signature). Пусто — запись из старой версии. */
         String layout = "";
         long partsDone;       // бит i — часть i построена
-        int hallsSpawned;     // бит n — в зале n появились мобы
-        int hallsCleared;     // бит n — зал n зачищен (мобы больше не появляются)
+        long hallsSpawned;    // бит n — в зале n появились мобы
+        long hallsCleared;    // бит n — зал n зачищен (мобы больше не появляются)
         /** Открытые секреты и решённые головоломки (id меток lever/mirror/secret). */
         final Set<String> opened = new LinkedHashSet<>();
         /** Повёрнутые зеркала: "x,y,z" (координаты данжа) -> сторона 0..3 (N,E,S,W); нет записи — сторона из метки. */
@@ -74,7 +74,7 @@ final class DungeonData extends SavedData {
             t.m_128405_("x", r.x); t.m_128405_("y", r.y); t.m_128405_("z", r.z);
             t.m_128359_("layout", r.layout);
             t.m_128356_("parts", r.partsDone);
-            t.m_128405_("spawned", r.hallsSpawned); t.m_128405_("cleared", r.hallsCleared);
+            t.m_128356_("spawned", r.hallsSpawned); t.m_128356_("cleared", r.hallsCleared);
             CompoundTag op = new CompoundTag();
             for (String k : r.opened) op.m_128405_(k, 1);
             t.m_128365_("opened", op);
@@ -101,7 +101,7 @@ final class DungeonData extends SavedData {
             Rec r = new Rec(k, t.m_128461_("def"), t.m_128451_("cx"), t.m_128451_("cz"), t.m_128451_("x"), t.m_128451_("y"), t.m_128451_("z"));
             r.layout = t.m_128461_("layout");   // нет поля -> "" -> не совпадёт с подписью
             r.partsDone = t.m_128454_("parts");
-            r.hallsSpawned = t.m_128451_("spawned"); r.hallsCleared = t.m_128451_("cleared");
+            r.hallsSpawned = t.m_128454_("spawned"); r.hallsCleared = t.m_128454_("cleared");
             r.opened.addAll(t.m_128469_("opened").m_128431_());
             CompoundTag mr = t.m_128469_("mirrors");
             for (String mk : mr.m_128431_()) r.mirrors.put(mk, mr.m_128451_(mk) & 3);

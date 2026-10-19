@@ -64,7 +64,7 @@ final class RiftMobs {
     }
 
     /** Конец сервера: статика не должна перейти в следующий мир. */
-    static void clear() { warned = false; MOBS.clear(); BY_ID.clear(); NOISES.clear(); PREV.clear(); MOVED.clear(); now = 0; }
+    static void clear() { CityMobs.clear(); CityMobsB.clear(); warned = false; MOBS.clear(); BY_ID.clear(); NOISES.clear(); PREV.clear(); MOVED.clear(); now = 0; }
 
     /** id метки spawn без префикса -> вид, или null (ванильные мобы). */
     static Kind kindOfMark(String a) {
@@ -89,6 +89,16 @@ final class RiftMobs {
             case PRISM: return new Prism();
             case EATER: return new Eater();
             case GOLEM: return new Golem();
+            case LUNATIC: return new CityMobs.Lunatic();
+            case DROWSY: return new CityMobs.Drowsy();
+            case STITCH_GUARD: return new CityMobs.StitchGuard();
+            case NIGHT_MOTH: return new CityMobs.Moth();
+            case DREAMER: return new CityMobsB.Dreamer();
+            case DREAM_CLONE: return new CityMobsB.Clone();
+            case BOOK_GUARD: return new CityMobsB.BookGuard();
+            case STATUE_GUARD: return new CityMobsB.Statue();
+            case CRADLER: return new CityMobsB.Cradler();
+            case FOG_WALKER: return new CityMobsB.FogWalker();
             default: return new RiftBeetles.Beetle();
         }
     }
@@ -122,9 +132,9 @@ final class RiftMobs {
         sb.append("Tags:[\"ewr_h\",\"ewrk_").append(k.id).append("\",\"ewri").append(m.id).append("\"");
         sb.append(",\"ewrh").append(Math.round(m.hx * 2)).append("_").append(Math.round(m.hy * 2)).append("_").append(Math.round(m.hz * 2)).append("\"");
         if (hallTag != null) sb.append(",\"ewd\",\"").append(hallTag).append("\"");
-        sb.append("],NoAI:1b,NoGravity:1b,Silent:1b,PersistenceRequired:1b,CanPickUpLoot:0b,DeathLootTable:\"minecraft:empty\",");
-        sb.append("Attributes:[{Name:\"minecraft:generic.max_health\",Base:").append(k.hp).append("d},{Name:\"minecraft:generic.knockback_resistance\",Base:1d}],Health:").append(k.hp).append("f,");
-        sb.append("ActiveEffects:[{Id:14,Amplifier:0b,Duration:-1,ShowParticles:0b}],CustomName:'{\"translate\":\"explosionwand.mob.").append(k.id).append("\"}',Passengers:[");
+        sb.append("],NoAI:1b,NoGravity:1b,Silent:1b,PersistenceRequired:1b,CanPickUpLoot:0b,DeathLootTable:\"minecraft:empty\",").append(hostExtra(k));
+        sb.append("Attributes:[{Name:\"minecraft:generic.max_health\",Base:").append(k.hp).append("d},{Name:\"minecraft:generic.knockback_resistance\",Base:1d}").append(hostAttrs(k)).append("],Health:").append(k.hp).append("f,");
+        sb.append("ActiveEffects:[{Id:14,Amplifier:0b,Duration:-1,ShowParticles:0b}").append(hostEffects(k)).append("],CustomName:'{\"translate\":\"explosionwand.mob.").append(k.id).append("\"}',Passengers:[");
         for (int i = 0; i < k.parts(); i++) {
             if (i > 0) sb.append(",");
             int l = k.light[i];
@@ -132,6 +142,17 @@ final class RiftMobs {
               .append(",view_range:1f,brightness:{sky:").append(l).append(",block:").append(l).append("},").append(tf[i]).append("}");
         }
         return sb.append("]}").toString();
+    }
+
+    /** Дополнительный NBT хоста: рой Ночной моли — фантом размера 3 (хитбокс 1,4 блока, как облако), Книжный страж — фантом размера 2. */
+    static String hostExtra(Kind k) { return k == Kind.NIGHT_MOTH ? "Size:3," : k == Kind.BOOK_GUARD ? "Size:2," : ""; }
+
+    /** Дополнительные эффекты хоста: фантомы горят на солнце даже при NoAI, а тушит их только step() (не дальше 56 блоков от игрока) - им огнестойкость (Id 12). */
+    static String hostEffects(Kind k) { return k.host.equals("phantom") ? ",{Id:12,Amplifier:0b,Duration:-1,ShowParticles:0b}" : ""; }
+
+    /** Дополнительные атрибуты: у зомби-хостов нет подкрепления (иначе удар по хосту на Сложной звал бы настоящих зомби без тегов зала). */
+    static String hostAttrs(Kind k) {
+        return k.host.equals("zombie") || k.host.equals("husk") ? ",{Name:\"minecraft:zombie.spawn_reinforcements\",Base:0d}" : "";
     }
 
     /** Зарегистрировать хост (свежий или найденный после загрузки мира). */
@@ -210,17 +231,19 @@ final class RiftMobs {
         }
         if (now % 20 == 0) { scan(sl, ps); sweep(sl, ps); }
         NOISES.removeIf(n -> now - n.at > RiftLogic.NOISE_TTL);
-        Iterator<Map.Entry<UUID, Mob>> it = MOBS.entrySet().iterator();
-        while (it.hasNext()) {
-            Mob m = it.next().getValue();
-            if (m.level != sl) continue;
-            if (m.host == null || m.host.m_213877_()) { BY_ID.remove(m.id); it.remove(); continue; }
+        // обход по копии: смерть моба посреди think() (шипы игрока, удар хоста) убирает его из реестра через onDeath
+        for (Map.Entry<UUID, Mob> en : new ArrayList<>(MOBS.entrySet())) {
+            Mob m = en.getValue();
+            if (MOBS.get(en.getKey()) != m || m.level != sl) continue;
+            if (m.host == null || m.host.m_213877_()) { BY_ID.remove(m.id); MOBS.remove(en.getKey()); continue; }
             if (m.host.m_21224_() || m.host.m_21223_() <= 0) continue;   // умирает: уберёт onDeath
             if (!m.near(ps)) continue;
             try { m.step(ps); }
             catch (RuntimeException e) { if (!warned) { warned = true; e.printStackTrace(); } }   // сбой одного моба не обрывает остальных
         }
+        CityMobsB.flush();   // копии Сновидца и прочее отложенное: после обхода реестра
         RiftBeetles.tick(sl, data, ps, now);
+        CityMobsB.tickWorld(sl, data, ps, now);
     }
 
     static boolean warned = false;

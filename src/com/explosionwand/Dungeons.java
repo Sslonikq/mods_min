@@ -658,26 +658,31 @@ final class Dungeons {
      * Фиксирует место данжа: первая из 8 точек клетки, где центр не в воде; высота земли запоминается навсегда.
      * Наземный данж (Def.flat > 0) берёт самую ровную из сухих точек (перепад высот по 9 точкам рамки не больше flat, иначе минимальный)
      * и пропускает клетку, если перепад больше maxVar.
+     * Запасные точки берутся от основной (site с a = 0); незагруженные и налезающие на обходимый данж (clashes) пропускаются,
+     * а клетка при пропуске по незагрузке без годной точки не становится dead, а ждёт игрока.
      */
     private static void register(ServerLevel sl, DungeonData data, Def d, int cx, int cz, long seed) {
         int[] best = null; int bestVar = Integer.MAX_VALUE;
+        boolean skipped = false;   // хоть одна точка не оценена из-за незагруженного чанка
         for (int a = 0; a < 8; a++) {
             int[] s = site(seed, d, cx, cz, a);
             if (d.avoid != null && clashes(seed, d, s)) continue;   // налезает на обходимый данж
             if (d.flat > 0 && !sl.m_46805_(new BlockPos(s[0], 64, s[1]))) {   // незагруженный чанк не генерируем синхронно
                 if (a == 0) return;   // основная точка: клетка подождёт следующего прохода
-                continue;             // запасная: пропустить, клетка не должна зависнуть
+                skipped = true; continue;   // запасная: пропустить, клетка не должна зависнуть
             }
             sl.m_6325_(s[0] >> 4, s[1] >> 4);
             int y = groundY(sl, s[0], s[1]);
             if (wet(sl, s[0], y - 1, s[1])) continue;
             int var = d.flat > 0 ? variation(sl, d, s[0], s[1]) : 0;
-            if (var == UNLOADED) { if (a == 0) return; continue; }
+            if (var == UNLOADED) { if (a == 0) return; skipped = true; continue; }
             if (var == SETTLED) continue;   // обжитое место (постройки игрока): эта точка не годится
             if (best == null || var < bestVar) { best = new int[]{s[0], y, s[1]}; bestVar = var; }
             if (var <= d.flat) break;
         }
-        if (best == null || bestVar > d.maxVar) {   // океан или слишком неровно: в этой клетке данжа не будет
+        if (!keepCell(best, bestVar, d.maxVar)) {
+            if (skipped) return;   // не все точки оценены: клетка подождёт игрока, dead не ставим
+            // океан или слишком неровно: в этой клетке данжа не будет
             data.dead.put(d.key(cx, cz), 1);
             data.m_77762_();
             return;
@@ -687,6 +692,9 @@ final class Dungeons {
         data.recs.put(d.key(cx, cz), rec);
         data.m_77762_();
     }
+
+    /** Годна ли лучшая из оценённых точек (есть и перепад не больше maxVar). Иначе клетка dead, если оценены все 8 точек. */
+    static boolean keepCell(int[] best, int bestVar, int maxVar) { return best != null && bestVar <= maxVar; }
 
     /** Результаты variation: чанк не загружен (отложить), место обжито (пропустить точку). */
     static final int UNLOADED = -1, SETTLED = -2;
@@ -765,7 +773,7 @@ final class Dungeons {
         boolean peaceful = sl.m_46791_() == Difficulty.valueOf("PEACEFUL");
         if (peaceful && !in.isEmpty() && tk % 200 == 0) for (ServerPlayer p : in) p.m_5661_(Component.m_237115_("explosionwand.dungeon.peaceful"), true);
         for (Hall h : d.halls()) {
-            int bit = 1 << h.id;
+            long bit = 1L << h.id;
             boolean spawned = (rec.hallsSpawned & bit) != 0, cleared = (rec.hallsCleared & bit) != 0;
             if (cleared) continue;
             String tag = tagOf(rec, h.id);
@@ -875,7 +883,7 @@ final class Dungeons {
 
     /** Босс логова побеждён: зал засчитывается (хранится в Rec.hallsCleared, переживает перезапуск) и ставится сундук. */
     static void lairWon(ServerLevel sl, DungeonData data, DungeonData.Rec rec, Hall h, List<ServerPlayer> in) {
-        rec.hallsCleared |= 1 << h.id; data.m_77762_();
+        rec.hallsCleared |= 1L << h.id; data.m_77762_();
         onCleared(sl, rec, h, in);
     }
 
@@ -908,10 +916,6 @@ final class Dungeons {
             double x = rec.x + m.x + 0.5, y = rec.y + m.y, z = rec.z + m.z + 0.5;
             if (m.a.startsWith(RiftMobs.PFX)) {   // моб Разлома: облик из block_display, свои тики (RiftMobs)
                 RiftMobs.spawn(sl, m.a, x, y, z, tag);
-                continue;
-            }
-            if (m.a.startsWith(City.STUB)) {   // заглушка моба Города Спящих (настоящие мобы — фаза 4.6)
-                City.spawnStub(sl, m.a, x, y, z, tag);
                 continue;
             }
             String gear = m.a.equals("skeleton") ? ",HandItems:[{id:\"minecraft:bow\",Count:1b},{}]" : "";

@@ -179,7 +179,7 @@ public class Boss {
             if (d == null || rec.partsDone != d.allParts() || BOSSES.containsKey(rec.key)) continue;
             for (Dungeons.Hall h : d.halls()) {
                 if (h.boss == null) continue;
-                int bit = 1 << h.id;
+                long bit = 1L << h.id;
                 boolean spawned = (rec.hallsSpawned & bit) != 0, cleared = (rec.hallsCleared & bit) != 0;
                 if (SWEPT.add(rec.key)) Cmd.run(sl, rec.x, rec.y, rec.z, "bossbar remove " + barOf(rec));   // полоска после перезапуска
                 if (!Dungeons.hallOccupied(rec, h, ps, 60) || !Dungeons.entitiesLoaded(sl, rec, h)) continue;
@@ -254,7 +254,7 @@ public class Boss {
     // ================= Тик =================
     boolean tick() {
         t++;
-        int bit = 1 << hall.id;
+        long bit = 1L << hall.id;
         if ((rec.hallsSpawned & bit) == 0 || (rec.hallsCleared & bit) != 0) { cleanup(); return true; }   // зал сброшен или засчитан без нас
         if (stage == -1) {
             if (t == 1) { purge(); clearPylons(); }

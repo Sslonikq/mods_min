@@ -281,8 +281,6 @@ public class DungeonTest {
     }
 
     // ================================================================ Город Спящих (4.5)
-    static final Set<String> STUBS = Set.of("stub:sleeper", "stub:stitch", "stub:dreamer", "stub:bookguard", "stub:statue");
-
         /** Зал достижим: хотя бы одна точка моба или клетка сундука достижима точно (в городе стены тонкие: «рядом» не годится). */
     static boolean hallExact(Dungeons.Def d, Set<Long> r, int hall) {
         Dungeons.Hall h = d.hall(hall);
@@ -326,7 +324,7 @@ public class DungeonTest {
             check(ids.add(h.id) && h.id >= 1 && h.id <= 30, "номер зала " + h.id);
             spawns += h.spawns.size();
             check(h.boss == null, "босса в городе пока нет (4.7): зал " + h.id);
-            for (Mark m : h.spawns) check(STUBS.contains(m.a), "заглушка моба известна: " + m.a);
+            for (Mark m : h.spawns) check(RiftMobs.kindOfMark(m.a) != null, "моб Города известен (настоящий, не заглушка): " + m.a);
             if (h.chest != null) {
                 chests++;
                 String[] sp = Dungeons.chestSpec(h.chest.a);
@@ -655,8 +653,8 @@ public class DungeonTest {
             double ex = hall.x + hall.sx + 10, ey = hall.y + 1, ez = hall.z + hall.sz / 2.0;
             check(!hall.contains(ex, ey, ez) && hall.containsPad(ex, ey, ez, Dungeons.ALIVE_PAD) && !hall.containsPad(ex + Dungeons.ALIVE_PAD, ey, ez, Dungeons.ALIVE_PAD),
                     "зал " + hid + ": запас ALIVE_PAD для сброса, коробка без запаса для печати");
-            int bit = 1 << hid;
-            int spawned = 0, cleared = 0;
+            long bit = 1L << hid;
+            long spawned = 0, cleared = 0;
             long lastHall = 0, now = 1000;
             // игрок вошёл: зал разбужен, дверь за ним закрыта
             spawned |= bit; lastHall = now;
@@ -806,8 +804,10 @@ public class DungeonTest {
         check(mt.halls().size() == 1 && lair.id == 7 && lair.spawns.size() == 4 && lair.chest != null, "логово: зал 7, 4 моба, сундук");
         check(seal.z + seal.sz <= lair.z && !lair.contains(seal.x, seal.y, seal.z), "дверь стоит перед залом, а не в нём");
         for (int x = 0; x < seal.sx; x++) for (int y = 0; y < seal.sy; y++) check(!mSolid(seal.x + x, seal.y + y, seal.z), "проём двери открыт в шаблоне");
-        check(!DungeonMech.sealWanted(0, 0, 7, true) && DungeonMech.sealWanted(1 << 7, 0, 7, true) && !DungeonMech.sealWanted(1 << 7, 1 << 7, 7, true) && !DungeonMech.sealWanted(1 << 6, 0, 7, true), "дверь закрыта только пока зал разбужен и не зачищен");
-        check(!DungeonMech.sealWanted(1 << 7, 0, 7, false), "в зале никого — дверь открыта");
+        check(!DungeonMech.sealWanted(0, 0, 7, true) && DungeonMech.sealWanted(1L << 7, 0, 7, true) && !DungeonMech.sealWanted(1L << 7, 1L << 7, 7, true) && !DungeonMech.sealWanted(1L << 6, 0, 7, true) && DungeonMech.sealWanted(1L << 40, 0, 40, true) && !DungeonMech.sealWanted(1L << 40, 1L << 40, 40, true), "дверь закрыта только пока зал разбужен и не зачищен");
+        check(!DungeonMech.sealWanted(1L << 7, 0, 7, false), "в зале никого — дверь открыта");
+        check(!Dungeons.keepCell(null, Integer.MAX_VALUE, 12) && !Dungeons.keepCell(new int[]{0, 0, 0}, 13, 12) && Dungeons.keepCell(new int[]{0, 0, 0}, 12, 12),
+                "клетка годна, только если есть точка с перепадом не больше maxVar (иначе dead при полной оценке, ожидание при пропуске)");
         check(Integer.parseInt(seal.a.split(",")[0]) == lair.id, "печать относится к залу 7");
     }
 }

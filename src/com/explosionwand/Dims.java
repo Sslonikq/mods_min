@@ -84,9 +84,10 @@ final class Dims {
         ServerLevel dest = get(sl, Level.f_46428_);
         if (dest == null) return;
         for (net.minecraft.server.level.ServerPlayer p : new ArrayList<>(sl.m_6907_())) {
-            BlockPos sp = (Level.f_46428_.equals(p.m_8963_()) && p.m_8961_() != null) ? p.m_8961_() : dest.m_220360_();
+            BlockPos bed = Level.f_46428_.equals(p.m_8963_()) ? p.m_8961_() : null;
+            BlockPos sp = bed != null ? bed : dest.m_220360_();
             int x = sp.m_123341_(), z = sp.m_123343_();
-            int y = safeY(dest, x, z);
+            int y = bed != null ? nearY(dest, x, bed.m_123342_(), z) : safeY(dest, x, z);
             teleport(p, dest, x + 0.5D, y, z + 0.5D);
         }
     }
@@ -101,6 +102,16 @@ final class Dims {
             if (f.age == 1 || f.age == 5 || f.age == 15 || f.age == 40) unstick(f);
             if (f.age >= 40 || !f.e.m_6084_()) it.remove();
         }
+    }
+
+    /** Высота рядом с точкой возрождения (кроватью) sy: сама точка или ближайший свободный проём в 3 блоках выше; иначе поверхность (safeY). */
+    static int nearY(ServerLevel l, int x, int sy, int z) {
+        l.m_6325_(x >> 4, z >> 4);
+        for (int dy = 0; dy <= 3; dy++) {
+            int yy = sy + dy;
+            if (yy > l.m_141937_() + 1 && air(l, x, yy, z) && air(l, x, yy + 1, z) && !air(l, x, yy - 1, z)) return yy;
+        }
+        return safeY(l, x, z);
     }
 
     /** Высота поверхности: сначала гарантированно грузим участок мира, потом ищем место, где можно стоять. */

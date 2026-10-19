@@ -48,16 +48,6 @@ public class CityTest {
             }
         }
 
-        // ---- мобы-заглушки: ванильные хосты с именами, неизвестный вид — лунатик
-        Set<String> hosts = Set.of("husk", "vex", "skeleton");
-        for (String id : List.of("stub:sleeper", "stub:stitch", "stub:dreamer", "stub:bookguard", "stub:statue", "stub:unknown")) {
-            String[] s = City.stub(id);
-            check(hosts.contains(s[0]) && s[1].contains("CustomName"), "заглушка " + id + ": " + s[0]);
-            check(!s[1].contains("\n") && count(s[1], "[") == count(s[1], "]") && count(s[1], "{") == count(s[1], "}"), "скобки NBT заглушки " + id);
-        }
-        check(City.stub("stub:stitch")[0].equals("husk") && City.stub("stub:dreamer")[0].equals("vex") && City.stub("stub:statue")[0].equals("skeleton"), "хосты заглушек");
-        check(City.STUB.equals("stub:") && "stub:sleeper".startsWith(City.STUB), "префикс заглушек");
-
         // ---- особая добыча и книги
         check(City.extra(21).equals(List.of("explosionwand:temple_seal")) && City.extra(19).size() == 1 && City.extra(25).size() == 1 && City.extra(1).isEmpty() && City.extra(20).isEmpty(),
                 "Печать Храма в склепе (21), книги в библиотеке (19) и ложе Архимага (25), больше ничего");
@@ -70,13 +60,13 @@ public class CityTest {
             check(book.length() < 1800, "книга помещается в команду: " + book.length());
         }
 
-        // ---- каждая метка spawn из шаблонов города — известная заглушка
+        // ---- каждая метка spawn из шаблонов города — настоящий моб (заглушек stub:<вид> больше нет)
         try {
             for (Dungeons.Hall h : Dungeons.SLEEP.halls())
-                for (DungeonTemplate.Mark m : h.spawns) check(m.a.startsWith(City.STUB) && !City.stub(m.a)[1].isEmpty(), "метка города: " + m.a);
+                for (DungeonTemplate.Mark m : h.spawns) check(!m.a.startsWith("stub:") && RiftMobs.kindOfMark(m.a) != null, "метка города: " + m.a);
         } catch (IllegalStateException e) { check(false, "шаблоны города: " + e.getMessage()); }
 
         if (fails > 0) { System.out.println(fails + " проверок не прошли"); System.exit(1); }
-        System.out.println("city ok: туман (стояние 3 с / 6 с, зона), заглушки мобов, добыча и книги");
+        System.out.println("city ok: туман (стояние 3 с / 6 с, зона), добыча и книги, метки мобов");
     }
 }

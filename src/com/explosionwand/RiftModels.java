@@ -40,7 +40,47 @@ final class RiftModels {
                 new int[]{3, 3, 4, 15, 4, 15, 4, 4, 4, 9, 15, 13, 13, 13}),
         BEETLE("crystal_beetle", "rabbit", 4, 1.0,
                 new String[]{Disp.block("amethyst_block"), Disp.block("black_concrete"), Disp.block("sea_lantern"), Disp.block("black_concrete"), Disp.block("black_concrete")},
-                new int[]{13, 4, 15, 4, 4});
+                new int[]{13, 4, 15, 4, 4}),
+        // ---- Город Спящих (4.6): бирюзовый и чёрный, облик в CityModels
+        LUNATIC("lunatic", "husk", 14, 1.0,
+                new String[]{Disp.block("cyan_terracotta"), Disp.block("cyan_terracotta"), Disp.block("white_concrete"), Disp.block("black_concrete"), Disp.block("sea_lantern"),
+                        Disp.block("white_concrete"), Disp.block("white_concrete"), Disp.block("sea_lantern"), Disp.block("sea_lantern"), Disp.block("sea_lantern")},
+                new int[]{4, 4, 8, 0, 15, 8, 8, 15, 15, 15}),
+        DROWSY("drowsy", "vex", 12, 1.0,
+                new String[]{Disp.block("black_concrete"), Disp.block("black_concrete"), Disp.block("sea_lantern"), Disp.block("cyan_stained_glass"), Disp.block("cyan_stained_glass"),
+                        Disp.block("cyan_concrete"), Disp.block("sea_lantern")},
+                new int[]{3, 3, 15, 13, 13, 9, 15}),
+        STITCH_GUARD("stitch_guard", "husk", 30, 1.0,
+                new String[]{Disp.block("cyan_concrete"), Disp.block("cyan_concrete"), Disp.block("cyan_concrete"), Disp.block("prismarine_bricks"), Disp.block("sea_lantern"),
+                        Disp.block("prismarine_bricks"), Disp.block("prismarine_bricks"), Disp.block("cyan_concrete"), Disp.block("iron_block"),
+                        Disp.block("dark_prismarine"), Disp.block("sea_lantern"), Disp.block("cyan_concrete")},
+                new int[]{6, 6, 8, 9, 15, 9, 9, 8, 10, 5, 15, 8}),
+        NIGHT_MOTH("night_moth", "phantom", 10, 1.0,
+                new String[]{Disp.block("cyan_concrete"), Disp.block("smooth_sandstone"), Disp.block("smooth_sandstone"),
+                        Disp.block("cyan_concrete"), Disp.block("smooth_sandstone"), Disp.block("smooth_sandstone"),
+                        Disp.block("cyan_concrete"), Disp.block("smooth_sandstone"), Disp.block("smooth_sandstone"),
+                        Disp.block("cyan_concrete"), Disp.block("smooth_sandstone"), Disp.block("smooth_sandstone"),
+                        Disp.block("cyan_concrete"), Disp.block("smooth_sandstone"), Disp.block("smooth_sandstone")},
+                new int[]{15, 9, 9, 15, 9, 9, 15, 9, 9, 15, 9, 9, 15, 9, 9}),
+        // ---- Город Спящих, часть B: Сновидец с копиями, Книжный страж, Статуя-страж, Колыбельщик, Туманный странник (облик в CityModels)
+        DREAMER("dreamer", "evoker", 36, 1.0,
+                new String[]{Disp.block("black_concrete"), Disp.block("black_concrete"), Disp.block("black_concrete"), Disp.block("sea_lantern"), Disp.block("cyan_stained_glass"), Disp.block("black_concrete"), Disp.block("black_concrete"), Disp.block("sea_lantern"), Disp.block("sea_lantern"), Disp.block("sea_lantern"), Disp.block("cyan_concrete"), Disp.block("cyan_stained_glass")},
+                new int[]{3, 3, 3, 15, 12, 3, 3, 15, 15, 15, 8, 12}),
+        DREAM_CLONE("dream_clone", "evoker", 1, 1.0,
+                new String[]{Disp.block("black_stained_glass"), Disp.block("black_stained_glass"), Disp.block("black_stained_glass"), Disp.block("cyan_stained_glass"), Disp.block("cyan_stained_glass"), Disp.block("black_stained_glass"), Disp.block("black_stained_glass"), Disp.block("cyan_stained_glass"), Disp.block("cyan_stained_glass"), Disp.block("cyan_stained_glass"), Disp.block("cyan_stained_glass"), Disp.block("cyan_stained_glass")},
+                new int[]{2, 2, 2, 10, 8, 2, 2, 10, 10, 10, 6, 8}),
+        BOOK_GUARD("book_guard", "phantom", 14, 1.0,
+                new String[]{Disp.block("smooth_sandstone"), Disp.block("smooth_sandstone"), Disp.block("dark_oak_planks"), Disp.block("sea_lantern"), Disp.block("smooth_sandstone"), Disp.block("smooth_sandstone"), Disp.block("dark_oak_planks"), Disp.block("sea_lantern"), Disp.block("smooth_sandstone"), Disp.block("smooth_sandstone"), Disp.block("dark_oak_planks"), Disp.block("sea_lantern"), Disp.block("smooth_sandstone"), Disp.block("smooth_sandstone"), Disp.block("smooth_sandstone")},
+                new int[]{8, 8, 3, 15, 8, 8, 3, 15, 8, 8, 3, 15, 9, 9, 9}),
+        STATUE_GUARD("statue_guard", "husk", 34, 1.0,
+                new String[]{Disp.block("polished_deepslate"), Disp.block("cyan_terracotta"), Disp.block("light_gray_concrete"), Disp.block("sea_lantern"), Disp.block("gray_stained_glass"), Disp.block("gray_stained_glass"), Disp.block("cyan_terracotta"), Disp.block("cyan_terracotta"), Disp.block("sea_lantern"), Disp.block("cyan_stained_glass")},
+                new int[]{4, 4, 4, 15, 6, 6, 4, 4, 15, 10}),
+        CRADLER("cradler", "iron_golem", 140, 1.0,
+                new String[]{Disp.block("black_concrete"), Disp.block("black_concrete"), Disp.block("black_concrete"), Disp.block("black_concrete"), Disp.block("sea_lantern"), Disp.block("black_concrete"), Disp.block("deepslate"), Disp.block("black_concrete"), Disp.block("gray_concrete"), Disp.block("sea_lantern"), Disp.block("dark_prismarine"), Disp.block("dark_prismarine"), Disp.block("cyan_stained_glass"), Disp.block("black_concrete"), Disp.block("cyan_stained_glass"), Disp.block("cyan_stained_glass"), Disp.block("cyan_stained_glass"), Disp.block("cyan_stained_glass"), Disp.block("cyan_stained_glass"), Disp.block("cyan_stained_glass")},
+                new int[]{1, 1, 1, 1, 15, 1, 2, 1, 2, 15, 4, 4, 12, 1, 13, 13, 13, 13, 13, 13}),
+        FOG_WALKER("fog_walker", "husk", 14, 1.0,
+                new String[]{Disp.block("gray_concrete"), Disp.block("light_gray_concrete"), Disp.block("sea_lantern"), Disp.block("sea_lantern"), Disp.block("gray_concrete"), Disp.block("gray_concrete"), Disp.block("iron_block"), Disp.block("white_stained_glass"), Disp.block("white_stained_glass"), Disp.block("white_stained_glass"), Disp.block("white_stained_glass"), Disp.block("gray_concrete"), Disp.block("gray_concrete")},
+                new int[]{2, 3, 15, 15, 2, 2, 5, 8, 8, 8, 8, 2, 2});
 
         final String id, host, hostId; final int hp; final double sc; final String[] blocks; final int[] light;
         Kind(String id, String host, int hp, double sc, String[] blocks, int[] light) {
@@ -52,34 +92,34 @@ final class RiftModels {
 
     /** Параметры позы; не нужные модели поля остаются нулями. */
     static final class Pose {
-        double t, ph, atk, strike, e = 1, crack, charge, jaw, ears, lift, open, aim, stun, cocoon;
+        double t, ph, atk, strike, e = 1, crack, charge, jaw, ears, lift, open, aim, stun, cocoon, wake;
         double[] cr = {1, 1, 1};
         double sc = 1;
     }
 
     static final int W = 10;   // cx, cy, cz, sx, sy, sz, qx, qy, qz, qw
 
-    private static void put(double[][] o, int i, double cx, double cy, double cz, double sx, double sy, double sz, double[] q) {
+    static void put(double[][] o, int i, double cx, double cy, double cz, double sx, double sy, double sz, double[] q) {
         double[] r = o[i];
         r[0] = cx; r[1] = cy; r[2] = cz; r[3] = sx; r[4] = sy; r[5] = sz; r[6] = q[0]; r[7] = q[1]; r[8] = q[2]; r[9] = q[3];
     }
 
     /** Конечность, подвешенная за плечо (sx,sy,sz): длина len вниз, поворот q вокруг плеча. */
-    private static void limb(double[][] o, int i, double sx, double sy, double sz, double len, double th, double[] q) {
+    static void limb(double[][] o, int i, double sx, double sy, double sz, double len, double th, double[] q) {
         double[] c = Disp.rot(q, 0, -len / 2, 0);
         put(o, i, sx + c[0], sy + c[1], sz + c[2], th, len, th, q);
     }
 
     /** Клинок, растущий вверх от основания (bx,by,bz). */
-    private static void blade(double[][] o, int i, double bx, double by, double bz, double h, double w, double[] q) {
+    static void blade(double[][] o, int i, double bx, double by, double bz, double h, double w, double[] q) {
         double[] c = Disp.rot(q, 0, h / 2, 0);
         put(o, i, bx + c[0], by + c[1], bz + c[2], w, h, w, q);
     }
 
-    private static double[] qx(double a) { return Disp.q(1, 0, 0, a); }
-    private static double[] qy(double a) { return Disp.q(0, 1, 0, a); }
-    private static double[] qz(double a) { return Disp.q(0, 0, 1, a); }
-    private static double[] mul(double[]... qs) { double[] r = Disp.ID; for (double[] q : qs) r = Disp.mul(r, q); return r; }
+    static double[] qx(double a) { return Disp.q(1, 0, 0, a); }
+    static double[] qy(double a) { return Disp.q(0, 1, 0, a); }
+    static double[] qz(double a) { return Disp.q(0, 0, 1, a); }
+    static double[] mul(double[]... qs) { double[] r = Disp.ID; for (double[] q : qs) r = Disp.mul(r, q); return r; }
 
     static double[][] pose(Kind k, Pose p) {
         double[][] o = new double[k.parts()][W];
@@ -91,6 +131,7 @@ final class RiftModels {
             case EATER -> eater(o, p);
             case GOLEM -> golem(o, p);
             case BEETLE -> beetle(o, p);
+            case LUNATIC, DROWSY, STITCH_GUARD, NIGHT_MOTH, DREAMER, DREAM_CLONE, BOOK_GUARD, STATUE_GUARD, CRADLER, FOG_WALKER -> CityModels.pose(k, o, p);
         }
         if (p.sc != 1) for (double[] r : o) for (int j = 0; j < 6; j++) r[j] *= p.sc;
         return o;
