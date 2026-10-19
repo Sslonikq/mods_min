@@ -45,8 +45,21 @@
   "explosionwand.dungeon.brazier_lit": "Жаровня зажжена: вы возродитесь здесь",
   "explosionwand.dungeon.brazier_same": "Это ваша последняя жаровня",
   "explosionwand.dungeon.respawned": "Вы возродились у жаровни",
-  "explosionwand.dungeon.cleared": "Зал зачищен: в логове появился сундук",
+  "explosionwand.dungeon.cleared": "Зал пройден: появился сундук с наградой",
   "explosionwand.dungeon.peaceful": "В мирном режиме данж спит",
   "explosionwand.dungeon.no_teleport": "Стены данжа не пускают: телепорт не работает",
-  "explosionwand.dungeon.no_wand": "В данже эта палочка молчит"
+  "explosionwand.dungeon.no_wand": "В данже эта палочка молчит",
+  "explosionwand.dungeon.solved": "Механизм щёлкнул: где-то открылся проход",
+  "explosionwand.dungeon.lever": "Рычаг опущен: в стене что-то сдвинулось",
+  "explosionwand.dungeon.seal_shut": "Дверь закрылась. Пока логово не затихнет, пути назад нет",
+  "explosionwand.dungeon.seal_open": "Дверь логова открылась",
+  "explosionwand.mob.shardling": "Осколочник",
+  "explosionwand.mob.shardling_mini": "Осколочек",
+  "explosionwand.mob.crystal_archer": "Кристальный лучник",
+  "explosionwand.mob.rift_shade": "Тень Разлома",
+  "explosionwand.mob.prism": "Призма",
+  "explosionwand.mob.echo_eater": "Пожиратель эха",
+  "explosionwand.mob.amethyst_golem": "Аметистовый голем",
+  "explosionwand.mob.crystal_beetle": "Кристальный жук",
+  "explosionwand.mob.golem_open": "Голем раскрыт — бей!"
 }

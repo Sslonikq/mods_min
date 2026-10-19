@@ -45,8 +45,21 @@
   "explosionwand.dungeon.brazier_lit": "Brazier lit: you will respawn here",
   "explosionwand.dungeon.brazier_same": "This is your last brazier",
   "explosionwand.dungeon.respawned": "You respawned at the brazier",
-  "explosionwand.dungeon.cleared": "Hall cleared: a chest appeared in the lair",
+  "explosionwand.dungeon.cleared": "Hall complete: a reward chest appeared",
   "explosionwand.dungeon.peaceful": "The dungeon sleeps in peaceful mode",
   "explosionwand.dungeon.no_teleport": "The dungeon walls refuse you: teleportation does not work",
-  "explosionwand.dungeon.no_wand": "This wand is silent inside a dungeon"
+  "explosionwand.dungeon.no_wand": "This wand is silent inside a dungeon",
+  "explosionwand.dungeon.solved": "The mechanism clicks: a passage has opened somewhere",
+  "explosionwand.dungeon.lever": "The lever is pulled: something shifts in the wall",
+  "explosionwand.dungeon.seal_shut": "The door slams shut. There is no way back until the lair falls silent",
+  "explosionwand.dungeon.seal_open": "The lair door opens",
+  "explosionwand.mob.shardling": "Shardling",
+  "explosionwand.mob.shardling_mini": "Shardlet",
+  "explosionwand.mob.crystal_archer": "Crystal Archer",
+  "explosionwand.mob.rift_shade": "Rift Shade",
+  "explosionwand.mob.prism": "Prism",
+  "explosionwand.mob.echo_eater": "Echo Eater",
+  "explosionwand.mob.amethyst_golem": "Amethyst Golem",
+  "explosionwand.mob.crystal_beetle": "Crystal Beetle",
+  "explosionwand.mob.golem_open": "The golem is exposed - strike!"
 }
