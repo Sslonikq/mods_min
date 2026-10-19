@@ -2,9 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "pattern": [
-    "EDE",
-    "AAA",
-    "A A"
+    "E E",
+    "ADA",
+    "AAA"
   ],
   "key": {
     "A": {
