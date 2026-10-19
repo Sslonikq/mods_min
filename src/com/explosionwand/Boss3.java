@@ -603,7 +603,6 @@ public class Boss3 {
             for (int i = 0; i < 220; i++) { double[] u = Fx.unit(); Fx.send(level, i % 2 == 0 ? WHITE : TEAL_P, bx, c, bz, 0, u[0], u[1], u[2], 1.6); }
             Fx.sound(level, bx, c, bz, "entity.generic.explode", 30.0F, 0.6F);
             Fx.sound(level, bx, c, bz, "ui.toast.challenge_complete", 20.0F, 1.0F);
-            Loot.pillar(level, 0, FLOOR, 5);
             Loot.chest(level, 0, FLOOR, 5, "Добыча Монолита Сна", List.of(
                     "explosionwand:dream_staff", "explosionwand:dreaming_eye", "2 minecraft:nether_star", "minecraft:netherite_block",
                     "4 minecraft:enchanted_golden_apple", "16 minecraft:diamond", "8 minecraft:echo_shard", "6 minecraft:experience_bottle"));

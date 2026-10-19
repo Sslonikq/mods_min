@@ -576,7 +576,6 @@ public class Boss4 {
             for (int i = 0; i < 250; i++) { double[] u = Fx.unit(); Fx.send(level, i % 2 == 0 ? WHITE : SKY, wx, wy, wz, 0, u[0], u[1], u[2], 1.6); }
             Fx.sound(level, wx, wy, wz, "entity.generic.explode", 30.0F, 0.6F);
             Fx.sound(level, wx, wy, wz, "ui.toast.challenge_complete", 20.0F, 1.0F);
-            Loot.pillar(level, 0, FLOOR, 5);
             Loot.chest(level, 0, FLOOR, 5, "Добыча Небесного Кита", List.of(
                     "explosionwand:whale_staff", "3 minecraft:nether_star", "2 minecraft:netherite_block", "2 minecraft:heart_of_the_sea",
                     "minecraft:trident", "minecraft:elytra", "6 minecraft:enchanted_golden_apple", "24 minecraft:diamond", "16 minecraft:prismarine_crystals"));

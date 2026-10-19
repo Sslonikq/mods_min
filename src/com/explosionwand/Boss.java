@@ -522,7 +522,6 @@ public class Boss {
             Fx.send(level, Fx.particle("reverse_portal"), bx, c, bz, 400, 1, 1, 1, 3.0);
             Fx.sound(level, bx, c, bz, "entity.generic.explode", 20.0F, 0.6F);
             Fx.sound(level, bx, c, bz, "ui.toast.challenge_complete", 10.0F, 1.0F);
-            Loot.pillar(level, 0, FLOOR, 5);
             Loot.chest(level, 0, FLOOR, 5, "Добыча Сердца Разлома", List.of(
                     "explosionwand:rift_core", "8 minecraft:diamond", "minecraft:netherite_ingot", "32 minecraft:amethyst_shard"));
             String at = Cmd.f(AX) + " " + (FLOOR + 1) + " " + Cmd.f(AZ + 3);

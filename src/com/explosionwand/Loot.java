@@ -2,6 +2,7 @@ package com.explosionwand;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Container;
 
 import java.util.List;
 
@@ -9,10 +10,12 @@ import java.util.List;
 final class Loot {
     /** items: массив строк вида "4 minecraft:diamond" или "minecraft:netherite_ingot". */
     static void chest(ServerLevel level, int x, int y, int z, String name, List<String> items) {
-        // старый (несобранный) сундук не затираем: новый ставим в ближайшую свободную клетку рядом по X
+        // старый (несобранный) сундук не затираем: новый ставим в ближайшую свободную клетку рядом по X;
+        // пустой (уже обчищенный) сундук считается свободной клеткой и перезаписывается
         for (int dx : new int[]{0, 1, -1, 2, -2, 3, -3}) {
-            if (!isChest(level, new BlockPos(x + dx, y, z))) { x += dx; break; }
+            if (!isFilledChest(level, new BlockPos(x + dx, y, z))) { x += dx; break; }
         }
+        pillar(level, x, y, z);
         Cmd.run(level, x, y, z, "setblock " + x + " " + y + " " + z + " minecraft:air");
         Cmd.run(level, x, y, z, "setblock " + x + " " + y + " " + z
                 + " minecraft:chest{CustomName:'{\"text\":\"" + name + "\",\"color\":\"gold\",\"bold\":true}'}");
@@ -33,6 +36,13 @@ final class Loot {
     /** Клетка занята сундуком (добыча): перестройка арены не должна её затирать. */
     static boolean isChest(ServerLevel level, BlockPos pos) {
         return level.m_8055_(pos).m_60734_() == Fx.state("chest").m_60734_();
+    }
+
+    /** Сундук, в котором ещё лежит добыча (пустой — не считается). */
+    static boolean isFilledChest(ServerLevel level, BlockPos pos) {
+        if (!isChest(level, pos)) return false;
+        Object be = level.m_7702_(pos);
+        return !(be instanceof Container c) || !c.m_7983_();
     }
 
     static void pillar(ServerLevel level, int x, int y, int z) {

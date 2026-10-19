@@ -596,7 +596,6 @@ public class Boss2 {
             for (int i = 0; i < 200; i++) { double[] u = Fx.unit(); Fx.send(level, Fx.particle("end_rod"), bx, c, bz, 0, u[0], u[1], u[2], 1.5); }
             Fx.sound(level, bx, c, bz, "entity.generic.explode", 30.0F, 0.5F);
             Fx.sound(level, bx, c, bz, "ui.toast.challenge_complete", 15.0F, 1.0F);
-            Loot.pillar(level, 0, FLOOR, 5);
             Loot.chest(level, 0, FLOOR, 5, "Добыча Короля Затмения", List.of(
                     "explosionwand:eclipse_heart", "minecraft:nether_star", "16 minecraft:diamond", "3 minecraft:netherite_ingot",
                     "2 minecraft:enchanted_golden_apple"));
