@@ -132,7 +132,8 @@ def tests():
     tests = sorted((ROOT / "tests").glob("*.java"))
     if not tests: print("[4] тестов нет"); return
     out_dir = BUILD / "tests"
-    cp = os.pathsep.join([str(BUILD / "classes"), str(BUILD / "stubout")])
+    # resources/ в classpath тестов: туда же попадают шаблоны, которых нет в jar (JAR_EXCLUDE)
+    cp = os.pathsep.join([str(BUILD / "classes"), str(BUILD / "stubout"), str(ROOT / "resources")])
     javac(out_dir, tests, cp)
     for t in tests:
         pkg = re.search(r"^package\s+([\w.]+);", t.read_text(encoding="utf-8"), re.M)
@@ -142,6 +143,10 @@ def tests():
         if code != 0: sys.exit(1)
         last = [l for l in out.splitlines() if l.strip()]
         if last: print("    " + last[-1])
+
+
+# тестовый стенд механик (93 КБ) нужен только тестам, в игре его никто не грузит
+JAR_EXCLUDE = {"data/explosionwand/structures/mech_test.nbt"}
 
 
 def package():
@@ -154,7 +159,8 @@ def package():
         z.writestr("META-INF/MANIFEST.MF", manifest)
         for f in sorted((BUILD / "classes").rglob("*.class")): z.write(f, f.relative_to(BUILD / "classes").as_posix())
         for f in sorted((ROOT / "resources").rglob("*")):
-            if f.is_file(): z.write(f, f.relative_to(ROOT / "resources").as_posix())
+            rel = f.relative_to(ROOT / "resources").as_posix()
+            if f.is_file() and rel not in JAR_EXCLUDE: z.write(f, rel)
     print(f"[5] jar: {jar.relative_to(ROOT)} ({jar.stat().st_size // 1024} КБ)")
     return jar
 

@@ -3,7 +3,9 @@
 import json, re, sys
 from pathlib import Path
 
-CHECKS = [('sound_event', r'Fx\.sound\([^;]*?"([a-z0-9_.]+)"'), ('particle_type', r'Fx\.particle\("([a-z0-9_]+)"\)'),
+CHECKS = [('sound_event', r'Fx\.sound\([^;]*?"([a-z0-9_.]+)"'), ('sound_event', r'(?<![\w.])sound\(\s*"([a-z0-9_.]+)"'),
+          ('particle_type', r'Fx\.particle\("([a-z0-9_]+)"\)'),
+          ('entity_type', r'^\s+[A-Z][A-Z_0-9]*\("[a-z_]+", "([a-z_]+)"', 'RiftModels.java'),  # enum Kind(id, хост, ...) только в этом файле
           ('block', r'(?:Fx\.state|Fx\.block|Disp\.block)\("([a-z0-9_]+)"\)'), ('block', r'BLOCKS\[[^\]]+\]\s*=\s*(?:BLOCKS\[[^\]]+\]\s*=\s*)*"([a-z0-9_]+)"'),
           ('mob_effect', r'Fx\.effect\("([a-z0-9_]+)"\)'), ('entity_type', r'summon minecraft:([a-z_]+)'), ('entity_type', r'Minions\.spawn\(level, "([a-z_]+)"'),
           ('item', r'"(?:\d+ )?minecraft:([a-z_]+)"'), ('item', r'id:\\"minecraft:([a-z_]+)\\"'), ('block', r'setblock [^"]*?minecraft:([a-z_]+)'), ('block', r'Dungeons\.state\("(?:minecraft:)?([a-z0-9_]+)')]
@@ -21,8 +23,9 @@ def check(root: Path):
     mod_items = set(re.findall(r'ITEMS\.register\("([a-z_]+)"', mod))
     bad = []
     for f, s in sorted(src.items()):
-        for kind, rx in CHECKS:
-            for m in re.finditer(rx, s):
+        for kind, rx, *only in CHECKS:
+            if only and f.name != only[0]: continue
+            for m in re.finditer(rx, s, re.M):
                 v = m.group(1)
                 if (f.name, v) in SKIP: continue
                 if kind == 'item' and v in reg['entity_type'] and v not in reg['item']: continue
