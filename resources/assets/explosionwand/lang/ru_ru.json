@@ -33,5 +33,20 @@
   "explosionwand.jei.eclipse_heart": "Выпадает из сундука с добычей Короля Затмения. Босс вызывается Печатью Затмения, для которой нужно Ядро Разлома.",
   "explosionwand.jei.dream_staff": "Лежит в сундуке с добычей Монолита Сна вместе с Недремлющим Оком. Монолит вызывается Печатью Сна, а она крафтится из Сердца Затмения.",
   "explosionwand.jei.dreaming_eye": "Выпадает из сундука с добычей Монолита Сна. Нужно для Печати Неба, которой вызывается Небесный Кит.",
-  "explosionwand.jei.whale_staff": "Лежит в сундуке с добычей Небесного Кита. Чтобы его вызвать, используйте Печать Неба, для которой нужно Недремлющее Око."
+  "explosionwand.jei.whale_staff": "Лежит в сундуке с добычей Небесного Кита. Чтобы его вызвать, используйте Печать Неба, для которой нужно Недремлющее Око.",
+  "item.explosionwand.seal_shard_rift": "Осколок Печати: Разлом",
+  "item.explosionwand.seal_shard_rift.desc": "В руке тянется к ближайшему Разлому. Рядом дрожит и звенит. Отпирает его дверь.",
+  "explosionwand.dungeon.rift": "Разлом",
+  "explosionwand.shard.point": "Осколок тянется к месту: %s, %s м",
+  "explosionwand.shard.near": "Осколок дрожит и звенит: %s совсем рядом",
+  "explosionwand.shard.silent": "Осколок молчит: здесь нет следа Печати",
+  "explosionwand.shard.locate": "%s: X %s, Z %s (в %s м)",
+  "explosionwand.dungeon.locked.rift": "Кристальная дверь заперта. Её отпирает Осколок Печати: Разлом",
+  "explosionwand.dungeon.brazier_lit": "Жаровня зажжена: вы возродитесь здесь",
+  "explosionwand.dungeon.brazier_same": "Это ваша последняя жаровня",
+  "explosionwand.dungeon.respawned": "Вы возродились у жаровни",
+  "explosionwand.dungeon.cleared": "Зал зачищен: в логове появился сундук",
+  "explosionwand.dungeon.peaceful": "В мирном режиме данж спит",
+  "explosionwand.dungeon.no_teleport": "Стены данжа не пускают: телепорт не работает",
+  "explosionwand.dungeon.no_wand": "В данже эта палочка молчит"
 }
