@@ -20,7 +20,7 @@ public class DungeonTest {
     // ---------- пешеходная модель ----------
     static Map<Long, String> world;
 
-    static boolean passable(String s) { return s.startsWith("minecraft:air") || s.contains("lantern") || s.contains("amethyst_cluster") || s.contains("campfire") || s.equals("minecraft:water") || s.startsWith("minecraft:lever"); }
+    static boolean passable(String s) { return s.startsWith("minecraft:air") || (s.contains("lantern") && !s.contains("sea_lantern")) || s.contains("amethyst_cluster") || s.contains("campfire") || s.equals("minecraft:water") || s.startsWith("minecraft:lever"); }
 
     /** Не заданные клетки — плоская земля: ниже y=0 твёрдо, выше воздух. */
     static boolean solid(int x, int y, int z) {
@@ -132,7 +132,7 @@ public class DungeonTest {
         for (Dungeons.Hall h : d.halls()) {
             check(ids.add(h.id) && h.id >= 1 && h.id <= 30, "номер зала " + h.id);
             spawns += h.spawns.size();
-            if (h.id <= 13) check(h.spawns.size() >= 4, "в зале " + h.id + " мобов: " + h.spawns.size());
+            if (h.id <= 13 && h.boss == null) check(h.spawns.size() >= 4, "в зале " + h.id + " мобов: " + h.spawns.size());
             if (h.chest != null) {
                 chests++;
                 String[] sp = Dungeons.chestSpec(h.chest.a);
@@ -140,8 +140,11 @@ public class DungeonTest {
             }
         }
         check(ids.equals(new TreeSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16))), "залы 1..16: " + ids);
-        check(chests == 12 && spawns == 88, "сундуков " + chests + ", мобов " + spawns);
-        for (Dungeons.Hall h : d.halls()) if (h.id == 7) check(h.chest != null && h.spawns.size() >= 8, "логово: сундук и мобы");
+        check(chests == 12 && spawns == 77, "сундуков " + chests + ", мобов " + spawns);
+        for (Dungeons.Hall h : d.halls()) {
+            if (h.id == 7) check(h.chest != null && h.boss != null && h.spawns.isEmpty() && h.boss.a.equals("rift_heart"), "логово: сундук и босс, обычных мобов нет");
+            else check(h.boss == null, "босс только в логове: зал " + h.id);
+        }
         // залы не пересекаются: метка spawn/chest относится ровно к одному залу
         for (Dungeons.Hall x : d.halls()) for (Dungeons.Hall y : d.halls()) {
             if (x.id >= y.id) continue;
@@ -239,6 +242,7 @@ public class DungeonTest {
             check(hallReached(d, r, h.id), "зал " + h.id + " достижим");
             for (Mark m : h.spawns) check(at(r, m), "точка моба недостижима: зал " + h.id + " " + m.a + " " + m.x + "," + m.y + "," + m.z);
             if (h.chest != null) check(reachNear(r, h.chest.x, h.chest.y, h.chest.z), "сундук недостижим: зал " + h.id);
+            if (h.boss != null) check(at(r, h.boss), "площадка босса достижима: зал " + h.id);
         }
         for (Mark br : d.braziers()) {
             String[] o = br.a.split(",");
@@ -276,9 +280,203 @@ public class DungeonTest {
         System.out.println("разлом ok: " + total + " блоков, залов " + ids.size() + ", мобов " + spawns + ", сундуков " + chests);
     }
 
+    // ================================================================ Город Спящих (4.5)
+    static final Set<String> STUBS = Set.of("stub:sleeper", "stub:stitch", "stub:dreamer", "stub:bookguard", "stub:statue");
+
+        /** Зал достижим: хотя бы одна точка моба или клетка сундука достижима точно (в городе стены тонкие: «рядом» не годится). */
+    static boolean hallExact(Dungeons.Def d, Set<Long> r, int hall) {
+        Dungeons.Hall h = d.hall(hall);
+        for (Mark m : h.spawns) if (at(r, m)) return true;
+        return h.chest != null && r.contains(Dungeons.pack(h.chest.x, h.chest.y, h.chest.z));
+    }
+
+    static void city() throws Exception {
+        Dungeons.Def d = Dungeons.SLEEP;
+        List<DungeonTemplate> tp = d.templates();
+        check(tp.size() == 3 && d.layout == 1 && d.signature().equals("sleep_north+sleep_mid+sleep_south:v1"), "три части города, раскладка 1: " + d.signature());
+        Set<Long> seen0 = new HashSet<>();
+        int total = 0;
+        for (DungeonTemplate t : tp) {
+            total += t.count();
+            check(t.name.startsWith("sleep_") && t.count() > 10000, t.name + ": блоков " + t.count());
+            for (int i = 0; i < t.count(); i++) {
+                if (t.bx[i] < 0 || t.bx[i] >= t.sx || t.by[i] < 0 || t.by[i] >= t.sy || t.bz[i] < 0 || t.bz[i] >= t.sz) { check(false, t.name + ": блок вне size"); break; }
+                if (!seen0.add(Dungeons.pack(t.ox + t.bx[i], t.oy + t.by[i], t.oz + t.bz[i]))) { check(false, t.name + ": пересечение частей"); break; }
+            }
+            for (String p : t.palette) check(p.startsWith("minecraft:"), "палитра: " + p);
+        }
+        int[] b = d.bounds();
+        int w = b[3] - b[0], dep = b[5] - b[2];
+        System.out.println("город: " + total + " блоков в 3 частях, габариты " + w + "x" + (b[4] - b[1]) + "x" + dep);
+        check(w >= 90 && w <= 100 && dep >= 90 && dep <= 100 && b[4] >= 60, "габариты города ~97x97, шпиль >= 60: " + w + "x" + dep + ", верх " + b[4]);
+        check(Dungeons.SLEEP.margin * 2 - 96 >= Math.max(w, dep), "соседние города (с запасными точками ±48) не пересекаются");
+        check(d.avoid == Dungeons.RIFT && d.flat > 0 && d.maxVar >= d.flat, "наземный данж обходит Разломы и проверяет ровность");
+
+        // ---- метки
+        Mark gate = null, temple = null;
+        for (Mark m : d.doors()) { if (m.a.equals("sleep")) gate = m; else if (m.a.equals("sleep_temple")) temple = m; }
+        check(d.doors().size() == 2 && gate != null && temple != null && d.start() != null, "ворота (sleep), дверь храма (sleep_temple) и старт");
+        check(d.braziers().size() == 4, "четыре жаровни: " + d.braziers().size());
+        check(d.marks("seal").size() == 2 && d.marks("lever").size() == 3 && d.marks("secret").size() == 3 && d.marks("platform").isEmpty()
+                && d.marks("steps").isEmpty() && d.marks("beams").isEmpty() && d.marks("mirror").isEmpty(), "печати, рычаги, секреты");
+        Set<Integer> ids = new TreeSet<>();
+        int chests = 0, spawns = 0, secretChests = 0;
+        Set<String> chestNames = new HashSet<>();
+        for (Dungeons.Hall h : d.halls()) {
+            check(ids.add(h.id) && h.id >= 1 && h.id <= 30, "номер зала " + h.id);
+            spawns += h.spawns.size();
+            check(h.boss == null, "босса в городе пока нет (4.7): зал " + h.id);
+            for (Mark m : h.spawns) check(STUBS.contains(m.a), "заглушка моба известна: " + m.a);
+            if (h.chest != null) {
+                chests++;
+                String[] sp = Dungeons.chestSpec(h.chest.a);
+                check(!sp[0].isEmpty() && chestNames.add(sp[0]), "название сундука: " + h.chest.a);
+                if (h.id >= 23) { secretChests++; check(sp[1].equals("3") && h.spawns.isEmpty(), "тайник: тир 3, без мобов: зал " + h.id); }
+            }
+            if (h.id <= 22) check(h.spawns.size() >= 3, "в зале " + h.id + " мобов: " + h.spawns.size());
+        }
+        Set<Integer> want = new TreeSet<>();
+        for (int i = 1; i <= 25; i++) want.add(i);
+        check(ids.equals(want), "залы 1..25: " + ids);
+        check(secretChests == 3 && chests >= 14 && spawns >= 70 && spawns <= 130, "сундуков " + chests + ", мобов " + spawns);
+        for (Dungeons.Hall x : d.halls()) for (Dungeons.Hall y : d.halls()) {
+            if (x.id >= y.id) continue;
+            boolean ov = x.x < y.x + y.sx && y.x < x.x + x.sx && x.y < y.y + y.sy + 1 && y.y < x.y + x.sy + 1 && x.z < y.z + y.sz && y.z < x.z + x.sz;
+            check(!ov, "залы " + x.id + " и " + y.id + " пересекаются");
+        }
+        check(d.sealed(19) && d.sealed(20) && !d.sealed(1) && !d.sealed(21), "печати у библиотеки (19) и логова храма (20)");
+        check(d.hall(20) != null && d.hall(20).chest != null && d.hall(20).spawns.size() == 6, "логово храма: заглушка с мобами и сундуком (босс — 4.7)");
+        check(Dungeons.chestSpec(d.hall(21).chest.a)[0].equals("Склеп Спящих") && City.extra(21).equals(List.of("explosionwand:temple_seal")), "Печать Храма в сундуке склепа");
+        check(!City.extra(19).isEmpty() && !City.extra(25).isEmpty() && City.extra(7).isEmpty() && Dungeons.lootFor(d, d.hall(21), 2).contains("explosionwand:temple_seal")
+                && !Dungeons.lootFor(Dungeons.RIFT, Dungeons.RIFT.hall(7), 2).contains("explosionwand:temple_seal"), "особая добыча только у сундуков города");
+
+        // ---- мир: стена сплошная, шпиль, свет в домах
+        world = Dungeons.assemble(d, 0, 0, 0);
+        int maxY = Integer.MIN_VALUE;
+        for (long k : world.keySet()) maxY = Math.max(maxY, (int) (k & 0xFFF) - 2048);
+        check(maxY >= 60 && world.get(Dungeons.pack(0, 60, -15)).equals("minecraft:sea_lantern"), "шпиль Монолита над храмом: верх " + maxY);
+        int holes = 0;
+        for (int x = -45; x <= 45; x++) for (int z = -45; z <= 45; z++) {
+            if (Math.max(Math.abs(x), Math.abs(z)) < 43) continue;
+            for (int y = 0; y <= 6; y++) { String v = world.get(Dungeons.pack(x, y, z)); if (v == null || v.equals("minecraft:air")) holes++; }
+        }
+        check(holes == 0, "стена без дыр (ворота закрыты): клеток " + holes);
+        Map<Integer, Integer> lights = new HashMap<>();
+        for (Map.Entry<Long, String> e : world.entrySet()) {
+            if (!LIGHT.contains(name(e.getValue()))) continue;
+            long k = e.getKey();
+            int x = (int) (k >> 38), y = (int) (k & 0xFFF) - 2048, z = (int) ((k >> 12) & 0x3FFFFFF);
+            if (x >= 1 << 25) x -= 1 << 26;
+            if (z >= 1 << 25) z -= 1 << 26;
+            for (Dungeons.Hall h : d.halls()) if (x >= h.x - 1 && x < h.x + h.sx + 1 && y >= h.y && y <= h.y + h.sy + 1 && z >= h.z - 1 && z < h.z + h.sz + 1) lights.merge(h.id, 1, Integer::sum);
+        }
+        for (Dungeons.Hall h : d.halls()) if (h.id >= 7) check(lights.getOrDefault(h.id, 0) > 0, "в зале " + h.id + " нет света");
+        // эмблемы: лунный знак (светящиеся блоки на мостовой) только у двери дома со склепом (W3: улица x -29..-25, z 4..8)
+        int moon = 0, other = 0;
+        for (int x = -29; x <= -25; x++) for (int z = 4; z <= 8; z++) if (world.get(Dungeons.pack(x, -1, z)).equals("minecraft:sea_lantern")) moon++;
+        for (int x = -20; x <= -16; x++) for (int z = -29; z <= -25; z++) if (world.get(Dungeons.pack(x, -1, z)).equals("minecraft:sea_lantern")) other++;
+        check(moon >= 5 && other == 0, "лунный знак у дома со склепом: " + moon + " светящихся, у соседа " + other);
+
+        // ---- прохождение по этапам
+        int[] saveBox = BOX;
+        BOX = new int[]{-60, 60, -60, 62, -22, 14};
+        Mark st = d.start();
+        check(standable(st.x, st.y, st.z), "старт у ворот — место, где можно стоять");
+        Set<Long> r = reach(st.x, st.y, st.z);
+        for (Dungeons.Hall h : d.halls()) check(!hallExact(d, r, h.id), "до открытия ворот зал " + h.id + " недостижим");
+        fill(gate, "minecraft:air");
+        r = reach(st.x, st.y, st.z);
+        for (int h = 1; h <= 19; h++) check(hallExact(d, r, h), "после ворот достижим зал " + h);
+        check(hallExact(d, r, 21) && hallExact(d, r, 22), "склеп (спуск из дома) и обсерватория достижимы без секретов");
+        for (int h : new int[]{20, 23, 24, 25}) check(!hallExact(d, r, h), "зал " + h + " закрыт: дверь храма / тайники");
+        for (Dungeons.Hall h : d.halls()) {
+            if (h.id == 20 || h.id >= 23) continue;
+            for (Mark m : h.spawns) check(at(r, m), "точка моба недостижима: зал " + h.id + " " + m.a + " " + m.x + "," + m.y + "," + m.z);
+            if (h.chest != null) check(r.contains(Dungeons.pack(h.chest.x, h.chest.y, h.chest.z)), "сундук недостижим: зал " + h.id);
+        }
+        // печать библиотеки отрезает зал; рычаги в домах и обсерватории достижимы до тайников
+        Map<Long, String> pw = Dungeons.assemble(d, 0, 0, 0);
+        for (Mark m : d.marks("seal")) {
+            int hid = Integer.parseInt(m.a.split(",")[0]);
+            Dungeons.Hall hh = d.hall(hid);
+            check(hh != null && !hh.contains(m.x, m.y, m.z) && !hh.contains(m.x + m.sx - 1, m.y + m.sy - 1, m.z + m.sz - 1), "дверь печати вне зала " + hid);
+            for (int x = 0; x < m.sx; x++) for (int y = 0; y < m.sy; y++) for (int z = 0; z < m.sz; z++) check(pw.get(Dungeons.pack(m.x + x, m.y + y, m.z + z)).equals("minecraft:air"), "проём печати открыт в шаблоне");
+            if (hid == 19) {
+                Map<Long, String> save = new HashMap<>(world);
+                fill(m, "minecraft:polished_blackstone_bricks");
+                check(!hallExact(d, reach(st.x, st.y, st.z), hid), "закрытая печать отрезает библиотеку");
+                world = save;
+            }
+        }
+        for (Mark m : d.marks("lever")) check(reachNear(r, m.x, m.y, m.z), "рычаг достижим: " + m.a);
+        // дверь храма: до Печати логово недостижимо, после — достижимо; печать логова отрезает его
+        fill(temple, "minecraft:air");
+        r = reach(st.x, st.y, st.z);
+        check(hallExact(d, r, 20), "с открытой дверью храма достижимо логово");
+        for (Mark br : d.braziers()) {
+            String[] o = br.a.split(",");
+            check(r.contains(Dungeons.pack(br.x + Integer.parseInt(o[0]), br.y + Integer.parseInt(o[1]), br.z + Integer.parseInt(o[2]))), "точка возрождения жаровни (после двери храма) недостижима: " + br.x + "," + br.y + "," + br.z);
+            check(world.get(Dungeons.pack(br.x, br.y, br.z)).contains("campfire"), "на метке жаровни костёр");
+        }
+        for (Mark m : d.hall(20).spawns) check(at(r, m), "точка моба логова недостижима " + m.x + "," + m.z);
+        check(r.contains(Dungeons.pack(d.hall(20).chest.x, d.hall(20).chest.y, d.hall(20).chest.z)), "сундук логова достижим");
+        for (Mark m : d.marks("seal")) if (m.a.startsWith("20,")) {
+            Map<Long, String> save = new HashMap<>(world);
+            fill(m, "minecraft:polished_blackstone_bricks");
+            check(!hallExact(d, reach(st.x, st.y, st.z), 20), "закрытая печать отрезает логово храма");
+            world = save;
+        }
+        // тайники
+        for (Mark m : d.marks("secret")) fill(m, "minecraft:air");
+        r = reach(st.x, st.y, st.z);
+        for (int h : new int[]{23, 24, 25}) check(hallExact(d, r, h), "после рычага достижим тайник " + h);
+        Set<String> lev = new HashSet<>();
+        for (Mark m : d.marks("lever")) { lev.add(m.a); check(world.get(Dungeons.pack(m.x, m.y, m.z)).startsWith("minecraft:lever"), "рычаг " + m.a); }
+        for (Mark m : d.marks("secret")) check(lev.contains(m.a), "у секрета " + m.a + " есть рычаг");
+        // всё проходимое внутри стены (и ров) — внутри данжа: защита и счёт игрока
+        Dungeons.Mask mk = d.mask();
+        int walkOut = 0;
+        for (long k : r) {
+            int x = (int) (k >> 38), y = (int) (k & 0xFFF) - 2048, z = (int) ((k >> 12) & 0x3FFFFFF);
+            if (x >= 1 << 25) x -= 1 << 26;
+            if (z >= 1 << 25) z -= 1 << 26;
+            if (Math.abs(x) <= 48 && Math.abs(z) <= 48 && y >= -9 && (!mk.has(x, y, z) || !mk.has(x, y + 1, z))) walkOut++;
+        }
+        check(walkOut == 0, "проходимые клетки города все в маске: вне " + walkOut);
+        BOX = saveBox;
+        System.out.println("город ok: " + total + " блоков, залов " + ids.size() + ", мобов " + spawns + ", сундуков " + chests + ", маска " + mk.count());
+    }
+
+    /** Город обходит Разломы: ни при каком сиде и запасной точке рамки не пересекаются; город остаётся в своей клетке. */
+    static void cityPlacement() {
+        Dungeons.Def c = Dungeons.SLEEP, r = Dungeons.RIFT;
+        int[] cb = c.bounds(), rb = r.bounds();
+        int clashes0 = 0, cells = 0;
+        for (long seed = 1; seed <= 40; seed++) for (int cx = -3; cx <= 3; cx++) for (int cz = -3; cz <= 3; cz++) {
+            cells++;
+            int[] s0 = Dungeons.site(seed * 7919, c, cx, cz, 0);
+            check(s0[0] >= cx * c.cell + c.margin && s0[0] < (cx + 1) * c.cell - c.margin && s0[1] >= cz * c.cell + c.margin && s0[1] < (cz + 1) * c.cell - c.margin, "город в своей клетке");
+            if (Dungeons.clashes(seed * 7919, c, Dungeons.site0Raw(seed * 7919, c, cx, cz))) clashes0++;
+            for (int at = 0; at < 8; at++) {
+                int[] s = Dungeons.site(seed * 7919, c, cx, cz, at);
+                if (at > 0 && Dungeons.clashes(seed * 7919, c, s)) continue;   // register такую запасную точку пропускает
+                for (int ax = Math.floorDiv(s[0], r.cell) - 1; ax <= Math.floorDiv(s[0], r.cell) + 1; ax++) for (int az = Math.floorDiv(s[1], r.cell) - 1; az <= Math.floorDiv(s[1], r.cell) + 1; az++)
+                    for (int ra = 0; ra < 8; ra++) {
+                        int[] q = Dungeons.site(seed * 7919, r, ax, az, ra);
+                        boolean ov = s[0] + cb[0] < q[0] + rb[3] && q[0] + rb[0] < s[0] + cb[3] && s[1] + cb[2] < q[1] + rb[5] && q[1] + rb[2] < s[1] + cb[5];
+                        check(!ov, "город " + Arrays.toString(s) + " налезает на Разлом " + Arrays.toString(q));
+                    }
+            }
+        }
+        System.out.println("город обходит Разломы: клеток " + cells + ", с первой попытки мешало в " + clashes0);
+        check(clashes0 < cells / 2, "обход не должен быть правилом: " + clashes0 + " из " + cells);
+    }
+
     public static void main(String[] a) throws Exception {
         Dungeons.Def d = Dungeons.RIFT;
         rift();
+        city();
+        cityPlacement();
         int total = 0;
         for (DungeonTemplate t : d.templates()) total += t.count();
         int ox = 1234, oy = 70, oz = -987;
@@ -435,7 +633,7 @@ public class DungeonTest {
         // номер версии раскладки: подпись зависит только от него и набора частей, а не от содержимого
         int next = d.layout + 1;
         Dungeons.Def v2 = new Dungeons.Def("rift", 768, 192, next, "rift_entrance", "rift_mid", "rift_deep");
-        check(d.layout == 2 && sig.endsWith(":v" + d.layout) && v2.signature().endsWith(":v" + next) && !v2.signature().equals(sig), "повышение номера раскладки меняет подпись (Разлом 4.3: раскладка 2)");
+        check(d.layout == 4 && sig.endsWith(":v" + d.layout) && v2.signature().endsWith(":v" + next) && !v2.signature().equals(sig), "повышение номера раскладки меняет подпись (Разлом 4.4: раскладка 4)");
         v2.setTemplates(d.templates());
         check(v2.signature().equals("rift_entrance+rift_mid+rift_deep:v" + next), "подпись не зависит от содержимого шаблонов");
     }

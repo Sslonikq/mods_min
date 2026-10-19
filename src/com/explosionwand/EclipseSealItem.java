@@ -21,7 +21,7 @@ public class EclipseSealItem extends Item {
                 return InteractionResultHolder.m_19092_(stack, false);
             }
             var bp = aim.block.m_82425_();
-            Altar.ACTIVE.add(new Altar(sl, bp.m_123341_(), bp.m_123342_() + 1, bp.m_123343_(), true));
+            Altar.ACTIVE.add(new Altar(sl, bp.m_123341_(), bp.m_123342_() + 1, bp.m_123343_(), 1));
             player.m_36335_().m_41524_(this, 600);
         }
         player.m_21011_(hand, true);

@@ -22,9 +22,10 @@ final class Loot {
         int slot = 0;
         for (String it : items) {
             if (slot >= 27) break;
-            String id; int count = 1;
-            String[] parts = it.trim().split("\\s+");
-            if (parts.length == 2) { count = Integer.parseInt(parts[0]); id = parts[1]; } else id = parts[0];
+            // "4 minecraft:diamond", "minecraft:golden_apple" или предмет с NBT (в нём бывают пробелы): число впереди — количество
+            String id = it.trim(); int count = 1;
+            int sp = id.indexOf(' ');
+            if (sp > 0 && id.substring(0, sp).matches("\\d+")) { count = Integer.parseInt(id.substring(0, sp)); id = id.substring(sp + 1).trim(); }
             Cmd.run(level, x, y, z, "item replace block " + x + " " + y + " " + z + " container." + slot + " with " + id + " " + count);
             slot++;
         }

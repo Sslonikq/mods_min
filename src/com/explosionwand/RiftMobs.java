@@ -11,6 +11,7 @@ import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -298,7 +299,9 @@ final class RiftMobs {
         Entity[] pe; String[] last;
         int t = 0, calib = 0;
         boolean ready = false;
-        double rideY = 0, x, y, z, yaw, hx, hy, hz, leash = 28;
+        double rideY = 0, x, y, z, yaw, hx, hy, hz, leash = Dungeons.ALIVE_PAD - 2;
+        /** Половина ширины хоста для проверки клеток при шаге (0 — только центр; голем 0,5: проверяются 4 угла). */
+        double half = 0;
         boolean quietSent = false;
         long buffUntil = 0;
         List<ServerPlayer> ps = List.of();
@@ -358,14 +361,14 @@ final class RiftMobs {
             think();
             fillPose();
             if (quiet()) {   // нечего показывать (спрятанная Тень): последнюю позу шлём один раз
-                if (!quietSent) { render(); quietSent = true; }
+                if (!quietSent) { render(3); quietSent = true; }
                 return;
             }
             quietSent = false;
             double near = Double.MAX_VALUE;
             for (ServerPlayer p : ps) near = Math.min(near, Math.sqrt(sq(p.m_20185_() - x) + sq(p.m_20186_() - y) + sq(p.m_20189_() - z)));
             int every = RiftLogic.renderEvery(near);
-            if (every > 0 && t % every == 0) render();
+            if (every > 0 && t % every == 0) render(every);
         }
 
         void calibrate() {
@@ -381,13 +384,14 @@ final class RiftMobs {
             Arrays.fill(last, null);
         }
 
-        void render() {
+        /** Слать позу раз в every тиков: интерполяция на клиенте длится столько же, движение не прерывается паузами (nit 16). */
+        void render(int every) {
             String[] tf = transforms(RiftModels.pose(kind, pose), yaw, rideY);
             for (int i = 0; i < tf.length; i++) {
                 Entity e = pe[i];
                 if (e == null || e.m_213877_() || tf[i].equals(last[i])) continue;
                 last[i] = tf[i];
-                Cmd.run(level, x, y, z, "data merge entity " + e.m_20149_() + " {start_interpolation:0,interpolation_duration:3," + tf[i] + "}");
+                Cmd.run(level, x, y, z, "data merge entity " + e.m_20149_() + " {start_interpolation:0,interpolation_duration:" + Math.max(1, every) + "," + tf[i] + "}");
             }
         }
 
@@ -416,6 +420,16 @@ final class RiftMobs {
             return null;
         }
 
+        /** Широкому хосту хватает места: все четыре угла (±half) стоят в свободных клетках (nit 12). */
+        boolean roomFor(double nx, double ny, double nz, int height) {
+            if (half <= 0) return true;
+            int cy = (int) Math.floor(ny + 0.01);
+            for (int sx : new int[]{-1, 1})
+                for (int sz : new int[]{-1, 1})
+                    if (!cellFree((int) Math.floor(nx + sx * half), cy, (int) Math.floor(nz + sz * half), height)) return false;
+            return true;
+        }
+
         void setPos(double nx, double ny, double nz) {
             host.m_6034_(nx, ny, nz);
             host.m_20256_(new Vec3(0, 0, 0));
@@ -434,7 +448,7 @@ final class RiftMobs {
                 double nx = x + tries[i][0] * k, nz = z + tries[i][1] * k;
                 if (leashBlocked(nx, nz)) continue;
                 Double ny = groundAt(nx, nz, height);
-                if (ny != null) { setPos(nx, ny, nz); return true; }
+                if (ny != null && roomFor(nx, ny, nz, height)) { setPos(nx, ny, nz); return true; }
             }
             return false;
         }
@@ -492,8 +506,11 @@ final class RiftMobs {
             return best;
         }
 
+        /** Урон с усилением Призмы; на Сложной обрезан (RiftLogic.capHit), чтобы не убивать одним ударом. */
+        float scaled(double raw) { return (float) RiftLogic.capHit(raw * dmgMult(), level.m_46791_() == Difficulty.valueOf("HARD")); }
+
         void hitPlayer(ServerPlayer p, double dmg, double kb) {
-            p.m_6469_(level.m_269111_().m_269333_(host), (float) (dmg * dmgMult()));
+            p.m_6469_(level.m_269111_().m_269333_(host), scaled(dmg));
             double dx = p.m_20185_() - x, dz = p.m_20189_() - z, l = Math.max(0.3, Math.sqrt(dx * dx + dz * dz));
             p.m_20256_(new Vec3(dx / l * kb, 0.32, dz / l * kb));
             p.f_19864_ = true;
@@ -782,7 +799,7 @@ final class RiftMobs {
                 if (!p.m_6084_() || p.m_5833_()) continue;
                 double dx = p.m_20185_() - lx, dz = p.m_20189_() - lz;
                 if (dx * dx + dz * dz < 1.4 * 1.4 && Math.abs(p.m_20186_() - ly) < 3) {
-                    p.m_6469_(level.m_269111_().m_269333_(host), (float) (7 * dmgMult()));
+                    p.m_6469_(level.m_269111_().m_269333_(host), scaled(7));
                     p.m_20256_(new Vec3(dx * 0.3, 0.4, dz * 0.3)); p.f_19864_ = true;
                 }
             }
@@ -894,6 +911,7 @@ final class RiftMobs {
     static final class Golem extends Mob {
         final GolemArmor ar = new GolemArmor();
         int wind = -1, cd = 40; double sx, sz;
+        { half = 0.5; }
 
         @Override void think() {
             pose.t = t;
@@ -922,7 +940,7 @@ final class RiftMobs {
             }
             wind--;
             pose.atk = 1 - wind / 24.0;
-            if (wind % 2 == 0) { ring(VIO, sx, y + 0.1, sz, 2.4, 20); ring(WHT, sx, y + 0.1, sz, 1.2, 10); }
+            if (wind % 2 == 0) { ring(VIO, sx, y + 0.1, sz, RiftLogic.GOLEM_FIST_R, 20); ring(WHT, sx, y + 0.1, sz, RiftLogic.GOLEM_FIST_R / 2, 10); }
             if (wind == 0) { wind = -1; cd = 70; slam(); }
         }
 
@@ -934,7 +952,7 @@ final class RiftMobs {
             for (ServerPlayer p : ps) {
                 if (!p.m_6084_() || p.m_5833_()) continue;
                 double dx = p.m_20185_() - sx, dz = p.m_20189_() - sz;
-                if (dx * dx + dz * dz < 2.5 * 2.5 && Math.abs(p.m_20186_() - y) < 2.5) hitPlayer(p, 12, 0.9);
+                if (dx * dx + dz * dz < RiftLogic.GOLEM_FIST_R * RiftLogic.GOLEM_FIST_R && Math.abs(p.m_20186_() - y) < 2.5) hitPlayer(p, 12, 0.9);
             }
         }
 

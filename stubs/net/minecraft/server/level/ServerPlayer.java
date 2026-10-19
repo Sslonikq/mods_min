@@ -1,1 +1,1 @@
-package net.minecraft.server.level; public abstract class ServerPlayer extends net.minecraft.world.entity.player.Player { public void m_8999_(ServerLevel l,double x,double y,double z,float yaw,float pitch){} }
+package net.minecraft.server.level; public abstract class ServerPlayer extends net.minecraft.world.entity.player.Player { public net.minecraft.core.BlockPos m_8961_(){return null;} public net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> m_8963_(){return null;} public void m_8999_(ServerLevel l,double x,double y,double z,float yaw,float pitch){} }

@@ -167,6 +167,19 @@ final class RiftLogic {
     /** Как часто слать позу облика: каждые 3 тика в 16 блоках, каждые 6 в 32, дальше не слать (0). */
     static int renderEvery(double nearestPlayer) { return nearestPlayer <= 16 ? 3 : nearestPlayer <= 32 ? 6 : 0; }
 
+    /** Радиус удара кулаком голема: и круг-телеграф, и зона урона (4.4, nit 12: раньше круг 2,4, удар 2,5). */
+    static final double GOLEM_FIST_R = 2.5;
+
+    /**
+     * Сложность и урон мобов Разлома (nit 8). Ванильный mobAttack масштабируется: Легко min(d/2+1, d), Нормально d, Сложно d*1,5.
+     * Цифры в коде даны для Нормальной. На Сложной один удар не должен превышать HARD_CAP (7 сердец без брони): иначе голем (12*1,5 = 18)
+     * и усиленный Призмой Пожиратель (10*1,5*1,5 = 22,5) убивали бы одним ударом почти с полного здоровья.
+     */
+    static final double HARD_MULT = 1.5, HARD_CAP = 14.0;
+
+    /** Урон до масштабирования сложностью, обрезанный так, чтобы на Сложной итог не превысил HARD_CAP. */
+    static double capHit(double raw, boolean hard) { return hard ? Math.min(raw, HARD_CAP / HARD_MULT) : raw; }
+
     /** Поводок: шаг к точке, которая дальше leash от дома и дальше текущего положения, запрещён. */
     static boolean leashBlocked(double homeDist, double newDist, double leash) { return newDist > leash && newDist > homeDist; }
 

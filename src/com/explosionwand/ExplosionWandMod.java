@@ -26,7 +26,6 @@ public class ExplosionWandMod {
 
     public static final RegistryObject<Item> TESSERACT_WAND = ITEMS.register("tesseract_wand", () -> new TesseractWandItem(props()));
 
-    public static final RegistryObject<Item> RIFT_KEY = ITEMS.register("rift_key", () -> new RiftKeyItem(props()));
     public static final RegistryObject<Item> RIFT_CORE = ITEMS.register("rift_core", () -> new RiftCoreItem(new Item.Properties().m_41487_(16).m_41497_(Rarity.valueOf("EPIC"))));
     public static final RegistryObject<Item> PORTAL_GUN = ITEMS.register("portal_gun", () -> new PortalGunItem(props()));
     public static final RegistryObject<Item> POSSESS_WAND = ITEMS.register("possess_wand", () -> new PossessWandItem(props()));
@@ -50,7 +49,12 @@ public class ExplosionWandMod {
     public static final RegistryObject<Item> ARCANE_LEGGINGS = ITEMS.register("arcane_leggings", () -> new ArcaneArmorItem(ArmorItem.Type.valueOf("LEGGINGS"), new Item.Properties().m_41497_(Rarity.valueOf("EPIC"))));
     public static final RegistryObject<Item> ARCANE_BOOTS = ITEMS.register("arcane_boots", () -> new ArcaneArmorItem(ArmorItem.Type.valueOf("BOOTS"), new Item.Properties().m_41497_(Rarity.valueOf("EPIC"))));
 
+    public static final RegistryObject<Item> RIFT_STAFF = ITEMS.register("rift_staff", () -> new RiftStaffItem(props()));
     public static final RegistryObject<Item> SEAL_SHARD_RIFT = ITEMS.register("seal_shard_rift", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "rift"));
+    public static final RegistryObject<Item> SLEEP_SEAL_SHARD = ITEMS.register("sleep_seal_shard", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "sleep", "sleep_seal_shard"));
+
+    /** Печать Храма (Город Спящих, 4.5): лежит в сундуке склепа, отпирает дверь храма. Не крафтится. */
+    public static final RegistryObject<Item> TEMPLE_SEAL = ITEMS.register("temple_seal", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("EPIC")), "sleep_temple", "temple_seal", true));
 
     /** Отдельная вкладка «Магия» — всё содержимое мода в порядке регистрации. */
     public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.f_279569_, "explosionwand");

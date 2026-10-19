@@ -21,16 +21,19 @@ final class Dims {
     static final ResourceKey<Level> VOID = key("void");
     static final ResourceKey<Level> HAUNT = key("haunt");
     static final ResourceKey<Level> INVERTED = key("inverted");
-    static final ResourceKey<Level> ARENA = key("arena");
     static final ResourceKey<Level> ECLIPSE = key("eclipse");
     static final ResourceKey<Level> DREAM = key("dream");
     static final ResourceKey<Level> SKY = key("sky");
     static final ResourceKey<Level> MAZE = key("maze");
+    /** Старое измерение арены (миры 2.6.x): больше не используется, игроков оттуда отправляем в обычный мир. */
+    static final ResourceKey<Level> OLD_ARENA = key("arena");
+    /** Уровень пола во всех аренах боссов (ECLIPSE, DREAM, SKY). */
+    static final int ARENA_FLOOR = 64;
     static final Random RNG = Fx.RNG;
 
     static ServerLevel get(ServerLevel any, ResourceKey<Level> k) { return any.m_7654_().m_129880_(k); }
     static boolean is(ServerLevel l, ResourceKey<Level> k) { return get(l, k) == l; }
-    static boolean isOurs(ServerLevel l) { return is(l, VOID) || is(l, HAUNT) || is(l, INVERTED) || is(l, ARENA) || is(l, ECLIPSE) || is(l, DREAM) || is(l, SKY) || is(l, MAZE); }
+    static boolean isOurs(ServerLevel l) { return is(l, VOID) || is(l, HAUNT) || is(l, INVERTED) || is(l, ECLIPSE) || is(l, DREAM) || is(l, SKY) || is(l, MAZE); }
 
     /** Откуда игрок попал в Перевёртыш — чтобы вернуть обратно. */
     static final Map<UUID, Object[]> ORIGIN = new HashMap<>();
@@ -57,23 +60,35 @@ final class Dims {
             Vec3 start = Maze.create(dest, e);
             return teleport(e, dest, start.f_82479_, start.f_82480_, start.f_82481_) != null;
         }
-        boolean inv = (k == INVERTED), arena = (k == ARENA), ecl = (k == ECLIPSE), dream = (k == DREAM), sky = (k == SKY);
-        if (inv || arena || ecl || dream || sky) {
+        boolean inv = (k == INVERTED), ecl = (k == ECLIPSE), dream = (k == DREAM), sky = (k == SKY);
+        if (inv || ecl || dream || sky) {
             Vec3 p = e.m_20182_();
             ORIGIN.put(e.m_20148_(), new Object[]{from.m_46472_(), p.f_82479_, p.f_82480_, p.f_82481_});
         }
-        int x = (arena || ecl || dream || sky) ? 0 : RNG.nextInt(1200) - 600, z = arena ? -18 : ecl ? -26 : dream ? -28 : sky ? -24 : RNG.nextInt(1200) - 600;
-        if (arena) Arena.ensureBuilt(dest);
+        int x = (ecl || dream || sky) ? 0 : RNG.nextInt(1200) - 600, z = ecl ? -26 : dream ? -28 : sky ? -24 : RNG.nextInt(1200) - 600;
         if (ecl) Arena2.ensureBuilt(dest);
         if (dream) Arena3.ensureBuilt(dest);
         if (sky) Arena4.ensureBuilt(dest);
-        double y = inv ? 90 : (arena || ecl || dream || sky) ? Arena.FLOOR : safeY(dest, x, z);
+        double y = inv ? 90 : (ecl || dream || sky) ? ARENA_FLOOR : safeY(dest, x, z);
         Entity moved = teleport(e, dest, x + 0.5D, y, z + 0.5D);
         if (moved != null) {
             Fix f = new Fix(); f.e = moved; f.level = dest; f.inverted = inv;
             FIXES.add(f);
         }
         return moved != null;
+    }
+
+    /** Игрока из устаревшего измерения arena (старый мир 2.6.x) отправляет в обычный мир на точку возрождения (или мировой спавн). */
+    static void evacuateOldArena(ServerLevel sl) {
+        if (!is(sl, OLD_ARENA)) return;
+        ServerLevel dest = get(sl, Level.f_46428_);
+        if (dest == null) return;
+        for (net.minecraft.server.level.ServerPlayer p : new ArrayList<>(sl.m_6907_())) {
+            BlockPos sp = (Level.f_46428_.equals(p.m_8963_()) && p.m_8961_() != null) ? p.m_8961_() : dest.m_220360_();
+            int x = sp.m_123341_(), z = sp.m_123343_();
+            int y = safeY(dest, x, z);
+            teleport(p, dest, x + 0.5D, y, z + 0.5D);
+        }
     }
 
     /** Вытаскивает застрявших в блоках после переноса. */

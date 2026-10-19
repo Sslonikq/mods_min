@@ -3,6 +3,7 @@ import net.minecraft.world.phys.AABB; import java.util.List; import java.util.fu
 public abstract class Level implements LevelReader { public boolean f_46443_;
  public static final net.minecraft.resources.ResourceKey<Level> f_46428_ = null;
  public net.minecraft.resources.ResourceKey<Level> m_46472_(){return null;}
+ public BlockPos m_220360_(){return null;}
  public void m_6263_(Player p,double x,double y,double z,SoundEvent s,SoundSource src,float v,float pi){}
  public Explosion m_255391_(Entity e,double x,double y,double z,float pow,boolean fire,ExplosionInteraction i){return null;}
  public List<Entity> m_6249_(Entity e, AABB b, Predicate<? super Entity> p){return null;}

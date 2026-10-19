@@ -28,7 +28,6 @@ public final class Ticker {
         run(Ember.ACTIVE, sl, e -> e.level, Ember::tick);
         run(Altar.ACTIVE, sl, a -> a.level, Altar::tick);
         run(Fist.ACTIVE, sl, f -> f.level, Fist::tick);
-        if (Boss.ACTIVE != null && Boss.ACTIVE.level == sl && Boss.ACTIVE.tick()) Boss.ACTIVE = null;
         if (Boss2.ACTIVE != null && Boss2.ACTIVE.level == sl && Boss2.ACTIVE.tick()) Boss2.ACTIVE = null;
         run(TimeStop.ACTIVE, sl, s2 -> s2.level, TimeStop::tick);
         EclipseStaff.tick(sl);
@@ -42,11 +41,11 @@ public final class Ticker {
         Possess.tick(sl);
         Later.tick(sl);
         Dims.tickFixes(sl);
+        if (ticks % 20 == 0) Dims.evacuateOldArena(sl);
         Dungeons.tick(sl);
         if (Dims.is(sl, Dims.VOID)) VoidWorld.tick(sl, ticks);
         else if (Dims.is(sl, Dims.HAUNT)) Haunt.tick(sl);
         else if (Dims.is(sl, Dims.INVERTED)) Inverted.tick(sl, ticks);
-        else if (Dims.is(sl, Dims.ARENA)) Arena.tick(sl);
         else if (Dims.is(sl, Dims.ECLIPSE)) Arena2.tick(sl);
         else if (Dims.is(sl, Dims.DREAM)) Arena3.tick(sl);
         else if (Dims.is(sl, Dims.SKY)) Arena4.tick(sl);

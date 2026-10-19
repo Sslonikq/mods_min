@@ -46,6 +46,8 @@ final class Dungeons {
         final int id, x, y, z, sx, sy, sz;
         final List<Mark> spawns = new ArrayList<>();
         Mark chest;
+        /** Метка босса зала (логово): зал будит босса, а не мобов; зачищен, когда босс убит. */
+        Mark boss;
         Hall(Mark m) { id = Integer.parseInt(m.a); x = m.x; y = m.y; z = m.z; sx = m.sx; sy = m.sy; sz = m.sz; }
         boolean contains(double px, double py, double pz) { return px >= x && px < x + sx && py >= y && py < y + sy + 1 && pz >= z && pz < z + sz; }
         /** Коробка зала с запасом pad по всем сторонам. */
@@ -116,6 +118,10 @@ final class Dungeons {
     /** Тип данжа: сетка расстановки, имена частей. Данные частей читаются лениво. */
     static final class Def {
         final String id; final int cell, margin, layout; final String[] parts;
+        /** Допустимый перепад высот земли под данжем (0 — не проверять) и жёсткий предел, после которого клетка пропускается; наземные данжи. */
+        int flat = 0, maxVar = Integer.MAX_VALUE;
+        /** Данж, с которым этот не должен пересекаться (по рамкам с запасом): Город Спящих обходит Разломы. */
+        Def avoid;
         private List<DungeonTemplate> tpl;
         private int[] bounds;
         private final List<Hall> halls = new ArrayList<>();
@@ -132,6 +138,10 @@ final class Dungeons {
         Def(String id, int cell, int margin, int layout, String... parts) { this.id = id; this.cell = cell; this.margin = margin; this.layout = layout; this.parts = parts; }
 
         String key(int cx, int cz) { return id + "_" + cx + "_" + cz; }
+
+        /** Наземный данж: предпочтительный перепад высот flat и предел maxVar (выше — в клетке данжа не будет). */
+        Def ground(int flat, int maxVar) { this.flat = flat; this.maxVar = maxVar; return this; }
+        Def avoiding(Def other) { this.avoid = other; return this; }
 
         synchronized List<DungeonTemplate> templates() {
             if (tpl == null) {
@@ -173,6 +183,7 @@ final class Dungeons {
                     if (h.contains(m.x, m.y, m.z)) {
                         if (m.t.equals("spawn")) h.spawns.add(m);
                         else if (m.t.equals("chest")) h.chest = m;
+                        else if (m.t.equals("boss")) h.boss = m;
                     }
                 }
             }
@@ -212,8 +223,13 @@ final class Dungeons {
      * Разлом: вход на поверхности, 3 уровня вниз, 16 залов (основной путь 1-7), ~190x200 блоков, три части по z (tools/gen_dungeons.py).
      * Клетка 768, отступ от края клетки 192: данжи одного типа не ближе ~290 блоков, запасные точки (±48) их не сближают.
      */
-    static final Def RIFT = new Def("rift", 768, 192, 2, "rift_entrance", "rift_mid", "rift_deep");
-    static final Def[] DEFS = {RIFT};
+    static final Def RIFT = new Def("rift", 768, 192, 4, "rift_entrance", "rift_mid", "rift_deep");
+    /**
+     * Город Спящих (4.5): наземный, ~97x97 с рвом, шпиль Монолита до ~64 блоков, три части по z (tools/gen_city.py). Клетка 768, отступ 128:
+     * города не ближе 256 блоков друг от друга (при размере 97 и запасных точках ±48 не пересекаются); Разломы обходит (Def.avoid).
+     */
+    static final Def SLEEP = new Def("sleep", 768, 128, 1, "sleep_north", "sleep_mid", "sleep_south").ground(5, 8).avoiding(RIFT);
+    static final Def[] DEFS = {RIFT, SLEEP};
     /** Стенд механик для теста (все метки DungeonMech на малой площади). В мире не ставится: в DEFS его нет. */
     static final Def MECH_TEST = new Def("mechtest", 768, 128, 1, "mech_test");
 
@@ -226,17 +242,52 @@ final class Dungeons {
         return z ^ (z >>> 31);
     }
 
-    /** Точка данжа в клетке (cx,cz); attempt > 0 — запасные точки в пределах ±48 блоков (если основная в воде). */
+    /** Запас вокруг рамки обходимого данжа: его запасные точки смещены на ±48 + зазор. */
+    static final int AVOID_PAD = 52;
+
+    /** Точка данжа в клетке (cx,cz); attempt > 0 — запасные точки в пределах ±48 блоков (если основная в воде). Данж с avoid не налезает на обходимый. */
     static int[] site(long seed, Def d, int cx, int cz, int attempt) {
-        long h = mix(seed + 0x9E3779B97F4A7C15L * (cx * 31L + 7) + 0xC2B2AE3D27D4EB4FL * (cz * 17L + 3) + d.id.hashCode() * 0x632BE59BD9B4E019L);
+        int[] s = site0(seed, d, cx, cz, 0, 0);
+        if (d.avoid != null) {
+            for (int salt = 1; salt < 32 && clashes(seed, d, s); salt++) s = site0(seed, d, cx, cz, 0, salt);
+        }
+        if (attempt > 0) {   // запасные точки смещены от основной (не от клетки): ближайшая к игроку, чанки рядом
+            long h = hash(seed, d, cx, cz, 0);
+            s = new int[]{s[0] + (int) Long.remainderUnsigned(mix(h + 10L * attempt), 97) - 48,
+                    s[1] + (int) Long.remainderUnsigned(mix(h + 10L * attempt + 5), 97) - 48};
+        }
+        return s;
+    }
+
+    /** Точка без обхода (для теста: как часто обход вообще нужен). */
+    static int[] site0Raw(long seed, Def d, int cx, int cz) { return site0(seed, d, cx, cz, 0, 0); }
+
+    private static long hash(long seed, Def d, int cx, int cz, int salt) {
+        return mix(seed + 0x9E3779B97F4A7C15L * (cx * 31L + 7) + 0xC2B2AE3D27D4EB4FL * (cz * 17L + 3) + d.id.hashCode() * 0x632BE59BD9B4E019L + salt * 0x2545F4914F6CDD1DL);
+    }
+
+    private static int[] site0(long seed, Def d, int cx, int cz, int attempt, int salt) {
+        long h = hash(seed, d, cx, cz, salt);
         int span = d.cell - 2 * d.margin;
         int x = cx * d.cell + d.margin + (int) Long.remainderUnsigned(mix(h + 1), span);
         int z = cz * d.cell + d.margin + (int) Long.remainderUnsigned(mix(h + 2), span);
-        if (attempt > 0) {
-            x += (int) Long.remainderUnsigned(mix(h + 10L * attempt), 97) - 48;
-            z += (int) Long.remainderUnsigned(mix(h + 10L * attempt + 5), 97) - 48;
-        }
         return new int[]{x, z};
+    }
+
+    /** Рамка данжа d в точке s пересекается с рамкой обходимого данжа (с запасом AVOID_PAD) вокруг любой из его соседних точек. */
+    static boolean clashes(long seed, Def d, int[] s) {
+        Def o = d.avoid;
+        int[] b, ob;
+        try { b = d.bounds(); ob = o.bounds(); } catch (IllegalStateException e) { return false; }   // шаблонов нет: обход выключен
+        int ca = Math.floorDiv(s[0], o.cell), za = Math.floorDiv(s[1], o.cell);
+        for (int ax = ca - 1; ax <= ca + 1; ax++) {
+            for (int az = za - 1; az <= za + 1; az++) {
+                int[] r = site(seed, o, ax, az, 0);
+                if (s[0] + b[0] < r[0] + ob[3] + AVOID_PAD && r[0] + ob[0] - AVOID_PAD < s[0] + b[3]
+                        && s[1] + b[2] < r[1] + ob[5] + AVOID_PAD && r[1] + ob[2] - AVOID_PAD < s[1] + b[5]) return true;
+            }
+        }
+        return false;
     }
 
     static final class Hit {
@@ -284,7 +335,7 @@ final class Dungeons {
 
     // ================================================================ состояние в памяти
     static long tk = 0;
-    static boolean warned = false, warnedMech = false, warnedMobs = false;
+    static boolean warned = false, warnedMech = false, warnedMobs = false, warnedBoss = false;
     static final int PREPARE_RANGE = 80, PART_RANGE = 96, BUDGET = 1500, EMPTY_TICKS = 600;
     static final Map<String, Long> SPAWNED_AT = new HashMap<>(), LAST_INSIDE = new HashMap<>(), LAST_HALL = new HashMap<>();
     static final Map<UUID, String> PENDING = new HashMap<>();
@@ -494,9 +545,11 @@ final class Dungeons {
     static void clearState() {
         PLACING.clear(); SPAWNED_AT.clear(); LAST_INSIDE.clear(); PENDING.clear(); NO_TEMPLATE.clear();
         DungeonMech.clear();
+        City.clear();
         RiftMobs.clear();
+        Boss.clear();
         Later.TASKS.clear();
-        warned = false; warnedMech = false; warnedMobs = false;
+        warned = false; warnedMech = false; warnedMobs = false; warnedBoss = false;
         LAST_HALL.clear();
     }
 
@@ -515,8 +568,11 @@ final class Dungeons {
         catch (Exception e) { if (!warnedMech) { warnedMech = true; e.printStackTrace(); } }   // сбой механики не обрывает залы и достройку
         try { RiftMobs.tick(sl, data, ps, tk); }
         catch (Exception e) { if (!warnedMobs) { warnedMobs = true; e.printStackTrace(); } }   // сбой мобов Разлома не обрывает залы
+        try { Boss.tickAll(sl, data, ps, tk); }
+        catch (Exception e) { if (!warnedBoss) { warnedBoss = true; e.printStackTrace(); } }   // сбой босса не обрывает залы
         if (tk % 10 != 0) return;
         purgeFalling(sl, data, ps);
+        City.tick(sl, data, ps);
         discover(sl, data, ps);
         schedule(sl, data, ps);
         if (tk % 100 == 0) purgeUnbuilt(sl, data, ps);
@@ -598,25 +654,60 @@ final class Dungeons {
         }
     }
 
-    /** Фиксирует место данжа: первая из 8 точек клетки, где центр не в воде; высота земли запоминается навсегда. */
+    /**
+     * Фиксирует место данжа: первая из 8 точек клетки, где центр не в воде; высота земли запоминается навсегда.
+     * Наземный данж (Def.flat > 0) берёт самую ровную из сухих точек (перепад высот по 9 точкам рамки не больше flat, иначе минимальный)
+     * и пропускает клетку, если перепад больше maxVar.
+     */
     private static void register(ServerLevel sl, DungeonData data, Def d, int cx, int cz, long seed) {
-        int bx = 0, by = 0, bz = 0; boolean dry = false;
-        for (int a = 0; a < 8 && !dry; a++) {
+        int[] best = null; int bestVar = Integer.MAX_VALUE;
+        for (int a = 0; a < 8; a++) {
             int[] s = site(seed, d, cx, cz, a);
+            if (d.avoid != null && clashes(seed, d, s)) continue;   // налезает на обходимый данж
+            if (d.flat > 0 && !sl.m_46805_(new BlockPos(s[0], 64, s[1]))) {   // незагруженный чанк не генерируем синхронно
+                if (a == 0) return;   // основная точка: клетка подождёт следующего прохода
+                continue;             // запасная: пропустить, клетка не должна зависнуть
+            }
             sl.m_6325_(s[0] >> 4, s[1] >> 4);
             int y = groundY(sl, s[0], s[1]);
-            bx = s[0]; by = y; bz = s[1];
-            dry = !wet(sl, s[0], y - 1, s[1]);
+            if (wet(sl, s[0], y - 1, s[1])) continue;
+            int var = d.flat > 0 ? variation(sl, d, s[0], s[1]) : 0;
+            if (var == UNLOADED) { if (a == 0) return; continue; }
+            if (var == SETTLED) continue;   // обжитое место (постройки игрока): эта точка не годится
+            if (best == null || var < bestVar) { best = new int[]{s[0], y, s[1]}; bestVar = var; }
+            if (var <= d.flat) break;
         }
-        if (!dry) {   // океан: в этой клетке данжа не будет
+        if (best == null || bestVar > d.maxVar) {   // океан или слишком неровно: в этой клетке данжа не будет
             data.dead.put(d.key(cx, cz), 1);
             data.m_77762_();
             return;
         }
-        DungeonData.Rec rec = new DungeonData.Rec(d.key(cx, cz), d.id, cx, cz, bx, by, bz);
+        DungeonData.Rec rec = new DungeonData.Rec(d.key(cx, cz), d.id, cx, cz, best[0], best[1], best[2]);
         try { rec.layout = d.signature(); } catch (IllegalStateException e) { noTemplate(d, e); }
         data.recs.put(d.key(cx, cz), rec);
         data.m_77762_();
+    }
+
+    /** Результаты variation: чанк не загружен (отложить), место обжито (пропустить точку). */
+    static final int UNLOADED = -1, SETTLED = -2;
+    /** Чанк обжит, если в нём игроки провели больше 5 минут (тики): стройка города поверх такого места ломала бы постройки. */
+    static final long SETTLED_TICKS = 20L * 60 * 5;
+
+    /** Перепад высот земли по 9 точкам рамки данжа (углы с отступом 6, середины, центр); вода в любой точке — 99; чанк не загружен — UNLOADED, обжит — SETTLED. */
+    private static int variation(ServerLevel sl, Def d, int x, int z) {
+        int[] b;
+        try { b = d.bounds(); } catch (IllegalStateException e) { return 0; }
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+        for (int px : new int[]{x + b[0] + 6, x, x + b[3] - 6}) {
+            for (int pz : new int[]{z + b[2] + 6, z, z + b[5] - 6}) {
+                if (!sl.m_46805_(new BlockPos(px, 64, pz))) return UNLOADED;
+                if (sl.m_6325_(px >> 4, pz >> 4).m_6319_() > SETTLED_TICKS) return SETTLED;
+                int y = groundY(sl, px, pz);
+                if (wet(sl, px, y - 1, pz)) return 99;
+                lo = Math.min(lo, y); hi = Math.max(hi, y);
+            }
+        }
+        return hi - lo;
     }
 
     private static void schedule(ServerLevel sl, DungeonData data, List<ServerPlayer> ps) {
@@ -628,7 +719,9 @@ final class Dungeons {
                 if (((r.partsDone >> i) & 1L) != 0 || placing(sl, r, i)) continue;
                 DungeonTemplate t = tp.get(i);
                 for (ServerPlayer p : ps) {
-                    if (distToRect(p.m_20185_(), p.m_20189_(), r.x + t.ox, r.z + t.oz, t.sx, t.sz) <= PART_RANGE) {
+                    // игрок уже внутри данжа: достраиваем все части сразу (залы спят до полной достройки), без ожидания 96 блоков до части
+                    if (r.contains(p.m_20185_(), p.m_20186_(), p.m_20189_(), 1)
+                            || distToRect(p.m_20185_(), p.m_20189_(), r.x + t.ox, r.z + t.oz, t.sx, t.sz) <= PART_RANGE) {
                         PLACING.add(new Placing(sl, r, i, t));
                         break;
                     }
@@ -658,7 +751,13 @@ final class Dungeons {
 
     private static void inDungeon(ServerLevel sl, DungeonData data, DungeonData.Rec rec, List<ServerPlayer> ps) {
         Def d = rec.def();
-        if (d == null || rec.partsDone != d.allParts()) return;
+        if (d == null) return;
+        if (rec.partsDone != d.allParts()) {   // достройка ещё идёт: залы спят, игроку об этом говорим
+            if (tk % 100 == 0 && rec.partsDone != 0)
+                for (ServerPlayer p : ps)
+                    if (p.m_6084_() && rec.contains(p.m_20185_(), p.m_20186_(), p.m_20189_(), 1)) p.m_5661_(Component.m_237115_("explosionwand.dungeon.building"), true);
+            return;
+        }
         List<ServerPlayer> in = new ArrayList<>();
         for (ServerPlayer p : ps) if (p.m_6084_() && rec.contains(p.m_20185_(), p.m_20186_(), p.m_20189_(), 1)) in.add(p);
         if (!in.isEmpty()) LAST_INSIDE.put(rec.key, tk);
@@ -671,12 +770,14 @@ final class Dungeons {
             if (cleared) continue;
             String tag = tagOf(rec, h.id);
             boolean sealed = d.sealed(h.id);
-            // залы с печатью сбрасываются по залу с запасом ALIVE_PAD (там же ищутся его мобы), а не по данжу; сама печать — по коробке без запаса
-            if (sealed && hallOccupied(rec, h, in, ALIVE_PAD)) LAST_HALL.put(tag, tk);
+            // залы с печатью сбрасываются по залу с запасом ALIVE_PAD (там же ищутся его мобы), а не по данжу; сама печать — по коробке без запаса.
+            // Логово босса — без запаса: погибшие стоят у жаровни в ALIVE_PAD от зала, но босс не должен ждать их вечно (30 с, и он восстановится)
+            if (sealed && hallOccupied(rec, h, in, h.boss != null ? 0 : ALIVE_PAD)) LAST_HALL.put(tag, tk);
             long ref = sealed ? LAST_HALL.computeIfAbsent(tag, k -> tk) : last;
             if (peaceful) {   // мирный режим: данж спит, зал не оживает и не засчитывается (мобы-призраки не дадут сундук)
                 if (spawned && entitiesLoaded(sl, rec, h)) {
                     for (Entity e : alive(sl, rec, h, tag)) RiftMobs.remove(e);
+                    if (h.boss != null) Boss.reset(sl, rec, h);
                     rec.hallsSpawned &= ~bit; SPAWNED_AT.remove(tag); data.m_77762_();
                 }
                 continue;
@@ -694,7 +795,7 @@ final class Dungeons {
             } else if (sl.m_46805_(center)) {
                 if (!in.isEmpty()) {
                     // записи нет (после перезапуска) — отсрочка 30 тиков с этого момента
-                    if (tk - SPAWNED_AT.computeIfAbsent(tag, k -> tk) > 30 && alive(sl, rec, h, tag).isEmpty()) {
+                    if (clearable(h.boss != null, tk - SPAWNED_AT.computeIfAbsent(tag, k -> tk) > 30, () -> alive(sl, rec, h, tag).isEmpty())) {
                         rec.hallsCleared |= bit; data.m_77762_();
                         onCleared(sl, rec, h, in);
                         continue;
@@ -702,6 +803,7 @@ final class Dungeons {
                 }
                 if (hallStale(tk, ref)) {   // никого (в зале с печатью — в зале +ALIVE_PAD, иначе в данже) 30 с: убрать недобитых, зал разбудится заново
                     for (Entity e : alive(sl, rec, h, tag)) RiftMobs.remove(e);
+                    if (h.boss != null) Boss.reset(sl, rec, h);
                     rec.hallsSpawned &= ~bit; SPAWNED_AT.remove(tag); LAST_HALL.remove(tag); data.m_77762_();
                 }
             }
@@ -751,27 +853,65 @@ final class Dungeons {
         return new String[]{a.substring(0, i), t.equals("2") || t.equals("3") ? t : "1"};
     }
 
+    /** Добыча сундука зала: у логова босса — трофеи босса, затем временный набор тира. */
+    static List<String> lootFor(Hall h, int tier) { return lootFor(null, h, tier); }
+
+    /** То же с учётом данжа: у Города Спящих в ряде сундуков лежат особые предметы (книги Архимага, Печать Храма). */
+    static List<String> lootFor(Def d, Hall h, int tier) {
+        List<String> out = new ArrayList<>();
+        if (h.boss != null) out.addAll(Boss.LOOT);
+        if (d != null && d == SLEEP) out.addAll(City.extra(h.id));
+        out.addAll(LOOT.get(tier - 1));
+        return out;
+    }
+
+    /**
+     * Можно ли засчитать зал по «мобов не осталось». Логово с боссом так не засчитывается никогда: хост появляется через 60 тиков после входа
+     * (и после перезапуска мира его ещё нет), поэтому победу ставит только сам босс (lairWon).
+     */
+    static boolean clearable(boolean hasBoss, boolean waited, java.util.function.BooleanSupplier aliveEmpty) {
+        return !hasBoss && waited && aliveEmpty.getAsBoolean();
+    }
+
+    /** Босс логова побеждён: зал засчитывается (хранится в Rec.hallsCleared, переживает перезапуск) и ставится сундук. */
+    static void lairWon(ServerLevel sl, DungeonData data, DungeonData.Rec rec, Hall h, List<ServerPlayer> in) {
+        rec.hallsCleared |= 1 << h.id; data.m_77762_();
+        onCleared(sl, rec, h, in);
+    }
+
     private static void onCleared(ServerLevel sl, DungeonData.Rec rec, Hall h, List<ServerPlayer> in) {
         if (h.chest == null) return;
         String[] spec = chestSpec(h.chest.a);
-        Loot.chest(sl, rec.x + h.chest.x, rec.y + h.chest.y, rec.z + h.chest.z, spec[0], LOOT.get(Integer.parseInt(spec[1]) - 1));
+        Loot.chest(sl, rec.x + h.chest.x, rec.y + h.chest.y, rec.z + h.chest.z, spec[0], lootFor(rec.def(), h, Integer.parseInt(spec[1])));
         for (ServerPlayer p : in) p.m_5661_(Component.m_237115_("explosionwand.dungeon.cleared"), false);
     }
 
     /** Живые мобы зала: тег зала в рамке «зал + ALIVE_PAD». Рамка совпадает с проверкой entitiesLoaded. */
     static List<Entity> alive(ServerLevel sl, DungeonData.Rec rec, Hall h, String tag) {
-        AABB box = new AABB(rec.x + h.x - ALIVE_PAD, rec.y + h.y - ALIVE_PAD, rec.z + h.z - ALIVE_PAD,
+        return sl.m_6249_(null, hallBox(rec, h), e -> e.m_6084_() && e.m_19880_().contains(tag));
+    }
+
+    /** Рамка поиска мобов зала (зал + ALIVE_PAD) в мировых координатах. */
+    static AABB hallBox(DungeonData.Rec rec, Hall h) {
+        return new AABB(rec.x + h.x - ALIVE_PAD, rec.y + h.y - ALIVE_PAD, rec.z + h.z - ALIVE_PAD,
                 rec.x + h.x + h.sx + ALIVE_PAD, rec.y + h.y + h.sy + ALIVE_PAD, rec.z + h.z + h.sz + ALIVE_PAD);
-        return sl.m_6249_(null, box, e -> e.m_6084_() && e.m_19880_().contains(tag));
     }
 
     private static void spawnHall(ServerLevel sl, DungeonData.Rec rec, Hall h, String tag) {
+        if (h.boss != null) {   // логово: вместо мобов просыпается босс (его тики — Boss.tickAll)
+            Boss.wake(sl, rec, h, tag);
+            return;
+        }
         int have = alive(sl, rec, h, tag).size();   // недобитые с прошлого раза не дублируются
         for (int i = have; i < h.spawns.size(); i++) {
             Mark m = h.spawns.get(i);
             double x = rec.x + m.x + 0.5, y = rec.y + m.y, z = rec.z + m.z + 0.5;
             if (m.a.startsWith(RiftMobs.PFX)) {   // моб Разлома: облик из block_display, свои тики (RiftMobs)
                 RiftMobs.spawn(sl, m.a, x, y, z, tag);
+                continue;
+            }
+            if (m.a.startsWith(City.STUB)) {   // заглушка моба Города Спящих (настоящие мобы — фаза 4.6)
+                City.spawnStub(sl, m.a, x, y, z, tag);
                 continue;
             }
             String gear = m.a.equals("skeleton") ? ",HandItems:[{id:\"minecraft:bow\",Count:1b},{}]" : "";
@@ -806,7 +946,7 @@ final class Dungeons {
             if (!main) return;
             if (holdsShard(p, m.a)) openDoor(sl, rec, m);
             else {
-                p.m_5661_(Component.m_237115_("explosionwand.dungeon.locked." + d.id), true);
+                p.m_5661_(Component.m_237115_("explosionwand.dungeon.locked." + m.a), true);
                 Fx.sound(sl, pos.m_123341_(), pos.m_123342_(), pos.m_123343_(), "block.amethyst_block.hit", 1.0F, 0.5F);
             }
             return;

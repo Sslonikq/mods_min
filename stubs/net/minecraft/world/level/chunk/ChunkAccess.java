@@ -1,1 +1,1 @@
-package net.minecraft.world.level.chunk; public abstract class ChunkAccess {}
+package net.minecraft.world.level.chunk; public abstract class ChunkAccess { public long m_6319_(){return 0;} }

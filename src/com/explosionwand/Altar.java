@@ -13,15 +13,11 @@ import org.joml.Vector3f;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Алтарь Разлома: каменный алтарь с аметистовыми колоннами и портал к Сердцу Разлома. */
+/** Алтарь с колоннами и портал на арену босса: Король Затмения (kind 1), Монолит Сна (2), Небесный Кит (3). Сердце Разлома живёт в данже, алтаря у него нет. */
 public class Altar {
     static final List<Altar> ACTIVE = new ArrayList<>();
     static DustParticleOptions PURPLE, BLACK, PINK, DREAM1, DREAM2, SKY1, SKY2;
     final ServerLevel level; final double cx, cy, cz; final int kind; int t = 0;
-
-    Altar(ServerLevel level, int bx, int by, int bz) { this(level, bx, by, bz, 0); }
-
-    Altar(ServerLevel level, int bx, int by, int bz, boolean eclipse) { this(level, bx, by, bz, eclipse ? 1 : 0); }
 
     Altar(ServerLevel level, int bx, int by, int bz, int kind) {
         this.level = level; this.kind = kind; boolean eclipse = kind == 1;
@@ -56,7 +52,7 @@ public class Altar {
         double r = 1.3 * Math.min(1, t / 30.0);
         for (int i = 0; i < 26; i++) {                       // вихрь
             double a = t * 0.12 + i * Math.PI * 2 / 26;
-            var c1 = kind == 3 ? (i % 3 == 0 ? SKY2 : SKY1) : kind == 2 ? (i % 3 == 0 ? DREAM1 : DREAM2) : kind == 1 ? (i % 3 == 0 ? Boss2.GOLD : Boss2.ORANGE) : (i % 3 == 0 ? PINK : PURPLE);
+            var c1 = kind == 3 ? (i % 3 == 0 ? SKY2 : SKY1) : kind == 2 ? (i % 3 == 0 ? DREAM1 : DREAM2) : (i % 3 == 0 ? Boss2.GOLD : Boss2.ORANGE);
             Fx.send(level, c1, cx + Math.cos(a) * r, cy + Math.sin(a) * r * 1.4, cz, 1, 0, 0, 0, 0);
             Fx.send(level, c1, cx, cy + Math.sin(a) * r * 1.4, cz + Math.cos(a) * r, 1, 0, 0, 0, 0);
         }
@@ -76,7 +72,7 @@ public class Altar {
             double dx = cx - p.f_82479_, dy = cy - (p.f_82480_ + 0.9), dz = cz - p.f_82481_;
             if (dx * dx + dy * dy + dz * dz < 1.6 * 1.6) {
                 Fx.sound(level, p.f_82479_, p.f_82480_, p.f_82481_, "block.portal.travel", 0.5F, 0.6F);
-                Dims.send(e, level, kind == 3 ? Dims.SKY : kind == 2 ? Dims.DREAM : kind == 1 ? Dims.ECLIPSE : Dims.ARENA);
+                Dims.send(e, level, kind == 3 ? Dims.SKY : kind == 2 ? Dims.DREAM : Dims.ECLIPSE);
             }
         }
         return t >= 1200;

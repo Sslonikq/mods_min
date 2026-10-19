@@ -24,7 +24,14 @@ final class DungeonGuard {
 
     static void onBreak(BlockEvent.BreakEvent ev) {
         if (!(ev.getPlayer() instanceof ServerPlayer p) || p.m_7500_()) return;
-        if (Dungeons.inside(p.m_9236_(), ev.getPos())) ev.setCanceled(true);
+        // ядро столба щита Сердца Разлома ломается (иначе щит не снять); остальное в данже неприкосновенно
+        if (!Dungeons.inside(p.m_9236_(), ev.getPos())) return;
+        if (p.m_9236_() instanceof ServerLevel sl && Boss.isPylonCore(sl, ev.getPos())) {
+            // ядро убираем сами, без дропа: аметист со столбов не фармится (бой можно сбросить и начать заново)
+            sl.m_7731_(ev.getPos(), Fx.state("air"), 3);
+            Fx.sound(sl, ev.getPos().m_123341_() + 0.5, ev.getPos().m_123342_() + 0.5, ev.getPos().m_123343_() + 0.5, "block.amethyst_block.break", 1.0F, 1.0F);
+        }
+        ev.setCanceled(true);
     }
 
     static void onPlace(BlockEvent.EntityPlaceEvent ev) {
@@ -63,7 +70,16 @@ final class DungeonGuard {
         if (ev.getLevel() instanceof ServerLevel sl && Dims.is(sl, net.minecraft.world.level.Level.f_46428_)) {
             DungeonData data = DungeonData.get(sl);
             if (data.recs.isEmpty()) return;
-            ev.getAffectedBlocks().removeIf(pos -> Dungeons.at(data, pos.m_123341_(), pos.m_123342_(), pos.m_123343_(), 0) != null);
+            java.util.List<BlockPos> cores = new java.util.ArrayList<>();
+            ev.getAffectedBlocks().removeIf(pos -> {
+                if (Dungeons.at(data, pos.m_123341_(), pos.m_123342_(), pos.m_123343_(), 0) == null) return false;
+                if (Boss.isPylonCore(sl, pos)) cores.add(pos.m_7949_());   // ядро столба: убираем сами, без дропа
+                return true;
+            });
+            for (BlockPos c : cores) {
+                sl.m_7731_(c, Fx.state("air"), 3);
+                Fx.sound(sl, c.m_123341_() + 0.5, c.m_123342_() + 0.5, c.m_123343_() + 0.5, "block.amethyst_block.break", 1.0F, 1.0F);
+            }
         }
     }
 
@@ -86,7 +102,7 @@ final class DungeonGuard {
         return i instanceof PortalWandItem || i instanceof PortalGunItem || i instanceof TesseractWandItem || i instanceof MimicWandItem
                 || i instanceof PossessWandItem || i instanceof RiftWandItem || i instanceof BlackHoleWandItem || i instanceof IceStormWandItem
                 || i instanceof ChronosWandItem || i instanceof SkySealItem || i instanceof EclipseSealItem || i instanceof DreamSealItem
-                || i instanceof RiftKeyItem || i instanceof EclipseStaffItem || i instanceof WhaleStaffItem;
+                || i instanceof EclipseStaffItem || i instanceof WhaleStaffItem || i instanceof RiftStaffItem;
     }
 
     static void onUseItem(PlayerInteractEvent.RightClickItem ev) {

@@ -9,7 +9,7 @@ public abstract class Entity { public boolean f_19864_; public float f_19789_;
  public void m_20225_(boolean b){} public void m_20331_(boolean b){} public void m_6034_(double x,double y,double z){} public void m_146922_(float f){} public void m_146926_(float f){} public void m_5616_(float f){}
  public void m_6593_(net.minecraft.network.chat.Component c){} public void m_20340_(boolean b){} public void m_8061_(net.minecraft.world.entity.EquipmentSlot s, net.minecraft.world.item.ItemStack st){}
  public float m_20205_(){return 0;} public float m_20206_(){return 0;} public float m_146909_(){return 0;} public void m_20095_(){} public boolean m_6060_(){return false;} public boolean m_6144_(){return false;}
- public java.util.Set<String> m_19880_(){return null;} public void m_6842_(boolean b){} public boolean m_213877_(){return false;} public void m_146915_(boolean b){} public double m_20275_(double x,double y,double z){return 0;} public void m_5997_(double x,double y,double z){} public String m_20149_(){return null;}
+ public java.util.Set<String> m_19880_(){return null;} public boolean m_20049_(String t){return false;} public void m_6842_(boolean b){} public boolean m_213877_(){return false;} public void m_146915_(boolean b){} public double m_20275_(double x,double y,double z){return 0;} public void m_5997_(double x,double y,double z){} public String m_20149_(){return null;}
  public net.minecraft.world.entity.EntityType<?> m_6095_(){return null;}
  public boolean m_20068_(){return false;} public void m_20254_(int s){}
  public void m_6021_(double x,double y,double z){} public void m_146870_(){} public java.util.UUID m_20148_(){return null;} public net.minecraft.world.level.Level m_9236_(){return null;} public float m_146908_(){return 0;}

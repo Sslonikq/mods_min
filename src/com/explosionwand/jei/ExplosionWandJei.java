@@ -24,6 +24,9 @@ public class ExplosionWandJei implements IModPlugin {
         info(reg, new ItemStack(ExplosionWandMod.DREAM_STAFF.get()), "dream_staff");
         info(reg, new ItemStack(ExplosionWandMod.DREAMING_EYE.get()), "dreaming_eye");
         info(reg, new ItemStack(ExplosionWandMod.WHALE_STAFF.get()), "whale_staff");
+        info(reg, new ItemStack(ExplosionWandMod.RIFT_STAFF.get()), "rift_staff");
+        info(reg, new ItemStack(ExplosionWandMod.SLEEP_SEAL_SHARD.get()), "sleep_seal_shard");
+        info(reg, new ItemStack(ExplosionWandMod.TEMPLE_SEAL.get()), "temple_seal");
     }
 
     private static void info(IRecipeRegistration reg, ItemStack stack, String key) {

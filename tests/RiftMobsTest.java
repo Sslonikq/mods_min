@@ -166,6 +166,12 @@ public class RiftMobsTest {
         check(RiftLogic.beetleFlock(RiftLogic.BEETLE_CAP, 7) == 0 && RiftLogic.beetleFlock(RiftLogic.BEETLE_CAP - 1, 7) == 1, "у предела — не больше, чем осталось");
         check(RiftLogic.beetleGone(true, 5, 110) && RiftLogic.beetleGone(false, 111, 110) && !RiftLogic.beetleGone(false, 110, 110), "жук уходит ночью или когда игроки дальше 110");
         check(RiftLogic.renderEvery(10) == 3 && RiftLogic.renderEvery(16) == 3 && RiftLogic.renderEvery(20) == 6 && RiftLogic.renderEvery(33) == 0, "облик реже и не шлётся издалека");
+        check(RiftLogic.GOLEM_FIST_R == 2.5, "круг-телеграф и зона удара голема — один радиус");
+        check(RiftLogic.capHit(12, false) == 12 && RiftLogic.capHit(22.5, false) == 22.5, "не на Сложной урон как есть");
+        check(RiftLogic.capHit(12, true) * RiftLogic.HARD_MULT <= RiftLogic.HARD_CAP + 1e-9 && RiftLogic.capHit(22.5, true) * RiftLogic.HARD_MULT <= RiftLogic.HARD_CAP + 1e-9
+                && RiftLogic.capHit(6, true) == 6 && RiftLogic.capHit(9.3, true) == 9.3, "на Сложной один удар не выше 14, мелкие не режутся");
+        check(RiftMobs.make(Kind.GOLEM).half == 0.5 && RiftMobs.make(Kind.SHARDLING).half == 0, "широкий хост (голем) проверяет 4 угла, остальные — центр");
+        check(RiftMobs.make(Kind.SHARDLING).leash == Dungeons.ALIVE_PAD - 2 && RiftMobs.make(Kind.BEETLE).leash == 15, "поводок: рамка поиска зала минус 2, у жуков 15");
         check(RiftLogic.leashBlocked(25, 29, 28) && !RiftLogic.leashBlocked(25, 27, 28) && !RiftLogic.leashBlocked(30, 29, 28) && RiftLogic.leashBlocked(30, 31, 28), "поводок: наружу за предел нельзя, обратно к дому можно");
         RiftMobs.Shade hid = new RiftMobs.Shade();
         check(hid.quiet() && !RiftMobs.make(Kind.SHARDLING).quiet(), "спрятанная Тень ничего не шлёт, остальные шлют");
@@ -301,22 +307,22 @@ public class RiftMobsTest {
                 }
             }
         }
-        check(marks == 88, "меток мобов " + marks);
+        check(marks == 77, "меток мобов " + marks);
         for (Kind k : new Kind[]{Kind.SHARDLING, Kind.ARCHER, Kind.SHADE, Kind.PRISM, Kind.EATER, Kind.GOLEM})
             check(total.getOrDefault(k, 0) > 0, "в Разломе есть " + k.id);
-        check(total.getOrDefault(Kind.GOLEM, 0) == 2 && total.getOrDefault(Kind.EATER, 0) == 5, "големы и пожиратели редки: " + total);
+        check(total.getOrDefault(Kind.GOLEM, 0) == 1 && total.getOrDefault(Kind.EATER, 0) == 3, "големы и пожиратели редки: " + total);
         for (int h : new int[]{1, 2}) check(Set.of("explosionwand:shardling", "explosionwand:crystal_archer").equals(prefixed(byHall.get(h))), "залы 1-2: осколочники и лучники: " + byHall.get(h));
         for (int h : new int[]{3, 4, 5}) {
             Set<String> s = byHall.get(h);
             check(s.contains("prism") && s.contains("rift_shade") && !s.contains("echo_eater") && !s.contains("amethyst_golem"), "залы 3-5: призмы и тени: " + h + " " + s);
         }
         check(byHall.get(6).contains("echo_eater"), "преддверие: пожиратели");
-        check(byHall.get(7).contains("echo_eater") && byHall.get(7).contains("amethyst_golem"), "логово: пожиратели и голем");
+        check(byHall.get(7) == null, "логово: обычных мобов нет, там босс");
         check(byHall.get(11).contains("amethyst_golem") && byHall.get(11).contains("rift_shade"), "Логово Тени: голем-элита и тени");
         check(byHall.get(8).equals(Set.of("shardling")), "Пещера Осколочников: осколочники");
         check(byHall.get(9).equals(Set.of("drowned")), "Затопленный грот остался ванильным");
         check(byHall.get(10).contains("rift_shade"), "Гнездо Теней: тени");
-        check(d.layout == 2 && d.signature().endsWith(":v2"), "раскладка Разлома повышена до 2");
+        check(d.layout == 4 && d.signature().endsWith(":v4"), "раскладка Разлома повышена до 4");
     }
 
     static Set<String> prefixed(Set<String> s) {

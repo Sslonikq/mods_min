@@ -13,7 +13,8 @@
     ew_origin  — [x,y,z] смещение угла части от начала данжа
     ew_marks   — метки: t (тип), a (аргумент), p [x,y,z] (в координатах части), s [sx,sy,sz]
 Типы меток: start, door (p+s: блоки двери), brazier (p: жаровня; a: "dx,dy,dz" смещение до точки возрождения),
-            hall (p+s: зал, a: номер), spawn (p: точка моба, a: тип сущности или моб Разлома explosionwand:<вид> — см. RIFT_MOBS; лучник на колонне из аметиста), chest (p: сундук награды, a: "Название|тир": тир 1..3 — набор временной добычи).
+            hall (p+s: зал, a: номер), spawn (p: точка моба, a: тип сущности или моб Разлома explosionwand:<вид> — см. RIFT_MOBS; лучник на колонне из аметиста), chest (p: сундук награды, a: "Название|тир": тир 1..3 — набор временной добычи),
+            boss (p: центр площадки, где просыпается босс при пробуждении зала, a: вид — BOSS_KINDS; зал должен быть с печатью seal).
 Механики (фаза 4.2, движок DungeonMech):
             steps (p+s: ступени над провалом, появляются при приближении; a: блок),
             beams (p: плитка-ловушка; a: "dx,dy,dz" смещение до кристалла, из которого бьёт луч),
@@ -21,6 +22,7 @@
             platform (p+s: платформа в начальном положении; a: "+x|-x|+z|-z,длина,блок"; ходит туда-сюда),
             lever (p: рычаг; a: id), secret (p+s: стена, исчезает по id от lever или решённой головоломки mirror),
             seal (p+s: проём двери; a: "номер зала,блок"; закрывается, пока зал разбужен и не зачищен).
+Город Спящих (фаза 4.5) строит модуль tools/gen_city.py (метки spawn вида "stub:<вид>" — заглушки мобов Города, см. STUB_MOBS).
 Файлы детерминированы (gzip без времени), поэтому --check сравнивает байты.
 """
 import gzip, io, json, math, random, struct, sys, zlib
@@ -32,6 +34,10 @@ TEX = ROOT / "resources" / "assets" / "explosionwand" / "textures" / "item"
 DATA_VERSION = 3465  # Minecraft 1.20.1
 SPLITS = (24, 100)   # части Разлома режутся по z: z<24 — rift_entrance, 24..99 — rift_mid, z>=100 — rift_deep
 PARTS = ("rift_entrance", "rift_mid", "rift_deep")
+CITY_SPLITS = (-16, 16)   # части Города Спящих (фаза 4.5): z<-16, -16..15, z>=16
+CITY_PARTS = ("sleep_north", "sleep_mid", "sleep_south")
+# мобы-заглушки Города Спящих (4.5, пока нет настоящих мобов 4.6): id метки spawn -> сколько клеток воздуха нужно над меткой
+STUB_MOBS = {"stub:sleeper": 2, "stub:stitch": 2, "stub:dreamer": 2, "stub:bookguard": 2, "stub:statue": 2}
 
 
 # ---------------------------------------------------------------- NBT (минимальный писатель)
@@ -264,39 +270,39 @@ def build_rift():
 
         # пещера Осколочников (зал 8), в ней рычаг тайника
         R.corr("в пещеру 8", -45, 31, -29, 33, S, w1, f1)
-        R.room("зал 8", -88, 28, -46, 58, S, 8, w1, f1)
-        g.mark("lever", -88, S, 52, "arch")
-        g.mark("secret", -73, S, 59, "arch", (3, 3, 1))
+        R.room("зал 8", -68, 28, -46, 50, S, 8, w1, f1)                              # 23x23 (было 43x31)
+        g.mark("lever", -68, S, 44, "arch")
+        g.mark("secret", -58, S, 51, "arch", (3, 3, 1))
 
         def cave():
-            for _ in range(16):
-                x, z = rng.randrange(-85, -48), rng.randrange(30, 57)
-                if (x >= -52 and 30 <= z <= 35) or (-76 <= x <= -68 and z >= 50): continue
+            for _ in range(8):
+                x, z = rng.randrange(-66, -48), rng.randrange(30, 49)
+                if (x >= -52 and 30 <= z <= 35) or (-61 <= x <= -53 and z >= 44): continue
                 pillar(x, S, S + rng.randrange(2, 6), z, rng.choice([CAL, DB, CAL]))
-            for (x, z) in ((-80, 34), (-70, 46), (-60, 36), (-56, 50), (-84, 54)): cluster(x, S, z)
-            g.box(-89, S - 1, 51, -89, S + 1, 53, MSB)                                  # подсказка у рычага
-            g.set(-88, S, 52, bm("lever[face=wall,facing=east,powered=false]"))
-            g.box(-73, S, 59, -71, S + 2, 59, CSB)                                      # трещина в кладке
+            for (x, z) in ((-64, 34), (-60, 40), (-56, 34), (-50, 46)): cluster(x, S, z)
+            g.box(-69, S - 1, 43, -69, S + 1, 45, MSB)                                  # обычная кладка у рычага (не подсказка)
+            g.set(-68, S, 44, bm("lever[face=wall,facing=east,powered=false]"))
+            g.box(-58, S, 51, -56, S + 2, 51, CSB)                                      # трещина в кладке
         R.add("deco", cave)
-        hall(8, -88, 28, -46, 58, S, 8)
-        mobs(S, [(-80, 40, SH), (-70, 46, SH), (-64, 36, SH), (-58, 44, SH), (-76, 32, SH), (-84, 50, SH)])
-        chest(-86, S, 30, "Пещера Осколочников", 1)
+        hall(8, -68, 28, -46, 50, S, 8)
+        mobs(S, [(-64, 32, SH), (-58, 38, SH), (-52, 38, SH), (-62, 46, SH), (-66, 40, SH), (-50, 44, SH)])
+        chest(-66, S, 30, "Пещера Осколочников", 1)
 
         # затопленный грот (зал 9): уступ у входа, дальше вода, на дне сундук
         R.corr("в грот 9", 29, 31, 51, 33, S, w1, f1)
-        R.room("зал 9", 52, 32, 90, 70, S, 9, w1, f1)
-        R.add("shell", lambda: g.box(57, S - 6, 31, 91, FL - 1, 71, w1))
+        R.room("зал 9", 52, 32, 77, 57, S, 9, w1, f1)                                # 26x26 (было 39x39)
+        R.add("shell", lambda: g.box(57, S - 6, 31, 78, FL - 1, 58, w1))
 
         def grotto():
-            for x in range(58, 91):
+            for x in range(58, 78):
                 top = {58: FL - 1, 59: FL - 2, 60: FL - 3}.get(x, FL - 4)             # блок дна; ступени уходят под воду
-                g.box(x, top, 32, x, top, 70, DB)
-                g.box(x, top + 1, 32, x, FL, 70, WATER)
-            for (x, z) in ((64, 36), (72, 52), (84, 40), (78, 66), (66, 62), (88, 56)): g.set(x, FL - 4, z, SL)
+                g.box(x, top, 32, x, top, 57, DB)
+                g.box(x, top + 1, 32, x, FL, 57, WATER)
+            for (x, z) in ((64, 36), (70, 44), (75, 36), (66, 54), (74, 54)): g.set(x, FL - 4, z, SL)
         R.add("pit", grotto)
-        hall(9, 52, 32, 90, 70, S, 9, low=4)
-        mobs(S - 4, [(68, 42, "drowned"), (76, 58, "drowned"), (84, 46, "drowned"), (66, 64, "drowned")])
-        chest(80, S - 4, 51, "Затопленный грот", 1)
+        hall(9, 52, 32, 77, 57, S, 9, low=4)
+        mobs(S - 4, [(66, 38, "drowned"), (72, 46, "drowned"), (68, 52, "drowned"), (75, 40, "drowned")])
+        chest(72, S - 4, 54, "Затопленный грот", 1)
 
         # зал 2: Кристальный сад — арена с колоннами и волнами
         R.corr("в зал 2", -1, 63, 1, 87, S, w1, f1)
@@ -313,32 +319,32 @@ def build_rift():
 
         # гнездо Теней (зал 10)
         R.corr("в гнездо 10", 35, 118, 51, 120, S, w1, f1)
-        R.room("зал 10", 52, 100, 90, 138, S, 8, w1, f1)
+        R.room("зал 10", 52, 106, 77, 131, S, 8, w1, f1)                             # 26x26 (было 39x39)
 
         def nest():
-            for _ in range(26):                                                        # паутина у потолка и по углам
-                g.set(rng.randrange(53, 90), S + rng.choice((6, 7)), rng.randrange(101, 138), bm("cobweb"))
-            for (x, z) in ((54, 102), (88, 102), (54, 136), (88, 136), (54, 112), (88, 112)):
+            for _ in range(14):                                                        # паутина у потолка и по углам
+                g.set(rng.randrange(53, 77), S + rng.choice((6, 7)), rng.randrange(107, 131), bm("cobweb"))
+            for (x, z) in ((54, 108), (75, 108), (54, 129), (75, 129), (75, 118)):
                 g.set(x, S, z, bm("cobweb")); g.set(x, S + 1, z, bm("cobweb"))
-            for _ in range(10):
-                pillar(rng.randrange(56, 88), S, S + rng.randrange(1, 4), rng.randrange(103, 136), BS)
+            for _ in range(6):
+                pillar(rng.randrange(56, 75), S, S + rng.randrange(1, 4), rng.randrange(109, 129), BS)
         R.add("deco", nest)
-        hall(10, 52, 100, 90, 138, S, 8)
-        mobs(S, [(60, 106, SD), (80, 108, SD), (66, 124, SH), (84, 124, SH), (72, 134, SD), (60, 132, SH)])
-        chest(86, S, 134, "Гнездо Теней", 1)
+        hall(10, 52, 106, 77, 131, S, 8)
+        mobs(S, [(58, 111, SD), (70, 111, SD), (62, 124, SH), (72, 124, SH), (66, 129, SD), (58, 118, SH)])
+        chest(74, S, 128, "Гнездо Теней", 1)
 
         # тайник Архимага (зал 14, секретный): за трещиной в кладке пещеры
-        R.corr("тайник 14: ход", -73, 60, -71, 103, S, w1, f1)
-        R.room("зал 14", -90, 104, -54, 132, S, 7, w1, f1)
+        R.corr("тайник 14: ход", -58, 52, -56, 61, S, w1, f1)
+        R.room("зал 14", -62, 62, -52, 72, S, 6, w1, f1)                             # каморка 11x11 (было 37x29)
 
         def stash():
-            for z in (106, 110, 114, 122, 126, 130): g.box(-89, S, z, -89, S + 2, z, bm("bookshelf"))
-            g.set(-80, S, 110, bm("lectern")); g.set(-80, S, 118, bm("enchanting_table"))
-            g.box(-62, S, 106, -62, S + 2, 106, bm("bookshelf")); g.box(-62, S, 131, -62, S + 2, 131, bm("bookshelf"))
-            for (x, z) in ((-70, 108), (-58, 120), (-84, 128), (-66, 128)): cluster(x, S, z)
+            for z in (64, 66, 68, 70): g.box(-61, S, z, -61, S + 2, z, bm("bookshelf"))
+            g.set(-60, S, 72, bm("lectern")); g.set(-56, S, 72, bm("enchanting_table"))
+            g.box(-53, S, 64, -53, S + 2, 64, bm("bookshelf")); g.box(-53, S, 66, -53, S + 2, 66, bm("bookshelf"))
+            for (x, z) in ((-59, 64), (-54, 70)): cluster(x, S, z)
         R.add("deco", stash)
-        hall(14, -90, 104, -54, 132, S, 7)
-        chest(-60, S, 128, "Тайник Архимага", 3)
+        hall(14, -62, 62, -52, 72, S, 6)
+        chest(-53, S, 70, "Тайник Архимага", 3)
 
         # лестница на 2-й уровень
         R.corr("из зала 2", -1, 137, 1, 140, S, w1, f1)
@@ -402,37 +408,37 @@ def build_rift():
 
         # логово Тени (зал 11, элита)
         R.corr("в логово Тени 11", -60, 77, -58, 101, S, w2, f2)
-        R.room("зал 11", -84, 40, -30, 76, S, 9, w2, f2)
+        R.room("зал 11", -72, 56, -46, 76, S, 9, w2, f2)                             # 27x21 (было 55x37)
 
         def shadow():
-            for _ in range(12):
-                x, z = rng.randrange(-82, -32), rng.randrange(42, 75)
-                if -62 <= x <= -56 and z >= 68: continue
+            for _ in range(6):
+                x, z = rng.randrange(-70, -48), rng.randrange(58, 75)
+                if -62 <= x <= -56 and z >= 70: continue
                 pillar(x, S, S + rng.randrange(2, 7), z, BS)
-            for _ in range(18):
-                g.set(rng.randrange(-83, -31), S + rng.choice((7, 8)), rng.randrange(41, 76), bm("cobweb"))
+            for _ in range(10):
+                g.set(rng.randrange(-71, -47), S + rng.choice((7, 8)), rng.randrange(57, 76), bm("cobweb"))
         R.add("deco", shadow)
-        hall(11, -84, 40, -30, 76, S, 9)
-        mobs(S, [(-76, 48, SD), (-66, 52, AR), (-52, 46, SD), (-44, 58, AR), (-74, 66, SD), (-40, 48, SH), (-80, 60, SH), (-50, 70, GO)])
-        chest(-80, S, 44, "Логово Тени", 2)
+        hall(11, -72, 56, -46, 76, S, 9)
+        mobs(S, [(-68, 60, SD), (-60, 62, AR), (-50, 60, SD), (-52, 72, AR), (-68, 70, SD), (-48, 66, SH), (-62, 68, GO)])
+        chest(-70, S, 58, "Логово Тени", 2)
 
         # склад храма (зал 12)
         R.corr("на склад 12: восток", 23, 166, 50, 168, S, w2, f2)
         R.corr("на склад 12: вверх", 49, 151, 51, 165, S, w2, f2)
-        R.room("зал 12", 22, 114, 78, 150, S, 8, w2, f2)
+        R.room("зал 12", 36, 129, 65, 150, S, 8, w2, f2)                             # 30x22 (было 57x37)
 
         def store():
-            for x in range(26, 77, 5):
-                for z in (118, 130, 142):
+            for x in range(40, 63, 5):
+                for z in (133, 141):
                     if rng.randrange(3) == 0: continue
                     for (bx, bz) in ((x, z), (x + 1, z), (x, z + 1), (x + 1, z + 1)):
                         pillar(bx, S, S + 1, bz, bm("barrel"))
-            for z in range(116, 149, 8): g.box(23, S, z, 23, S + 2, z, bm("bookshelf"))
-            for (x, z) in ((30, 124), (66, 124), (30, 146), (66, 146)): cluster(x, S, z)
+            for z in range(131, 143, 5): g.box(37, S, z, 37, S + 2, z, bm("bookshelf"))
+            for (x, z) in ((39, 131), (63, 131), (39, 148), (63, 148)): cluster(x, S, z)
         R.add("deco", store)
-        hall(12, 22, 114, 78, 150, S, 8)
-        mobs(S, [(34, 120, SH), (46, 136, AR), (62, 120, SH), (70, 142, AR), (56, 128, PR)])
-        chest(74, S, 146, "Склад храма", 2)
+        hall(12, 36, 129, 65, 150, S, 8)
+        mobs(S, [(40, 137, SH), (52, 131, AR), (60, 137, SH), (58, 146, AR), (46, 145, PR)])
+        chest(62, S, 146, "Склад храма", 2)
 
         # зал 4 -> мост: проход за дверью
         R.corr("к мосту: от зала 4", -15, 124, -7, 126, S, w2, f2)
@@ -481,16 +487,16 @@ def build_rift():
 
         # за водопадом (зал 15, секретный)
         R.corr("за водопадом: ход", 82, 38, 84, 58, S, w2, f2)
-        R.room("зал 15", 52, 4, 90, 37, S, 8, w2, f2)
+        R.room("зал 15", 78, 27, 88, 37, S, 6, w2, f2)                               # каморка 11x11 (было 39x34)
 
         def fall():
-            for (x, z) in ((56, 8), (86, 8), (56, 33), (86, 33), (70, 18)):
-                g.box(x, S, z, x, S + 6, z, DB); g.set(x, S + 3, z, CO)
-            for (x, z) in ((60, 12), (76, 12), (62, 28), (80, 28), (70, 8)): cluster(x, S, z)
-            for x in range(54, 89, 4): g.set(x, S + 7, 4, SL)
+            for (x, z) in ((79, 29), (87, 29)):
+                g.box(x, S, z, x, S + 4, z, DB); g.set(x, S + 3, z, CO)
+            for (x, z) in ((80, 35), (86, 35), (83, 30)): cluster(x, S, z)
+            for x in (80, 83, 86): g.set(x, S + 5, 27, SL)
         R.add("deco", fall)
-        hall(15, 52, 4, 90, 37, S, 8)
-        chest(70, S, 24, "За водопадом", 3)
+        hall(15, 78, 27, 88, 37, S, 6)
+        chest(83, S, 29, "За водопадом", 3)
 
     # =================================================================== уровень 3: Сердце (стоять на -52)
     def level3():
@@ -523,16 +529,16 @@ def build_rift():
         R.corr("под мостом: юг", 91, 36, 93, 61, S, w3, f3)
         R.add("floor", lambda: g.box(82, S, 33, 82, S + 2, 35, PBB))
         g.mark("secret", 82, S, 33, "u1", (1, 3, 3))
-        R.room("зал 16", 56, 62, 94, 100, S, 8, w3, f3)
+        R.room("зал 16", 87, 62, 97, 72, S, 6, w3, f3)                               # каморка 11x11 (было 39x39)
 
         def under():
-            for (x, z) in ((60, 66), (90, 66), (60, 96), (90, 96), (75, 80)):
-                g.box(x, S, z, x, S + 6, z, BS); g.set(x, S + 3, z, CO)
-            for (x, z) in ((66, 70), (84, 70), (66, 90), (84, 90), (75, 66), (75, 96)): cluster(x, S, z)
-            for x in range(60, 92, 6): g.box(x, S, 100, x, S + 1, 100, bm("budding_amethyst"))
+            for (x, z) in ((88, 64), (96, 64), (88, 71), (96, 71)):
+                g.box(x, S, z, x, S + 4, z, BS); g.set(x, S + 3, z, CO)
+            for (x, z) in ((89, 67), (95, 67), (92, 70)): cluster(x, S, z)
+            for x in (88, 91, 94): g.box(x, S, 72, x, S + 1, 72, bm("budding_amethyst"))
         R.add("deco", under)
-        hall(16, 56, 62, 94, 100, S, 8)
-        chest(75, S, 84, "Под мостом", 3)
+        hall(16, 87, 62, 97, 72, S, 6)
+        chest(92, S, 68, "Под мостом", 3)
 
         # главный коридор: Преддверие -> Логово, ответвление в Камеру кристаллов
         R.corr("из зала 6 на запад", -39, 16, 39, 18, S, w3, f3)
@@ -542,18 +548,18 @@ def build_rift():
         R.add("floor", lambda: g.box(-28, FL, 60, -27, FL, 62, f3))
         R.add("deco", lambda: (g.set(-27, S, 61, bm("soul_campfire[lit=false]")), g.set(-27, S + 3, 61, bm("lantern[hanging=true]"))))
         g.mark("brazier", -27, S, 61, "-1,0,0")
-        R.room("зал 13", -88, 4, -40, 34, S, 8, w3, f3)
+        R.room("зал 13", -65, 8, -40, 29, S, 8, w3, f3)                              # 26x22 (было 49x31)
 
         def chamber():
-            for _ in range(20):
-                x, z = rng.randrange(-86, -42), rng.randrange(6, 33)
+            for _ in range(10):
+                x, z = rng.randrange(-63, -42), rng.randrange(10, 28)
                 if 14 <= z <= 20 and x >= -50: continue
                 pillar(x, S, S + rng.randrange(1, 5), z, AM)
-            for (x, z) in ((-84, 8), (-60, 30), (-80, 28), (-50, 8)): cluster(x, S, z)
+            for (x, z) in ((-63, 10), (-48, 27), (-62, 27), (-47, 10)): cluster(x, S, z)
         R.add("deco", chamber)
-        hall(13, -88, 4, -40, 34, S, 8)
-        mobs(S, [(-80, 10, AR), (-70, 28, SH), (-56, 10, PR), (-62, 30, AR), (-76, 22, SH), (-48, 26, PR)])
-        chest(-86, S, 32, "Камера кристаллов", 2)
+        hall(13, -65, 8, -40, 29, S, 8)
+        mobs(S, [(-61, 12, AR), (-55, 26, SH), (-50, 11, PR), (-58, 21, AR), (-62, 19, SH), (-46, 26, PR)])
+        chest(-63, S, 27, "Камера кристаллов", 2)
 
         # Логово Сердца (зал 7): круглый зал над бездной (кольцо, бездна глубиной 5, круглая площадка, мост с севера)
         CX, CZ, RR, HH = -30, 108, 28, 14
@@ -612,8 +618,8 @@ def build_rift():
         R.add("floor", lambda: g.box(CX - 1, FL, 72, CX + 1, FL, 72, f3))               # проём двери логова (закрывает движок)
         g.mark("seal", CX - 1, S, 72, "7,polished_blackstone_bricks", (3, 3, 1))
         hall(7, CX - RR, CZ - RR, CX + RR, CZ + RR, S, HH, low=5)
-        mobs(S, [(CX + 24, CZ, AR), (CX - 24, CZ, AR), (CX + 5, CZ + 22, EA), (CX + 15, CZ + 19, SH), (CX - 15, CZ + 19, EA),
-                 (CX + 4, CZ + 4, PR), (CX - 4, CZ + 4, PR), (CX + 4, CZ - 4, SH), (CX - 4, CZ - 4, SH), (CX, CZ + 7, GO)])
+        # 4.4: обычных мобов в логове нет, зал будит босс (метка boss: центр круглой площадки, a = вид босса); сундук там же, после победы
+        g.mark("boss", CX, S, CZ, "rift_heart")
         chest(CX, S, CZ, "Логово Сердца", 2)
 
     level1()
@@ -666,13 +672,13 @@ def build_mech_test():
 
 
 # ---------------------------------------------------------------- разрезание на части и запись
-def split(g):
-    parts = {n: {} for n in PARTS}
-    for pos, b in g.cells.items(): parts[part_of(pos)][pos] = b
+def split(g, splits=SPLITS, names=PARTS):
+    parts = {n: {} for n in names}
+    for pos, b in g.cells.items(): parts[part_of(pos, splits, names)][pos] = b
     return parts
 
 
-def part_of(pos): return PARTS[sum(1 for s in SPLITS if pos[2] >= s)]
+def part_of(pos, splits=SPLITS, names=PARTS): return names[sum(1 for s in splits if pos[2] >= s)]
 
 
 def encode(name, cells, marks):
@@ -710,7 +716,12 @@ def generate():
         files[name + ".nbt"] = encode(name, cells, marks)
     mg = build_mech_test()
     files["mech_test.nbt"] = encode("mech_test", mg.cells, mg.marks)
-    return [g, mg], files
+    import gen_city
+    cg = gen_city.build_city(sys.modules[__name__])
+    for name, cells in split(cg, CITY_SPLITS, CITY_PARTS).items():
+        marks = [m for m in cg.marks if part_of(m[2], CITY_SPLITS, CITY_PARTS) == name]
+        files[name + ".nbt"] = encode(name, cells, marks)
+    return [g, mg, cg], files
 
 
 # ---------------------------------------------------------------- текстура осколка (16x16 PNG без PIL)
@@ -740,10 +751,38 @@ def shard_png():
             + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
 
+def temple_seal_png():
+    """Печать Храма (4.5): круглая бирюзовая печать с лунным серпом внутри."""
+    pal = {".": (0, 0, 0, 0), "o": (14, 40, 48, 255), "c": (38, 140, 150, 255), "l": (150, 230, 225, 255), "m": (24, 70, 92, 255), "w": (240, 255, 252, 255)}
+    rows = ["................",
+            "......oooo......",
+            "....ooccccoo....",
+            "...occllllcco...",
+            "..occlllmmlcco..",
+            "..oclllmwllcco..",
+            ".occllmlllllcco.",
+            ".occllmlllllcco.",
+            ".occllmlllllcco.",
+            ".occllmlllllcco.",
+            "..ocllmlllllco..",
+            "..occlllmmlcco..",
+            "...occllllcco...",
+            "....ooccccoo....",
+            "......oooo......",
+            "................"]
+    assert all(len(r) == 16 for r in rows) and len(rows) == 16
+    raw = b"".join(b"\x00" + b"".join(bytes(pal[c]) for c in r) for r in rows)
+
+    def chunk(t, d): return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 16, 16, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
+
 # ---------------------------------------------------------------- проверки
 # мобы Разлома (RiftMobs, фаза 4.3): id метки spawn -> сколько клеток воздуха нужно над меткой
 RIFT_MOBS = {"explosionwand:shardling": 2, "explosionwand:crystal_archer": 5, "explosionwand:rift_shade": 3,
              "explosionwand:prism": 6, "explosionwand:echo_eater": 3, "explosionwand:amethyst_golem": 4}
+BOSS_KINDS = ("rift_heart",)   # виды босса для метки boss (4.4)
 MECH_TYPES = ("steps", "beams", "mirror", "platform", "lever", "secret", "seal")
 
 
@@ -758,13 +797,21 @@ def validate(g):
         n = b.split("[")[0]
         if not n.startswith("minecraft:") or n[10:] not in reg["block"]: bad.append("блока нет в реестре: " + b)
     for (t, a, p, s) in g.marks:
-        if t == "spawn" and a not in RIFT_MOBS and a not in reg["entity_type"]: bad.append("моба нет в реестре: " + a)
-        if t not in ("start", "door", "brazier", "hall", "spawn", "chest") + MECH_TYPES: bad.append("неизвестная метка: " + t)
+        if t == "spawn" and a not in RIFT_MOBS and a not in STUB_MOBS and a not in reg["entity_type"]: bad.append("моба нет в реестре: " + a)
+        if t not in ("start", "door", "brazier", "hall", "spawn", "chest", "boss") + MECH_TYPES: bad.append("неизвестная метка: " + t)
+        if t == "boss" and a not in BOSS_KINDS: bad.append(f"boss {p}: неизвестный босс '{a}'")
     halls = [(int(a), p, s) for (t, a, p, s) in g.marks if t == "hall"]
     for (t, a, p, s) in g.marks:
-        if t in ("spawn", "chest") and not any(all(h[1][i] <= p[i] < h[1][i] + h[2][i] for i in range(3)) for h in halls):
+        if t in ("spawn", "chest", "boss") and not any(all(h[1][i] <= p[i] < h[1][i] + h[2][i] for i in range(3)) for h in halls):
             bad.append(f"метка {t} {p} вне залов")
     if len({h[0] for h in halls}) != len(halls): bad.append("повтор номеров залов")
+    sealed = {int(a.split(",")[0]) for (t, a, p, s) in g.marks if t == "seal"}
+    for h in halls:
+        inside = lambda p, h=h: all(h[1][i] <= p[i] < h[1][i] + h[2][i] for i in range(3))
+        bosses = [m for m in g.marks if m[0] == "boss" and inside(m[2])]
+        if len(bosses) > 1: bad.append(f"в зале {h[0]} боссов: {len(bosses)} (нужен один)")
+        if bosses and h[0] not in sealed: bad.append(f"зал {h[0]} с боссом без печати seal")
+        if bosses and any(m[0] == "spawn" and inside(m[2]) for m in g.marks): bad.append(f"зал {h[0]}: у босса не должно быть обычных мобов")
     chest_halls = {}
     for (t, a, p, s) in g.marks:
         if t == "chest":
@@ -795,6 +842,10 @@ def validate_mobs(g, halls):
             for dy in range(RIFT_MOBS[a]):
                 if g.cells.get((p[0], p[1] + dy, p[2]), AIR) != AIR: bad.append(f"spawn {p} {a}: над меткой занято (+{dy})")
             if a.endswith("crystal_archer") and g.cells.get((p[0], p[1] - 1, p[2])) != bm("amethyst_block"): bad.append(f"spawn {p}: под лучником нет колонны")
+        elif a.startswith("stub:"):
+            if a not in STUB_MOBS: bad.append(f"spawn {p}: неизвестная заглушка {a}"); continue
+            for dy in range(STUB_MOBS[a]):
+                if g.cells.get((p[0], p[1] + dy, p[2]), AIR) != AIR: bad.append(f"spawn {p} {a}: над меткой занято (+{dy})")
     return bad
 
 
@@ -806,7 +857,7 @@ def validate_cells(g):
     def cell(p): return g.cells.get(p)
     def solid(p): return g.cells.get(p, AIR) not in (AIR, bm("water"))
     for (t, a, p, s) in g.marks:
-        if t in ("spawn", "chest", "start", "brazier") and t != "brazier":
+        if t in ("spawn", "chest", "start", "brazier", "boss") and t != "brazier":
             if cell(p) not in free and not (t == "start" and cell(p) is None): bad.append(f"{t} {p}: клетка занята ({cell(p)})")
             if not solid((p[0], p[1] - 1, p[2])): bad.append(f"{t} {p}: под меткой нет пола")
     for pos, b in g.cells.items():
@@ -882,6 +933,8 @@ def main():
             if not f.exists() or gzip.decompress(f.read_bytes()) != gzip.decompress(data): bad.append(f"{name}: устарел, запустите python tools/gen_dungeons.py")
         f = TEX / "seal_shard_rift.png"
         if not f.exists() or f.read_bytes() != tex: bad.append("seal_shard_rift.png: устарел, запустите python tools/gen_dungeons.py")
+        f = TEX / "temple_seal.png"
+        if not f.exists() or f.read_bytes() != temple_seal_png(): bad.append("temple_seal.png: устарел, запустите python tools/gen_dungeons.py")
         print(f"[gen_dungeons] файлов {len(files)}, проблем {len(bad)}")
         if bad: sys.exit("\n".join(bad))
         return
@@ -891,6 +944,7 @@ def main():
         (OUT / name).write_bytes(data); print("записан", name, len(data), "байт")
     TEX.mkdir(parents=True, exist_ok=True)
     (TEX / "seal_shard_rift.png").write_bytes(tex); print("записана текстура seal_shard_rift.png")
+    (TEX / "temple_seal.png").write_bytes(temple_seal_png()); print("записана текстура temple_seal.png")
 
 
 if __name__ == "__main__":
