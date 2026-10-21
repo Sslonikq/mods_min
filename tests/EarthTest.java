@@ -15,6 +15,7 @@ public class EarthTest {
     static void check(boolean ok, String m) { if (!ok) { System.out.println("FAIL: " + m); System.exit(1); } }
 
     public static void main(String[] a) throws Exception {
+        check(EarthLogic.warnDue(1) && EarthLogic.warnDue(10) && EarthLogic.warnDue(1000) && !EarthLogic.warnDue(0) && !EarthLogic.warnDue(2) && !EarthLogic.warnDue(11) && !EarthLogic.warnDue(200), "лог сбоев: 1, 10, 100...");
         // оси
         check(EarthLogic.axis(1, 0.2, 0.1) == 0 && EarthLogic.axis(-1, 0, 0) == 1, "ось x");
         check(EarthLogic.axis(0.1, 0.9, 0.2) == 2 && EarthLogic.axis(0.1, -0.9, 0.2) == 3, "вертикаль");

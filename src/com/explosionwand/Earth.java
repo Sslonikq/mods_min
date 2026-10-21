@@ -893,11 +893,15 @@ final class Earth {
     }
 
     // ================================================================ тик и уборка
-    static boolean tickWarned;
+    /** Сколько раз упал какой-нибудь tick* (в лог идут сбои 1, 10, 100, 1000...: без спама и без немой потери). */
+    static int tickFails;
 
     private static void guard(Runnable r) {
         try { r.run(); }
-        catch (RuntimeException | LinkageError ex) { if (!tickWarned) { tickWarned = true; System.err.println("[explosionwand] Earth.tick: сбой: " + ex); ex.printStackTrace(); } }
+        catch (RuntimeException | LinkageError ex) {
+            tickFails++;
+            if (EarthLogic.warnDue(tickFails)) { System.err.println("[explosionwand] Earth.tick: сбой №" + tickFails + ": " + ex); ex.printStackTrace(); }
+        }
     }
 
     static void tick(ServerLevel sl) {

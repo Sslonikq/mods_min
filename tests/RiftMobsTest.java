@@ -39,6 +39,7 @@ public class RiftMobsTest {
         summonTests();
         hallTests();
         knockTests();
+        knockLeashLandTests();
         System.out.println(fails == 0 ? "мобы Разлома ok" : fails + " проверок не прошли");
         if (fails > 0) System.exit(1);
     }
@@ -62,6 +63,32 @@ public class RiftMobsTest {
         // свободный путь проходит целиком
         r = RiftLogic.knockMove(0, 5, 0, 1.4, 0.3, -0.7, (a, b, c, d, e, f) -> true);
         check(near(r[0], 1.4) && near(r[1], 5.3) && near(r[2], -0.7), "без преград смещение полное");
+    }
+
+    static void knockLeashLandTests() {
+        // поводок: дом (0,0), leash 5; моб на 4,8 -> наружу за предел нельзя, внутрь можно, вдоль y свободно
+        double hx = 0, hz = 0, leash = 5;
+        RiftLogic.Step st = (ox, oy, oz, nx, ny, nz) -> !RiftLogic.leashBlocked(Math.hypot(ox - hx, oz - hz), Math.hypot(nx - hx, nz - hz), leash);
+        double[] r = RiftLogic.knockMove(4.8, 5, 0, 1.4, 0, 0, st);
+        check(r[0] <= 5.0 + 1e-9 && r[3] == 0, "поводок: наружу не дальше leash, x=" + r[0]);
+        r = RiftLogic.knockMove(4.8, 5, 0, -1.4, 0, 0, st);
+        check(near(r[0], 3.4) && r[3] == -1.4, "поводок: к дому летит целиком");
+        r = RiftLogic.knockMove(6, 5, 0, 1.0, 0, 0, st);   // уже за поводком: дальше от дома нельзя
+        check(near(r[0], 6) && r[3] == 0, "поводок: за пределом наружу стоит");
+        r = RiftLogic.knockMove(6, 5, 0, -1.0, 0, 0, st);
+        check(near(r[0], 5) && r[3] == -1.0, "поводок: из-за предела возвращается");
+        r = RiftLogic.knockMove(4.8, 5, 0, 0, -1.0, 0, st);
+        check(near(r[1], 4) && r[4] == -1.0, "поводок: падение по y не блокируется");
+        // предел падения
+        double v = 0; for (int i = 0; i < 100; i++) v = RiftLogic.gravity(v);
+        check(v == -3.0 && near(RiftLogic.gravity(-0.5), -0.58), "падение: предел -3, малая скорость растёт на 0,08");
+        // пол на y=4: падение с 4,6 со скоростью -1 упирается, снап на целый y
+        RiftLogic.Step floor = (ox, oy, oz, nx, ny, nz) -> ny >= 4;
+        r = RiftLogic.knockMove(0, 4.6, 0, 0, -1.0, 0, floor);
+        check(r[4] == 0 && r[1] >= 4 && r[1] < 4.6, "приземление: упёрлись в пол");
+        check(RiftLogic.landY(4.3, -1, 0, true) == 4.0, "снап: на целый y");
+        check(RiftLogic.landY(4.3, -1, 0, false) == 4.3, "снап: клетка занята - остаёмся");
+        check(RiftLogic.landY(4.3, -1, -0.5, true) == 4.3 && RiftLogic.landY(4.3, 0.5, 0, true) == 4.3, "снап: только при падении и остановке");
     }
 
     // ---------------------------------------------------------------- Осколочник

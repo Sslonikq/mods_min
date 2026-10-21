@@ -183,6 +183,13 @@ final class RiftLogic {
     /** Поводок: шаг к точке, которая дальше leash от дома и дальше текущего положения, запрещён. */
     static boolean leashBlocked(double homeDist, double newDist, double leash) { return newDist > leash && newDist > homeDist; }
 
+    /** Предел скорости падения от толчка (блоков за тик). */
+    static final double FALL_MAX = -3.0;
+    /** Гравитация наземного моба в полёте от толчка, не быстрее предела. */
+    static double gravity(double ky) { return Math.max(ky - 0.08, FALL_MAX); }
+    /** Приземление: упёрлись в пол при падении и клетка на целом y свободна - встаём на целый y. */
+    static double landY(double cy, double oky, double kyAfter, boolean floorFree) { return kyAfter == 0 && oky < 0 && floorFree ? Math.floor(cy) : cy; }
+
     /** Можно ли перейти из (ox,oy,oz) в (nx,ny,nz): один подшаг импульса. */
     interface Step { boolean ok(double ox, double oy, double oz, double nx, double ny, double nz); }
 

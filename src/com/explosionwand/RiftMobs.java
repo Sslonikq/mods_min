@@ -520,14 +520,14 @@ final class RiftMobs {
             if (!airborne && kx == 0 && ky == 0 && kz == 0) return false;
             int hg = Math.max(1, (int) Math.ceil(host.m_20206_()));
             boolean fl = flies();
-            if (!fl) ky -= 0.08;
+            if (!fl) ky = RiftLogic.gravity(ky);   // предел падения -3 (без него ky копится и подшагов станет много)
             double oky = ky;
             // подшагами <= 0,45 блока: стена или дверь-печать в 1 блок не перепрыгивается
             double[] r = RiftLogic.knockMove(x, y, z, kx, ky, kz, (ox, oy, oz, nx, ny, nz) ->
                     spaceFor(nx, ny, nz, hg) && !RiftLogic.leashBlocked(Math.hypot(ox - hx, oz - hz), Math.hypot(nx - hx, nz - hz), leash));
             double cx = r[0], cy = r[1], cz = r[2];
             kx = r[3]; ky = r[4]; kz = r[5];
-            if (ky == 0 && oky < 0 && spaceFor(cx, Math.floor(cy), cz, hg)) cy = Math.floor(cy);   // приземление на целый y
+            cy = RiftLogic.landY(cy, oky, ky, spaceFor(cx, Math.floor(cy), cz, hg));   // приземление на целый y
             kx *= 0.82; kz *= 0.82;
             if (fl) ky *= 0.82;
             if (Math.abs(kx) < 0.02) kx = 0;

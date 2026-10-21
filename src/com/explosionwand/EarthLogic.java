@@ -62,6 +62,9 @@ final class EarthLogic {
     static final int CAST_TICKS = 100;        // 5 секунд
     static final int CAST_FAIL_CD = 40;
 
+    /** Повторный сбой пишем в лог, когда его номер - степень десяти (1, 10, 100...). */
+    static boolean warnDue(int n) { if (n < 1) return false; while (n % 10 == 0) n /= 10; return n == 1; }
+
     /** Сдвиг от точки начала каста, прерывающий его: больше 0.6 блока по горизонтали или 1.2 по вертикали. */
     static boolean moved(double dx, double dy, double dz) { return dx * dx + dz * dz > 0.36D || Math.abs(dy) > 1.2D; }
     /** Урон прерывает каст: здоровье стало меньше, чем было. */
