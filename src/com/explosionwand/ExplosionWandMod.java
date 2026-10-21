@@ -50,8 +50,14 @@ public class ExplosionWandMod {
     public static final RegistryObject<Item> RIFT_STAFF = ITEMS.register("rift_staff", () -> new RiftStaffItem(props()));
     public static final RegistryObject<Item> SEAL_SHARD_RIFT = ITEMS.register("seal_shard_rift", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "rift"));
     public static final RegistryObject<Item> SLEEP_SEAL_SHARD = ITEMS.register("sleep_seal_shard", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "sleep", "sleep_seal_shard"));
-    /** Осколок Печати: Пепел (4.7): трофей Монолита Сна, указывает на Пепельное святилище (фаза 4.8; данжа пока нет, предмет говорит «путь не открыт»). */
+    /** Осколок Печати: Пепел (4.7): трофей Монолита Сна, указывает на Пепельное святилище (4.8), открывает его башню (дверь `ash`). */
     public static final RegistryObject<Item> ASH_SEAL_SHARD = ITEMS.register("ash_seal_shard", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "ash", "ash_seal_shard"));
+
+    /** Пепельный ключ (Святилище, 4.8): лежит в сундуке Кладовой Пепла, отпирает дверь вниз на «Огненную переправу». Не крафтится. */
+    public static final RegistryObject<Item> ASH_KEY = ITEMS.register("ash_key", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "ash_gate", "ash_key", true));
+
+    /** Угольный ключ (Святилище, 4.8): лежит в сундуке арены, отпирает дверь Гнезда. Не крафтится. */
+    public static final RegistryObject<Item> EMBER_KEY = ITEMS.register("ember_key", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "ember_gate", "ember_key", true));
 
     /** Печать Храма (Город Спящих, 4.5): лежит в сундуке склепа, отпирает дверь храма. Не крафтится. */
     public static final RegistryObject<Item> TEMPLE_SEAL = ITEMS.register("temple_seal", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("EPIC")), "sleep_temple", "temple_seal", true));

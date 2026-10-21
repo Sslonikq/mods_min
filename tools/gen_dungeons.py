@@ -22,6 +22,16 @@
             platform (p+s: платформа в начальном положении; a: "+x|-x|+z|-z,длина,блок"; ходит туда-сюда),
             lever (p: рычаг; a: id), secret (p+s: стена, исчезает по id от lever или решённой головоломки mirror),
             seal (p+s: проём двери; a: "номер зала,блок"; закрывается, пока зал разбужен и не зачищен).
+Пепельное святилище (фаза 4.8, tools/gen_ash.py) добавляет метки:
+            bell (p: блок колокола; a: id секрета — ПКМ по колоколу открывает его),
+            jets (p: сопло в стене — наблюдатель лицом в проход; a: "±x|±z,длина,период,сдвиг" — струя огня в проход по таймеру),
+            crumble (p+s: платформа; a: блок — осыпается через 1,5 с после шага игрока и восстанавливается),
+            geyser (p: блок-жерло; a: "±x|±z|up,период" — гейзер подбрасывает игрока над ним).
+Достройка Святилища (4.8, шаг 2б):
+            braziers (головоломка «Четыре жаровни», a: "id,роль,n"): роль b (p: костёр campfire[lit=false], n = 0..3 — жаровня), f (p+s: панель фрески, n = 0..3 —
+                     место в порядке; роспись ставит движок по порядку, который считается из позиции данжа), w (p: точка, где при ошибке появляется волна мобов);
+                     верный порядок открывает secret с тем же id, ошибка гасит жаровни.
+Святилище строит модуль tools/gen_ash.py (метки spawn: ванильные husk/skeleton/blaze/magma_cube).
 Город Спящих (фаза 4.5) строит модуль tools/gen_city.py (метки spawn: explosionwand:<вид> — мобы Города, см. RIFT_MOBS; заглушек stub:<вид> больше нет).
 Файлы детерминированы (gzip без времени), поэтому --check сравнивает байты.
 """
@@ -36,6 +46,8 @@ SPLITS = (24, 100)   # части Разлома режутся по z: z<24 —
 PARTS = ("rift_entrance", "rift_mid", "rift_deep")
 CITY_SPLITS = (-16, 16)   # части Города Спящих (фаза 4.5): z<-16, -16..15, z>=16
 CITY_PARTS = ("sleep_north", "sleep_mid", "sleep_south")
+ASH_SPLITS = (-52, -16)   # части Пепельного святилища (фаза 4.8): z<-52, -52..-17, z>=-16
+ASH_PARTS = ("ash_north", "ash_mid", "ash_south")
 
 
 # ---------------------------------------------------------------- NBT (минимальный писатель)
@@ -94,7 +106,7 @@ def bm(n): return "minecraft:" + n
 
 
 S1, S2, S3 = -12, -32, -52      # уровень, на котором стоит игрок: «≈10 / 30 / 50» вниз от земли
-LIGHTS = ("shroomlight", "sea_lantern", "lantern", "crying_obsidian", "glowstone", "soul_campfire", "soul_lantern")
+LIGHTS = ("shroomlight", "sea_lantern", "lantern", "crying_obsidian", "glowstone", "soul_campfire", "soul_lantern", "campfire", "lava")
 
 
 class Rift:
@@ -719,7 +731,12 @@ def generate():
     for name, cells in split(cg, CITY_SPLITS, CITY_PARTS).items():
         marks = [m for m in cg.marks if part_of(m[2], CITY_SPLITS, CITY_PARTS) == name]
         files[name + ".nbt"] = encode(name, cells, marks)
-    return [g, mg, cg], files
+    import gen_ash
+    ag = gen_ash.build_ash(sys.modules[__name__])
+    for name, cells in split(ag, ASH_SPLITS, ASH_PARTS).items():
+        marks = [m for m in ag.marks if part_of(m[2], ASH_SPLITS, ASH_PARTS) == name]
+        files[name + ".nbt"] = encode(name, cells, marks)
+    return [g, mg, cg, ag], files
 
 
 # ---------------------------------------------------------------- текстура осколка (16x16 PNG без PIL)
@@ -776,6 +793,62 @@ def temple_seal_png():
             + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
 
+def ash_key_png():
+    """Пепельный ключ (4.8): тёмный ключ с тлеющим кольцом, ключ уровня «Зал Пепла»."""
+    pal = {".": (0, 0, 0, 0), "o": (28, 22, 24, 255), "d": (62, 54, 58, 255), "m": (104, 94, 98, 255), "l": (160, 148, 150, 255),
+           "e": (255, 120, 32, 255), "f": (255, 196, 80, 255)}
+    rows = ["................",
+            "....ooooo.......",
+            "...oeffeeo......",
+            "..oefooofeo.....",
+            "..oefo.ofeo.....",
+            "..oefooofeo.....",
+            "...oeffeeo......",
+            "....oooood......",
+            ".......odmo.....",
+            "........odmo....",
+            ".........odmo...",
+            ".........omdmo..",
+            "........omlmo...",
+            "........oodmo...",
+            ".........omlo...",
+            "..........oo...."]
+    assert all(len(r) == 16 for r in rows) and len(rows) == 16
+    raw = b"".join(b"\x00" + b"".join(bytes(pal[c]) for c in r) for r in rows)
+
+    def chunk(t, d): return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 16, 16, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
+
+def ember_key_png():
+    """Угольный ключ (4.8, 2б): ключ уровня «арена Хранителя», раскалённое кольцо и зубцы-угли."""
+    pal = {".": (0, 0, 0, 0), "o": (24, 16, 16, 255), "d": (70, 40, 36, 255), "m": (128, 74, 58, 255), "l": (206, 150, 110, 255),
+           "e": (214, 48, 28, 255), "f": (255, 214, 96, 255)}
+    rows = ["................",
+            "....ooooo.......",
+            "...oeffeeo......",
+            "..oefooofeo.....",
+            "..oefo.ofeo.....",
+            "..oefooofeo.....",
+            "...oeffeeo......",
+            "....oooood......",
+            ".......odmo.....",
+            "........odmo....",
+            "........odmoo...",
+            "........omdmeo..",
+            ".........odmo...",
+            "........oodmeo..",
+            ".........omlo...",
+            "..........oo...."]
+    assert all(len(r) == 16 for r in rows) and len(rows) == 16
+    raw = b"".join(b"\x00" + b"".join(bytes(pal[c]) for c in r) for r in rows)
+
+    def chunk(t, d): return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 16, 16, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
+
 # ---------------------------------------------------------------- проверки
 # мобы Разлома (RiftMobs, фаза 4.3): id метки spawn -> сколько клеток воздуха нужно над меткой
 RIFT_MOBS = {"explosionwand:shardling": 2, "explosionwand:crystal_archer": 5, "explosionwand:rift_shade": 3,
@@ -784,7 +857,7 @@ RIFT_MOBS = {"explosionwand:shardling": 2, "explosionwand:crystal_archer": 5, "e
              "explosionwand:lunatic": 2, "explosionwand:drowsy": 3, "explosionwand:stitch_guard": 2, "explosionwand:night_moth": 3,
              "explosionwand:dreamer": 3, "explosionwand:book_guard": 3, "explosionwand:statue_guard": 3, "explosionwand:cradler": 5}
 BOSS_KINDS = ("rift_heart", "monolith")   # виды босса для метки boss (4.4)
-MECH_TYPES = ("steps", "beams", "mirror", "platform", "lever", "secret", "seal")
+MECH_TYPES = ("steps", "beams", "mirror", "platform", "lever", "secret", "seal", "bell", "jets", "crumble", "geyser", "braziers")
 
 
 def validate(g):
@@ -844,6 +917,9 @@ def validate_mobs(g, halls):
                 if g.cells.get((p[0], p[1] + dy, p[2]), AIR) != AIR: bad.append(f"spawn {p} {a}: над меткой занято (+{dy})")
             if a.endswith("crystal_archer") and g.cells.get((p[0], p[1] - 1, p[2])) != bm("amethyst_block"): bad.append(f"spawn {p}: под лучником нет колонны")
         elif a.startswith("stub:"): bad.append(f"spawn {p}: заглушки мобов убраны, нужен explosionwand:<вид> ({a})")
+        else:   # ванильный моб: над меткой свободно (блейз выше), вода тоже считается свободной (утопленники)
+            for dy in range(3 if a == "blaze" else 2):
+                if g.cells.get((p[0], p[1] + dy, p[2]), AIR) not in (AIR, bm("water")): bad.append(f"spawn {p} {a}: над меткой занято (+{dy})")
     return bad
 
 
@@ -861,7 +937,11 @@ def validate_cells(g):
     for pos, b in g.cells.items():
         if b == bm("lantern[hanging=true]") and not solid((pos[0], pos[1] + 1, pos[2])): bad.append(f"фонарь {pos} висит в воздухе")
         elif b == bm("amethyst_cluster[facing=up]") and not solid((pos[0], pos[1] - 1, pos[2])): bad.append(f"кристалл {pos} стоит в воздухе")
-        elif b.startswith(bm("soul_campfire")) and not solid((pos[0], pos[1] - 1, pos[2])): bad.append(f"костёр {pos} без пола")
+        elif (b.startswith(bm("soul_campfire")) or b.startswith(bm("campfire"))) and not solid((pos[0], pos[1] - 1, pos[2])): bad.append(f"костёр {pos} без пола")
+        elif b == bm("lava"):   # лава не должна вытекать: бока и низ — лава или твёрдое
+            for d in ((1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1), (0, -1, 0)):
+                n = (pos[0] + d[0], pos[1] + d[1], pos[2] + d[2])
+                if g.cells.get(n, AIR) in (AIR, bm("water")): bad.append(f"лава {pos} открыта к {n}"); break
     rift = getattr(g, "rift", None)
     if rift:
         for (name, x1, z1, x2, z2, S, H) in rift.rooms:
@@ -878,10 +958,23 @@ def validate_mech(g, reg, halls):
     def solid(p): return g.cells.get(p, AIR) != AIR
     def blk(n): return n in reg["block"]
     def box(p, s): return [(p[0] + x, p[1] + y, p[2] + z) for x in range(s[0]) for y in range(s[1]) for z in range(s[2])]
-    levers, srcs, rcvs = set(), set(), set()
+    levers, srcs, rcvs, bells, fires = set(), set(), set(), set(), {}
     for (t, a, p, s) in g.marks:
         if t not in MECH_TYPES: continue
-        if t in ("steps", "platform", "secret", "seal") and not all(v >= 1 for v in s): bad.append(f"{t} {p}: размер {s}")
+        if t in ("steps", "platform", "secret", "seal", "crumble") and not all(v >= 1 for v in s): bad.append(f"{t} {p}: размер {s}")
+        if t == "braziers":
+            v = a.split(",")
+            if len(v) != 3 or v[1] not in ("b", "f", "w") or not v[2].isdigit(): bad.append(f"braziers {p}: a='{a}', нужно id,b|f|w,n"); continue
+            fires.setdefault(v[0], {"b": [], "f": [], "w": []})[v[1]].append((int(v[2]), p, s))
+            below_solid = solid((p[0], p[1] - 1, p[2]))
+            if v[1] == "b":
+                if not g.cells.get(p, AIR).startswith("minecraft:campfire[") or "lit=false" not in g.cells.get(p, AIR): bad.append(f"braziers {p}: на метке b должен стоять незажжённый campfire")
+                if not below_solid: bad.append(f"braziers {p}: костёр без постамента")
+            elif v[1] == "w":
+                if solid(p) or solid((p[0], p[1] + 1, p[2])) or not below_solid: bad.append(f"braziers {p}: точка волны должна быть свободной клеткой с полом")
+            else:
+                if not all(v2 >= 1 for v2 in s) or sorted(s)[:1] != [1] and min(s[0], s[2]) != 1: bad.append(f"braziers {p}: панель фрески {s}: нужен слой толщиной 1")
+                if not all(solid(c) for c in box(p, s)): bad.append(f"braziers {p}: панель фрески должна быть сплошной")
         if t == "steps":
             if not blk(a): bad.append(f"steps {p}: блока нет в реестре: {a}")
             if any(solid(c) for c in box(p, s)): bad.append(f"steps {p}: в шаблоне на месте ступеней должен быть воздух")
@@ -906,6 +999,25 @@ def validate_mech(g, reg, halls):
         elif t == "lever":
             if not g.cells.get(p, AIR).startswith("minecraft:lever"): bad.append(f"lever {p}: на метке не рычаг")
             levers.add(a)
+        elif t == "bell":
+            if not g.cells.get(p, AIR).startswith("minecraft:bell"): bad.append(f"bell {p}: на метке не колокол")
+            bells.add(a)
+        elif t == "jets":
+            v = a.split(",")
+            if len(v) != 4 or v[0] not in ("+x", "-x", "+z", "-z") or not all(x.isdigit() for x in v[1:]) or int(v[1]) < 1 or int(v[2]) < 60: bad.append(f"jets {p}: a='{a}', нужно ±x|±z,длина,период>=60,сдвиг")
+            else:
+                dx, dz = (1 if v[0] == "+x" else -1 if v[0] == "-x" else 0), (1 if v[0] == "+z" else -1 if v[0] == "-z" else 0)
+                if not g.cells.get(p, AIR).startswith("minecraft:observer"): bad.append(f"jets {p}: сопло — не наблюдатель")
+                if g.cells.get((p[0] + dx, p[1], p[2] + dz), AIR) != AIR: bad.append(f"jets {p}: перед соплом не воздух")
+                if sum(1 for i in range(1, int(v[1]) + 1) if g.cells.get((p[0] + dx * i, p[1], p[2] + dz * i), AIR) == AIR) < int(v[1]) // 2: bad.append(f"jets {p}: линия струи почти вся в стене")
+        elif t == "crumble":
+            if not blk(a): bad.append(f"crumble {p}: блока нет в реестре: {a}")
+            elif not all(g.cells.get(c) == "minecraft:" + a for c in box(p, s)): bad.append(f"crumble {p}: в шаблоне платформа должна быть из {a}")
+            if any(solid((c[0], c[1] + dy, c[2])) for c in box(p, s) for dy in (1, 2, 3)): bad.append(f"crumble {p}: над платформой занято")
+        elif t == "geyser":
+            v = a.split(",")
+            if len(v) != 2 or v[0] not in ("+x", "-x", "+z", "-z", "up") or not v[1].isdigit() or int(v[1]) < 60: bad.append(f"geyser {p}: a='{a}', нужно ±x|±z|up,период>=60")
+            if not solid(p) or any(solid((p[0], p[1] + dy, p[2])) for dy in (1, 2, 3)): bad.append(f"geyser {p}: жерло не твёрдое или над ним занято")
         elif t == "secret":
             if not all(solid(c) for c in box(p, s)): bad.append(f"secret {p}: в шаблоне стена должна быть сплошной")
         elif t == "seal":
@@ -913,8 +1025,10 @@ def validate_mech(g, reg, halls):
             if len(v) != 2 or not v[0].isdigit() or not blk(v[1]): bad.append(f"seal {p}: a='{a}', нужно зал,блок")
             elif int(v[0]) not in {h[0] for h in halls}: bad.append(f"seal {p}: нет зала {v[0]}")
             if any(solid(c) for c in box(p, s)): bad.append(f"seal {p}: проём в шаблоне открыт (воздух), закрывает движок")
+    for fid, f in fires.items():
+        if sorted(n for n, _, _ in f["b"]) != [0, 1, 2, 3] or sorted(n for n, _, _ in f["f"]) != [0, 1, 2, 3] or len(f["w"]) < 3: bad.append(f"braziers '{fid}': нужны жаровни 0..3, панели 0..3 и не менее 3 точек волны")
     for (t, a, p, s) in g.marks:
-        if t == "secret" and a not in levers and not (a in srcs and a in rcvs): bad.append(f"secret {p}: нет рычага или головоломки с id '{a}'")
+        if t == "secret" and a not in levers and a not in bells and a not in fires and not (a in srcs and a in rcvs): bad.append(f"secret {p}: нет рычага или головоломки с id '{a}'")
     for i in srcs ^ rcvs: bad.append(f"mirror '{i}': нужны и src, и rcv")
     return bad
 
@@ -933,6 +1047,10 @@ def main():
         if not f.exists() or f.read_bytes() != tex: bad.append("seal_shard_rift.png: устарел, запустите python tools/gen_dungeons.py")
         f = TEX / "temple_seal.png"
         if not f.exists() or f.read_bytes() != temple_seal_png(): bad.append("temple_seal.png: устарел, запустите python tools/gen_dungeons.py")
+        f = TEX / "ash_key.png"
+        if not f.exists() or f.read_bytes() != ash_key_png(): bad.append("ash_key.png: устарел, запустите python tools/gen_dungeons.py")
+        f = TEX / "ember_key.png"
+        if not f.exists() or f.read_bytes() != ember_key_png(): bad.append("ember_key.png: устарел, запустите python tools/gen_dungeons.py")
         print(f"[gen_dungeons] файлов {len(files)}, проблем {len(bad)}")
         if bad: sys.exit("\n".join(bad))
         return
@@ -943,6 +1061,8 @@ def main():
     TEX.mkdir(parents=True, exist_ok=True)
     (TEX / "seal_shard_rift.png").write_bytes(tex); print("записана текстура seal_shard_rift.png")
     (TEX / "temple_seal.png").write_bytes(temple_seal_png()); print("записана текстура temple_seal.png")
+    (TEX / "ash_key.png").write_bytes(ash_key_png()); print("записана текстура ash_key.png")
+    (TEX / "ember_key.png").write_bytes(ember_key_png()); print("записана текстура ember_key.png")
 
 
 if __name__ == "__main__":

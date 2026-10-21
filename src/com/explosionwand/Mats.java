@@ -21,7 +21,7 @@ import java.util.Random;
  * ХУКИ ДЛЯ СЛЕДУЮЩИХ ФАЗ:
  *   - мобы Пепельного святилища (4.9): добавить их виды в {@link #dungeonOf} (-> Dungeon.ASH) и {@link #strong}; дроп сработает сам
  *     через RiftMobs.onDeath, если мобы - наследники RiftMobs.Mob. Другой путь - вызвать {@link #drop} напрямую.
- *   - сундуки Святилища (4.8): завести Def и добавить ветку в {@link #dungeonOf(Dungeons.Def)} (Dungeon.ASH), тиры 1/2/3 как у остальных.
+ *   - сундуки Святилища (4.8): готово, {@link #dungeonOf(Dungeons.Def)} знает Dungeons.ASH (Dungeon.ASH), тиры 1/2/3 как у остальных.
  */
 final class Mats {
     enum Dungeon {
@@ -88,6 +88,7 @@ final class Mats {
     static Dungeon dungeonOf(Dungeons.Def d) {
         if (d == Dungeons.RIFT) return Dungeon.RIFT;
         if (d == Dungeons.SLEEP) return Dungeon.SLEEP;
+        if (d == Dungeons.ASH) return Dungeon.ASH;
         return null;
     }
 

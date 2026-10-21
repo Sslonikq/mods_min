@@ -29,6 +29,8 @@ public class DungeonTest {
     }
 
     static boolean free(int x, int y, int z) { return !solid(x, y, z); }
+    /** Для полёта: решётка без соединений — лишь столбик 2/16, между столбиками проходит игрок. */
+    static boolean open(int x, int y, int z) { String s = world.get(Dungeons.pack(x, y, z)); return free(x, y, z) || (s != null && s.startsWith("minecraft:iron_bars") && !s.contains("=true")); }
     /** Поверхность бесконечна, поэтому поиск ограничен окрестностью данжа. */
     static int[] BOX = {-30, 30, -30, 110, -45, 12};   // x0, x1, z0, z1, y0, y1
     static boolean inBox(int x, int y, int z) { return x >= BOX[0] && x <= BOX[1] && z >= BOX[2] && z <= BOX[3] && y >= BOX[4] && y <= BOX[5]; }
@@ -74,7 +76,7 @@ public class DungeonTest {
     }
 
     // ================================================================ Разлом (настоящий данж)
-    static final Set<String> LIGHT = Set.of("shroomlight", "sea_lantern", "lantern", "crying_obsidian", "glowstone", "soul_campfire", "soul_lantern");
+    static final Set<String> LIGHT = Set.of("shroomlight", "sea_lantern", "lantern", "crying_obsidian", "glowstone", "soul_campfire", "soul_lantern", "campfire", "lava");
 
     static String name(String st) { int i = st.indexOf('['); return (i < 0 ? st : st.substring(0, i)).replace("minecraft:", ""); }
 
@@ -446,6 +448,534 @@ public class DungeonTest {
         System.out.println("город ok: " + total + " блоков, залов " + ids.size() + ", мобов " + spawns + ", сундуков " + chests + ", маска " + mk.count());
     }
 
+
+    // ================================================================ Пепельное святилище (4.8, шаг 2а)
+    /** Как reach, но прыжок через яму до maxGap клеток (сначала земля, потом платформы над лавой). */
+    static Set<Long> reachG(int sx, int sy, int sz, int maxGap) {
+        Set<Long> seen = reach(sx, sy, sz);
+        ArrayDeque<int[]> q = new ArrayDeque<>();
+        for (long k : seen) q.add(unpack(k));
+        int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        while (!q.isEmpty()) {
+            int[] c = q.poll();
+            for (int[] d : dirs) {
+                for (int gap = 1; gap <= maxGap; gap++) {
+                    boolean clear = free(c[0], c[1] + 2, c[2]);
+                    for (int i = 1; i <= gap && clear; i++) {
+                        int mx = c[0] + d[0] * i, mz = c[2] + d[1] * i;
+                        clear = free(mx, c[1], mz) && free(mx, c[1] + 1, mz) && free(mx, c[1] + 2, mz);
+                    }
+                    if (!clear) break;
+                    int jx = c[0] + d[0] * (gap + 1), jz = c[2] + d[1] * (gap + 1);
+                    for (int dy = 0; dy >= -2; dy--) {
+                        int ny = c[1] + dy;
+                        if (standable(jx, ny, jz) && free(jx, c[1], jz) && free(jx, c[1] + 1, jz) && free(jx, c[1] + 2, jz)) {
+                            if (seen.add(Dungeons.pack(jx, ny, jz))) {
+                                int[] n = {jx, ny, jz};
+                                q.add(n);
+                                for (long k : reach(jx, ny, jz)) if (seen.add(k)) q.add(unpack(k));   // дальше снова пешком
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return seen;
+    }
+
+    static int[] unpack(long k) {
+        int x = (int) (k >> 38), y = (int) (k & 0xFFF) - 2048, z = (int) ((k >> 12) & 0x3FFFFFF);
+        if (x >= 1 << 25) x -= 1 << 26;
+        if (z >= 1 << 25) z -= 1 << 26;
+        return new int[]{x, y, z};
+    }
+
+    static Mark markAt(Dungeons.Def d, String type, String a) {
+        for (Mark m : d.marks(type)) if (m.a.equals(a)) return m;
+        throw new IllegalStateException("нет метки " + type + " " + a);
+    }
+
+    static void ash() throws Exception {
+        Dungeons.Def d = Dungeons.ASH;
+        List<DungeonTemplate> tp = d.templates();
+        check(tp.size() == 3 && d.layout == 1 && d.signature().equals("ash_north+ash_mid+ash_south:v1"), "три части Святилища, раскладка 1: " + d.signature());
+        Set<Long> seen0 = new HashSet<>();
+        int total = 0;
+        for (DungeonTemplate t : tp) {
+            total += t.count();
+            check(t.name.startsWith("ash_") && t.count() > 10000, t.name + ": блоков " + t.count());
+            for (int i = 0; i < t.count(); i++) {
+                if (t.bx[i] < 0 || t.bx[i] >= t.sx || t.by[i] < 0 || t.by[i] >= t.sy || t.bz[i] < 0 || t.bz[i] >= t.sz) { check(false, t.name + ": блок вне size"); break; }
+                if (!seen0.add(Dungeons.pack(t.ox + t.bx[i], t.oy + t.by[i], t.oz + t.bz[i]))) { check(false, t.name + ": пересечение частей"); break; }
+            }
+            check(t.sx <= 250 && t.sz <= 250, t.name + ": часть не больше 250 блоков в поперечнике");
+            for (String p : t.palette) check(p.startsWith("minecraft:"), "палитра: " + p);
+        }
+        int[] b = d.bounds();
+        int w = b[3] - b[0], dep = b[5] - b[2], hgt = b[4] - b[1];
+        System.out.println("святилище: " + total + " блоков в 3 частях, габариты " + w + "x" + hgt + "x" + dep + ", y " + b[1] + ".." + (b[4] - 1));
+        check(w >= 165 && dep >= 135 && b[4] >= 62 && b[1] <= -75 && hgt >= 135, "габариты ~173x142 после 2б, башня >= 62 вверх, Гнездо на y -75: " + w + "x" + hgt + "x" + dep);
+        check(w <= 190 && dep <= 190, "рамка укладывается в запас клетки (margin*2-96 = 192): " + w + "x" + dep);
+        check(Dungeons.ASH.margin * 2 - 96 >= Math.max(w, dep), "соседние святилища (с запасными точками ±48) не пересекаются");
+        check(d.roof < 0 && d.maxVar == DungeonSite.COVER_MAX && d.avoidAll.contains(Dungeons.RIFT) && d.avoidAll.contains(Dungeons.SLEEP) && Dungeons.def("ash") == d, "подземно-вертикальный, обходит Разломы и Города, найден по id ash");
+
+        // ---- метки
+        Mark door = null, gate = null, ember = null;
+        for (Mark m : d.doors()) { if (m.a.equals("ash")) door = m; else if (m.a.equals("ash_gate")) gate = m; else if (m.a.equals("ember_gate")) ember = m; }
+        check(d.doors().size() == 3 && door != null && gate != null && ember != null && d.start() != null, "дверь башни (ash), дверь вниз (ash_gate), дверь Гнезда (ember_gate) и старт");
+        check(d.braziers().size() == 6, "шесть жаровен-якорей: двор, Зал Пепла, посадка уровня 2, зал 17, тоннель, Гнездо: " + d.braziers().size());
+        check(d.marks("bell").size() == 1 && d.marks("bell").get(0).a.equals("shaft") && d.marks("secret").size() == 7 && d.marks("lever").size() == 5, "колокол, секреты (7), рычаги (5)");
+        check(d.marks("braziers").size() == 14 && DungeonMech.fireIds(d).equals(Set.of("fires")), "головоломка жаровен: 4 костра, 4 панели, 6 точек волны: " + d.marks("braziers").size());
+        check(d.marks("jets").size() >= 15 && d.marks("crumble").size() >= 10 && d.marks("geyser").size() >= 6, "струи " + d.marks("jets").size() + ", платформы " + d.marks("crumble").size() + ", гейзеры " + d.marks("geyser").size());
+        check(d.marks("steps").isEmpty() && d.marks("beams").isEmpty() && d.marks("boss").isEmpty(), "ступеней и лучей нет, босса нет (босс — 4.10, метка boss зарезервирована)");
+        check(d.marks("seal").size() == 1 && d.marks("seal").get(0).a.startsWith("20,") && d.sealed(20) && !d.sealed(23), "печать только на арене Хранителя (зал 20)");
+        for (Mark m : d.marks("jets")) check(DungeonMech.jetCfg(m.a) != null, "струя: разбор a " + m.a);
+        for (Mark m : d.marks("geyser")) check(DungeonMech.geyserCfg(m.a) != null, "гейзер: разбор a " + m.a);
+        Set<String> mobs = Set.of("husk", "skeleton", "blaze", "magma_cube", "zombie", "wither_skeleton");
+        Set<Integer> ids = new TreeSet<>();
+        int chests = 0, spawns = 0, secretChests = 0;
+        Set<String> chestNames = new HashSet<>();
+        for (Dungeons.Hall h : d.halls()) {
+            check(ids.add(h.id) && h.id >= 1 && h.id <= 30, "номер зала " + h.id);
+            spawns += h.spawns.size();
+            check(h.boss == null, "босса в Святилище 4.8 нет: зал " + h.id);
+            for (Mark m : h.spawns) check(mobs.contains(m.a), "моб-заглушка ванильный: " + m.a);
+            if (h.chest != null) {
+                chests++;
+                String[] sp = Dungeons.chestSpec(h.chest.a);
+                check(!sp[0].isEmpty() && chestNames.add(sp[0]), "название сундука: " + h.chest.a);
+                if (h.id == 14 || h.id == 15 || h.id == 16 || h.id == 21) { secretChests++; check(sp[1].equals("3") && h.spawns.isEmpty(), "тайник: тир 3, без мобов: зал " + h.id); }
+                else check(sp[1].equals("1") || sp[1].equals("2"), "сундук тира 1-2: зал " + h.id);
+            }
+            if (h.id <= 13 || h.id == 18 || h.id == 19 || h.id == 20) check(h.spawns.size() >= 2, "в зале " + h.id + " мобов: " + h.spawns.size());
+            if (h.id == 17 || h.id == 23) check(h.spawns.isEmpty(), "зал " + h.id + ": мобы приходят волной (17) или не нужны (Гнездо до 4.10)");
+        }
+        check(ids.equals(new TreeSet<>(List.of(1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23))), "залы 1-6, 8-21, 23 (7, 22, 24-30 свободны): " + ids);
+        check(secretChests == 4 && chests == 16 && spawns >= 62, "сундуков " + chests + ", мобов " + spawns);
+        Dungeons.Hall nest = d.hall(23);
+        check(nest != null && nest.sx == 61 && nest.sz == 61 && nest.chest != null && nest.boss == null && Ash.GUARD_HALL == 20, "Гнездо: зал 61x61 с сундуком-заглушкой, босса нет");
+        for (Dungeons.Hall x : d.halls()) for (Dungeons.Hall y : d.halls()) {
+            if (x.id >= y.id) continue;
+            boolean ov = x.x < y.x + y.sx && y.x < x.x + x.sx && x.y < y.y + y.sy + 1 && y.y < x.y + x.sy + 1 && x.z < y.z + y.sz && y.z < x.z + x.sz;
+            check(!ov, "залы " + x.id + " и " + y.id + " пересекаются");
+        }
+        check(Ash.extra(9).equals(List.of("explosionwand:ash_key")) && Ash.extra(8).isEmpty() && Ash.extra(12).isEmpty()
+                && Dungeons.lootFor(d, d.hall(9), 2).contains("explosionwand:ash_key") && !Dungeons.lootFor(d, d.hall(12), 2).contains("explosionwand:ash_key")
+                && !Dungeons.lootFor(Dungeons.RIFT, Dungeons.RIFT.hall(2), 1).contains("explosionwand:ash_key"), "Пепельный ключ только в сундуке Кладовой (зал 9)");
+        check(Ash.extra(20).equals(List.of("explosionwand:ember_key")) && Dungeons.lootFor(d, d.hall(20), 2).contains("explosionwand:ember_key") && !Dungeons.lootFor(d, d.hall(20), 2).contains("explosionwand:ash_key")
+                && !Dungeons.lootFor(d, d.hall(9), 2).contains("explosionwand:ember_key") && !Dungeons.lootFor(d, d.hall(23), 2).contains("explosionwand:ember_key"), "Угольный ключ только в сундуке арены (зал 20)");
+        // повторная выдача ключа: зал зачищен, дверь закрыта, ключа нет ни у игрока, ни в сундуке
+        check(Ash.reissueWanted(true, true, false, false) && !Ash.reissueWanted(false, true, false, false) && !Ash.reissueWanted(true, false, false, false)
+                && !Ash.reissueWanted(true, true, true, false) && !Ash.reissueWanted(true, true, false, true), "ключ выдаётся заново только когда потерян (иначе сундук открывается как обычно)");
+        // элита арены: усиление только у wither_skeleton зала 20
+        String eg = Ash.gear(20, "wither_skeleton");
+        check(eg.startsWith(",") && eg.contains("generic.max_health") && eg.contains("explosionwand.ash.guard") && Ash.gear(20, "husk").isEmpty() && Ash.gear(9, "wither_skeleton").isEmpty() && Ash.gear(13, "blaze").isEmpty(), "заглушка-элита арены усилена, остальные мобы без добавки");
+        long mobsE = d.hall(20).spawns.stream().filter(m -> m.a.equals("wither_skeleton")).count();
+        check(mobsE == 1 && d.hall(20).spawns.size() == 5, "в арене одна элита и четыре хаски");
+        check(Mats.dungeonOf(d) == Mats.Dungeon.ASH && Dungeons.lootFor(d, d.hall(10), 1).stream().anyMatch(x -> x.contains("explosionwand:ash_coal") || x.contains("explosionwand:smoldering_feather")), "сундуки дают материалы Святилища");
+        // дверь и ключ, тексты (файлы, не игра)
+        String mod = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("src/com/explosionwand/ExplosionWandMod.java")), java.nio.charset.StandardCharsets.UTF_8);
+        check(mod.contains("\"ash_key\", () -> new SealShardItem(") && mod.contains("\"ash_gate\", \"ash_key\", true)") && mod.contains("\"ash\", \"ash_seal_shard\")"), "Осколок Пепел (ash) и Пепельный ключ (ash_gate) связаны с дверями");
+        check(mod.contains("\"ember_key\", () -> new SealShardItem(") && mod.contains("\"ember_gate\", \"ember_key\", true)"), "Угольный ключ (ember_gate) связан с дверью Гнезда");
+        for (String lang : new String[]{"ru_ru", "en_us"}) {
+            String js = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("resources/assets/explosionwand/lang/" + lang + ".json")), java.nio.charset.StandardCharsets.UTF_8);
+            for (String k : new String[]{"explosionwand.dungeon.ash", "explosionwand.dungeon.locked.ash", "explosionwand.dungeon.locked.ash_gate", "explosionwand.dungeon.bell", "item.explosionwand.ash_key", "item.explosionwand.ash_key.desc", "explosionwand.jei.ash_key",
+                    "explosionwand.dungeon.locked.ember_gate", "item.explosionwand.ember_key", "item.explosionwand.ember_key.desc", "explosionwand.jei.ember_key", "explosionwand.dungeon.fires_wrong", "explosionwand.dungeon.fires_solved", "explosionwand.dungeon.key_reissued", "explosionwand.ash.guard"})
+                check(js.contains("\"" + k + "\""), lang + ": нет ключа " + k);
+        }
+
+        // ---- мир, свет, высота
+        world = Dungeons.assemble(d, 0, 0, 0);
+        int maxY = Integer.MIN_VALUE;
+        for (long k : world.keySet()) maxY = Math.max(maxY, (int) (k & 0xFFF) - 2048);
+        check(maxY >= 62 && world.get(Dungeons.pack(0, 64, -34)).contains("campfire[") && world.get(Dungeons.pack(0, 64, -34)).contains("signal_fire=true") && world.get(Dungeons.pack(0, 63, -34)).equals("minecraft:hay_block"), "на острие шпиля дымовой костёр на тюке сена: верх " + maxY);
+        int smoke = 0;
+        for (String v : world.values()) if (v.startsWith("minecraft:campfire[") && v.contains("lit=true") && v.contains("signal_fire=true")) smoke++;
+        check(smoke >= 9, "дымовых костров (башня, двор): " + smoke);
+        Map<Integer, Integer> lights = new HashMap<>();
+        for (Map.Entry<Long, String> e : world.entrySet()) {
+            if (!LIGHT.contains(name(e.getValue()))) continue;
+            int[] c = unpack(e.getKey());
+            for (Dungeons.Hall h : d.halls()) if (c[0] >= h.x - 1 && c[0] < h.x + h.sx + 1 && c[1] >= h.y && c[1] <= h.y + h.sy + 1 && c[2] >= h.z - 1 && c[2] < h.z + h.sz + 1) lights.merge(h.id, 1, Integer::sum);
+        }
+        for (Dungeons.Hall h : d.halls()) check(lights.getOrDefault(h.id, 0) > 0, "в зале " + h.id + " нет света");
+        // лава не вытекает: бока и низ каждой клетки лавы — лава или твёрдое
+        int leaks = 0;
+        for (Map.Entry<Long, String> e : world.entrySet()) {
+            if (!e.getValue().equals("minecraft:lava")) continue;
+            int[] c = unpack(e.getKey());
+            for (int[] n : new int[][]{{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}, {0, -1, 0}}) {
+                String v = world.get(Dungeons.pack(c[0] + n[0], c[1] + n[1], c[2] + n[2]));
+                if (v == null || v.equals("minecraft:air") || v.equals("minecraft:water")) { leaks++; break; }
+            }
+        }
+        check(leaks == 0, "лава заперта (бока и низ — твёрдое или лава): открытых клеток " + leaks);
+
+        // ---- прохождение по этапам
+        int[] saveBox = BOX;
+        BOX = new int[]{-105, 85, -115, 70, -85, 75};
+        Mark st = d.start();
+        check(standable(st.x, st.y, st.z), "старт во дворе — место, где можно стоять");
+        Set<Long> r = reach(st.x, st.y, st.z);
+        for (Dungeons.Hall h : d.halls()) check(!hallExact(d, r, h.id), "при закрытой двери башни зал " + h.id + " недостижим");
+        // полёт (элитры): из воздуха снаружи в рамку башни не попасть, пока дверь закрыта (бойницы и арки закрыты решётками)
+        {
+            ArrayDeque<int[]> fq = new ArrayDeque<>();
+            Set<Long> air = new HashSet<>();
+            fq.add(new int[]{0, 70, 8}); air.add(Dungeons.pack(0, 70, 8));
+            int[][] d6 = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+            while (!fq.isEmpty()) {
+                int[] c = fq.poll();
+                for (int[] dd : d6) {
+                    int nx = c[0] + dd[0], ny = c[1] + dd[1], nz = c[2] + dd[2];
+                    if (nx < -40 || nx > 40 || nz < -70 || nz > 16 || ny < -3 || ny > 80) continue;
+                    if (!open(nx, ny, nz) || !open(nx, ny + 1, nz)) continue;
+                    if (air.add(Dungeons.pack(nx, ny, nz))) fq.add(new int[]{nx, ny, nz});
+                }
+            }
+            int inside = 0;
+            for (long k : air) { int[] c = unpack(k); if (c[0] >= -14 && c[0] <= 14 && c[2] >= -48 && c[2] <= -20 && c[1] >= 0 && c[1] <= 52) inside++; }
+            check(air.size() > 5000 && inside == 0, "с воздуха снаружи в башню не попасть при закрытой двери: клеток внутри " + inside + " из " + air.size());
+            String bn = world.get(Dungeons.pack(0, 46, -50)), bw = world.get(Dungeons.pack(-16, 46, -34)), bs = world.get(Dungeons.pack(-3, 5, -50)), bk = world.get(Dungeons.pack(-16, 5, -46));
+            check(bn != null && bn.startsWith("minecraft:iron_bars") && bn.contains("east=true") && bn.contains("west=true"), "арка N соединена решёткой вдоль x: " + bn);
+            check(bw != null && bw.startsWith("minecraft:iron_bars") && bw.contains("north=true") && bw.contains("south=true"), "арка W соединена решёткой вдоль z: " + bw);
+            check(bs != null && bs.contains("east=true") && bs.contains("west=true") && bk != null && bk.contains("north=true") && bk.contains("south=true"), "бойницы соединены по виду стены");
+            int bare = 0;
+            for (Map.Entry<Long, String> en : world.entrySet()) if (en.getValue().startsWith("minecraft:iron_bars") && !en.getValue().contains("=true")) bare++;
+            check(bare == 0, "решётки без соединений (столбики со щелью): " + bare);
+        }
+        fill(door, "minecraft:air");
+        r = reach(st.x, st.y, st.z);
+        for (int h : new int[]{1, 2, 3, 4, 5, 6}) check(hallExact(d, r, h), "дверь открыта: достижим зал башни " + h);
+        for (Dungeons.Hall h : d.halls()) {
+            if (h.id > 6) continue;
+            for (Mark m : h.spawns) check(at(r, m), "точка моба недостижима: зал " + h.id + " " + m.a + " " + m.x + "," + m.y + "," + m.z);
+            if (h.chest != null) check(r.contains(Dungeons.pack(h.chest.x, h.chest.y, h.chest.z)), "сундук недостижим: зал " + h.id);
+        }
+        for (int h : new int[]{8, 9, 10, 11, 12, 13, 14, 15, 16}) check(!hallExact(d, r, h), "до колокола зал " + h + " недостижим");
+        check(!hallExact(d, r, 23) && r.contains(Dungeons.pack(22, -74, 0)) && !r.contains(Dungeons.pack(24, -74, 0)), "с поверхности колодец ведёт вниз до глухой двери, а Гнездо в обход ключей недоступно");
+        Mark bell = d.marks("bell").get(0);
+        check(reachNear(r, bell.x, bell.y, bell.z) && r.contains(Dungeons.pack(bell.x, bell.y - 2, bell.z)), "к колоколу можно подойти и достать");
+        Mark lever = markAt(d, "lever", "tower");
+        check(reachNear(r, lever.x, lever.y, lever.z), "рычаг тайника башни (в Караулке) достижим");
+        // обрушенные пролёты: площадка с провалом в 1 блок, без прыжка не пройти
+        int stand0 = 7;
+        Map<Long, String> keep = new HashMap<>(world);
+        for (int x = -13; x <= -11; x++) world.put(Dungeons.pack(x, stand0 - 1, -30), "minecraft:polished_blackstone_bricks");
+        Set<Long> rf = reach(st.x, st.y, st.z);
+        check(rf.contains(Dungeons.pack(-12, stand0, -30)), "залатанная площадка проходится (провал — настоящая яма, а не стена)");
+        world = keep;
+        check(!r.contains(Dungeons.pack(-12, stand0, -30)) && r.contains(Dungeons.pack(-12, stand0, -29)) && r.contains(Dungeons.pack(-12, stand0, -31)), "провал площадки перепрыгивается (клетки по краям достижимы, сам провал нет)");
+        // колокол открывает шахту
+        Mark shaft = markAt(d, "secret", "shaft");
+        check(shaft.sx == 9 && shaft.sz == 9 && shaft.y == -1, "крышка шахты 9x9 в полу башни");
+        fill(shaft, "minecraft:air");
+        r = reach(st.x, st.y, st.z);
+        check(hallExact(d, r, 8) && hallExact(d, r, 9) && hallExact(d, r, 10) && hallExact(d, r, 11), "после колокола винтовая лестница ведёт в Зал Пепла (залы 8-11)");
+        check(r.contains(Dungeons.pack(-4, -1, -34)) && r.contains(Dungeons.pack(3, -22, -30)), "ступени шахты проходимы вниз до пола Зала Пепла");
+        check(!hallExact(d, r, 12) && !hallExact(d, r, 13), "до ключа вниз на уровень 2 не пройти");
+        for (Mark br : d.braziers()) { String[] o = br.a.split(","); check(r.contains(Dungeons.pack(br.x + Integer.parseInt(o[0]), br.y + Integer.parseInt(o[1]), br.z + Integer.parseInt(o[2]))) || br.y < -30, "точка возрождения жаровни достижима: " + br.x + "," + br.y + "," + br.z); }
+        for (Dungeons.Hall h : d.halls()) {
+            if (h.id < 8 || h.id > 11) continue;
+            for (Mark m : h.spawns) check(at(r, m), "точка моба недостижима: зал " + h.id + " " + m.a + " " + m.x + "," + m.y + "," + m.z);
+            if (h.chest != null) check(r.contains(Dungeons.pack(h.chest.x, h.chest.y, h.chest.z)), "сундук недостижим: зал " + h.id);
+        }
+        // струи по коридорам: сопла в стенах, линия свободна, не накрывает метки мобов и сундуки
+        for (Mark m : d.marks("jets")) {
+            int[] c = DungeonMech.jetCfg(m.a);
+            check(world.get(Dungeons.pack(m.x, m.y, m.z)).startsWith("minecraft:observer"), "сопло в стене: " + m.x + "," + m.y + "," + m.z);
+            int free = 0;
+            for (int i = 1; i <= c[2]; i++) {
+                int jx = m.x + c[0] * i, jz = m.z + c[1] * i;
+                if (!mSolidW(jx, m.y, jz)) free++;
+                for (Dungeons.Hall h : d.halls()) {
+                    for (Mark sp : h.spawns) check(!(sp.x == jx && sp.z == jz && Math.abs(sp.y + 1 - m.y) <= 1), "моб стоит на линии струи " + m.x + "," + m.z + " -> " + sp.x + "," + sp.z);
+                    if (h.chest != null) check(!(h.chest.x == jx && h.chest.z == jz), "сундук на линии струи");
+                }
+            }
+            check(free >= c[2] / 2, "струя бьёт в проход, а не в стену: " + m.x + "," + m.z + " " + m.a);
+        }
+        // ключ: дверь вниз
+        check(!hallExact(d, r, 12), "дверь ash_gate закрыта");
+        fill(gate, "minecraft:air");
+        r = reach(st.x, st.y, st.z);
+        check(hallExact(d, r, 13), "с ключом достижим Грот гейзеров (зал 13) по лестнице и коридору");
+        boolean landBrazier = false;
+        for (Mark br : d.braziers()) if (br.y == -40 && br.x == 73) landBrazier = true;
+        check(landBrazier && r.contains(Dungeons.pack(72, -40, -34)), "жаровня посадки уровня 2 достижима по лестнице");
+        // переправа: платформы с прыжками до 2 клеток
+        Set<Long> rg = reachG(st.x, st.y, st.z, 2);
+        Dungeons.Hall h12 = d.hall(12);
+        for (Mark m : h12.spawns) check(at(rg, m), "переправа: точка моба достижима прыжками: " + m.a + " " + m.x + "," + m.z);
+        check(h12.chest != null && rg.contains(Dungeons.pack(h12.chest.x, h12.chest.y, h12.chest.z)), "переправа проходится до выступа с сундуком (прыжки до 2 клеток)");
+        Mark chest12 = h12.chest;
+        check(!reach(st.x, st.y, st.z).contains(Dungeons.pack(chest12.x, chest12.y, chest12.z)), "без прыжков до выступа с сундуком не дойти");
+        // осыпающиеся платформы обязательны: без них пути нет
+        Map<Long, String> keep2 = new HashMap<>(world);
+        for (Mark m : d.marks("crumble")) {
+            check(m.sx == 3 && m.sy == 1 && m.sz == 3 && world.get(Dungeons.pack(m.x, m.y, m.z)).equals("minecraft:" + m.a), "осыпающаяся платформа 3x3 из " + m.a);
+            fill(m, "minecraft:air");
+        }
+        check(!reachG(st.x, st.y, st.z, 2).contains(Dungeons.pack(chest12.x, chest12.y, chest12.z)), "когда платформы осыпались, дальше пути нет (они на главном пути)");
+        world = keep2;
+        // тайники 14-16 закрыты до рычага и достижимы после
+        for (int hh : new int[]{14, 15, 16}) check(!hallExact(d, rg, hh), "секретный зал " + hh + " закрыт до рычага");
+        Mark sLava = markAt(d, "secret", "ashlava"), sRoom = markAt(d, "secret", "ashroom"), sTower = markAt(d, "secret", "tower");
+        check(reachNear(rg, markAt(d, "lever", "ashlava").x, markAt(d, "lever", "ashlava").y, markAt(d, "lever", "ashlava").z) && reachNear(rg, markAt(d, "lever", "ashroom").x, markAt(d, "lever", "ashroom").y, markAt(d, "lever", "ashroom").z), "рычаги тайников 15 и 16 достижимы");
+        for (Mark m : new Mark[]{sLava, sRoom, sTower}) {
+            check(world.get(Dungeons.pack(m.x, m.y, m.z)).contains("cracked"), "секрет " + m.a + ": трещина в кладке — единственный знак");
+            fill(m, "minecraft:air");
+        }
+        rg = reachG(st.x, st.y, st.z, 2);
+        for (int hh : new int[]{14, 15, 16}) {
+            check(hallExact(d, rg, hh), "после рычага достижим тайник " + hh);
+            check(rg.contains(Dungeons.pack(d.hall(hh).chest.x, d.hall(hh).chest.y, d.hall(hh).chest.z)), "сундук тайника " + hh + " достижим");
+        }
+
+        // ---- уровень 3 (шаг 2б): выход с уступа переправы -> лестница -> зал 17; головоломка закрывает спуск
+        Dungeons.Hall h17 = d.hall(17);
+        Mark[] fb = DungeonMech.fireSlots(d, "fires", "b", 4), ff = DungeonMech.fireSlots(d, "fires", "f", 4), fw = DungeonMech.fireSlots(d, "fires", "w", 16);
+        check(h17 != null && fb[0] != null && fb[3] != null && ff[0] != null && ff[3] != null && fw[2] != null, "зал 17: четыре жаровни, четыре панели, точки волны");
+        boolean in17 = false;
+        for (Mark m : fb) in17 |= reachNear(rg, m.x, m.y - 2, m.z);
+        check(in17 && rg.contains(Dungeons.pack(-55, -56, -40)) && rg.contains(Dungeons.pack(-53, -56, -40)), "с уступа переправы по лестнице достижим зал 17");
+        for (Mark m : fb) {
+            check(reachNear(rg, m.x, m.y - 2, m.z) && !standable(m.x, m.y - 2, m.z), "к жаровне можно подойти, а залезть на постамент нельзя: " + m.x + "," + m.z);
+            check(world.get(Dungeons.pack(m.x, m.y, m.z)).startsWith("minecraft:campfire[") && world.get(Dungeons.pack(m.x, m.y, m.z)).contains("lit=false"), "жаровня стоит незажжённая");
+            int bi = Integer.parseInt(m.a.split(",")[2]);
+            check(world.get(Dungeons.pack(m.x, m.y - 3, m.z)).equals("minecraft:" + DungeonMech.FIRE_COLORS[bi]) || world.get(Dungeons.pack(m.x + 1, m.y - 3, m.z)).equals("minecraft:" + DungeonMech.FIRE_COLORS[bi]), "площадка жаровни " + bi + " цвета " + DungeonMech.FIRE_COLORS[bi]);
+        }
+        for (Mark m : fw) if (m != null) check(rg.contains(Dungeons.pack(m.x, m.y, m.z)), "точка волны достижима: " + m.x + "," + m.z);
+        for (Mark m : ff) {
+            check(m.sx == 3 && m.sy == 5 && m.sz == 1, "панель фрески 3x5");
+            boolean solidPanel = true, airFront = true;
+            for (int ix = 0; ix < 3; ix++) for (int iy = 0; iy < 5; iy++) {
+                solidPanel &= mSolidW(m.x + ix, m.y + iy, m.z);
+                airFront &= !mSolidW(m.x + ix, m.y + iy, m.z + 1);
+            }
+            check(solidPanel && airFront, "панель фрески — часть стены, перед ней свободно");
+            check(rg.contains(Dungeons.pack(m.x + 1, m.y - 2, m.z + 3)) || reachNear(rg, m.x + 1, m.y - 2, m.z + 3), "перед фреской можно стоять");
+        }
+        for (int hh : new int[]{18, 19}) check(hallExact(d, rg, hh), "боковой зал " + hh + " достижим без секретов");
+        check(!hallExact(d, rg, 21) && !hallExact(d, rg, 20) && !hallExact(d, rg, 23), "до решения головоломки спуск закрыт: зал 21 (рычаг), арена и Гнездо недостижимы");
+        Mark lvE = markAt(d, "lever", "emberroom"), sE = markAt(d, "secret", "emberroom");
+        check(reachNear(rg, lvE.x, lvE.y, lvE.z) && world.get(Dungeons.pack(sE.x, sE.y, sE.z)).contains("cracked") && sE.sx == 3 && sE.sy == 3 && sE.sz == 3, "рычаг тайника 21 в зале 18 достижим, трещина в зале 19");
+        fill(sE, "minecraft:air");
+        Set<Long> rg2 = reachG(st.x, st.y, st.z, 2);
+        check(hallExact(d, rg2, 21) && rg2.contains(Dungeons.pack(d.hall(21).chest.x, d.hall(21).chest.y, d.hall(21).chest.z)) && !hallExact(d, rg2, 20), "после рычага достижим тайник 21, но не арена");
+        for (Dungeons.Hall hh : d.halls()) {
+            if (hh.id < 17 || hh.id > 19) continue;
+            for (Mark m : hh.spawns) check(at(rg2, m), "точка моба достижима: зал " + hh.id);
+            if (hh.chest != null) check(rg2.contains(Dungeons.pack(hh.chest.x, hh.chest.y, hh.chest.z)), "сундук достижим: зал " + hh.id);
+        }
+        Mark sF = markAt(d, "secret", "fires");
+        check(sF.sx == 3 && sF.sy == 4 && sF.sz == 1 && world.get(Dungeons.pack(sF.x, sF.y, sF.z)).equals("minecraft:obsidian"), "заслонка спуска 3x4 из обсидиана в южной стене зала 17");
+
+        // ---- головоломка «Четыре жаровни»: порядок из позиции данжа, фреска, шаги
+        Set<String> perms = new HashSet<>();
+        boolean allPerm = true;
+        for (int sx = -20; sx < 20; sx++) for (int sz = -20; sz < 20; sz += 3) {
+            int[] o = DungeonMech.fireOrder(DungeonMech.fireSeed(sx * 896 + 17, sz * 896 - 5));
+            int[] sorted = o.clone();
+            Arrays.sort(sorted);
+            allPerm &= Arrays.equals(sorted, new int[]{0, 1, 2, 3});
+            perms.add(Arrays.toString(o));
+            check(Arrays.equals(o, DungeonMech.fireOrder(DungeonMech.fireSeed(sx * 896 + 17, sz * 896 - 5))), "порядок жаровен детерминирован");
+        }
+        check(allPerm && perms.size() >= 20, "порядок — перестановка 0..3, у разных данжей разный: различных " + perms.size() + " из 24");
+        Set<String> glyphs = new HashSet<>();
+        for (int bi = 0; bi < 4; bi++) {
+            StringBuilder sb = new StringBuilder();
+            int ink = 0;
+            for (int row = 0; row < 5; row++) for (int col = 0; col < 3; col++) { boolean k = DungeonMech.fireInk(bi, col, row); sb.append(k ? '#' : '.'); if (k) ink++; }
+            glyphs.add(sb.toString());
+            check(ink >= 5 && ink <= 12 && DungeonMech.fireBlock(bi, 0, 0).equals(DungeonMech.fireInk(bi, 0, 0) ? DungeonMech.FIRE_COLORS[bi] : DungeonMech.FIRE_BG), "узор жаровни " + bi + ": " + ink + " клеток краски");
+        }
+        check(glyphs.size() == 4 && new HashSet<>(Arrays.asList(DungeonMech.FIRE_COLORS)).size() == 4 && !DungeonMech.fireInk(0, 3, 0) && !DungeonMech.fireInk(9, 0, 0), "четыре разных узора и цвета; вне панели краски нет");
+        for (int[] o : new int[][]{{0, 1, 2, 3}, {2, 0, 3, 1}, {3, 2, 1, 0}}) {
+            boolean[] lit = new boolean[4];
+            int[] want = {DungeonMech.FIRE_OK, DungeonMech.FIRE_OK, DungeonMech.FIRE_OK, DungeonMech.FIRE_DONE};
+            for (int k = 0; k < 4; k++) {
+                check(DungeonMech.firePrefix(o, lit), "состояние до шага " + k + " согласовано");
+                int wrong = o[(k + 1) % 4] == o[k] ? -1 : o[(k + 1) % 4];
+                if (k < 3) check(DungeonMech.fireStep(o, lit, wrong) == DungeonMech.FIRE_WRONG, "не та жаровня на шаге " + k + " - ошибка");
+                if (k > 0) check(DungeonMech.fireStep(o, lit, o[0]) == DungeonMech.FIRE_NONE, "уже горящая жаровня ничего не меняет");
+                check(DungeonMech.fireStep(o, lit, o[k]) == want[k], "верная жаровня на шаге " + k);
+                lit[o[k]] = true;
+            }
+        }
+        boolean[] bad = new boolean[4];
+        bad[2] = true;
+        check(!DungeonMech.firePrefix(new int[]{0, 1, 2, 3}, bad) && DungeonMech.firePrefix(new int[]{2, 0, 1, 3}, bad) && DungeonMech.firePrefix(new int[]{0, 1, 2, 3}, new boolean[4]), "нарушенное состояние (горит не первая по порядку) распознаётся");
+        // фреска показывает порядок: панель k - узор жаровни order[k]; по нему игрок восстанавливает порядок
+        int[] ord = DungeonMech.fireOrder(DungeonMech.fireSeed(100, 200));
+        int[] seen = new int[4];
+        for (int k = 0; k < 4; k++) for (int bi = 0; bi < 4; bi++) {
+            boolean same = true;
+            for (int row = 0; row < 5; row++) for (int col = 0; col < 3; col++) same &= DungeonMech.fireInk(bi, col, row) == DungeonMech.fireInk(ord[k], col, row);
+            if (same) seen[k] = bi;
+        }
+        check(Arrays.equals(seen, ord), "по узорам панелей слева направо читается порядок зажигания");
+        check(!DungeonMech.waveMob(0).isEmpty() && Set.of("husk", "skeleton", "blaze").containsAll(List.of(DungeonMech.waveMob(0), DungeonMech.waveMob(2), DungeonMech.waveMob(5), DungeonMech.waveMob(11))) && DungeonMech.WAVE_CAP >= 2, "волна из ванильных заглушек");
+
+        // ---- уровень 4: спуск, арена (печать), элита, сундук с Угольным ключом, дверь Гнезда
+        fill(sF, "minecraft:air");
+        Set<Long> rg3 = reachG(st.x, st.y, st.z, 2);
+        Dungeons.Hall h20 = d.hall(20);
+        for (Mark m : h20.spawns) check(at(rg3, m), "арена: точка моба достижима " + m.a + " " + m.x + "," + m.z);
+        check(h20.chest != null && rg3.contains(Dungeons.pack(h20.chest.x, h20.chest.y, h20.chest.z)), "арена: сундук с ключом достижим");
+        Mark seal = d.marks("seal").get(0);
+        boolean sealOpen = true;
+        for (int ix = 0; ix < seal.sx; ix++) for (int iy = 0; iy < seal.sy; iy++) sealOpen &= !mSolidW(seal.x + ix, seal.y + iy, seal.z);
+        check(sealOpen && seal.sx == 3 && seal.sy == 4 && rg3.contains(Dungeons.pack(seal.x + 1, seal.y, seal.z)), "проём печати арены свободен в шаблоне и проходим; закрывает его движок");
+        check(DungeonMech.sealWanted(1L << 20, 0, 20, true) && !DungeonMech.sealWanted(1L << 20, 1L << 20, 20, true) && !DungeonMech.sealWanted(0, 0, 20, true), "печать арены: закрыта, пока зал разбужен и не зачищен");
+        check(!hallExact(d, rg3, 23) && !rg3.contains(Dungeons.pack(3, -64, 4)), "до Угольного ключа в Гнездо не пройти");
+        check(world.get(Dungeons.pack(ember.x, ember.y, ember.z)) != null && ember.sx == 2 && ember.sy == 4 && ember.sz == 3 && mSolidW(ember.x, ember.y, ember.z + 1), "дверь Гнезда на месте");
+        Mark aElite = null;
+        for (Mark m : h20.spawns) if (m.a.equals("wither_skeleton")) aElite = m;
+        check(aElite != null && !mSolidW(aElite.x, aElite.y, aElite.z) && !mSolidW(aElite.x, aElite.y + 2, aElite.z) && mSolidW(aElite.x, aElite.y - 1, aElite.z), "элита стоит на помосте со свободной головой");
+
+        // ---- уровень 5: Гнездо и колодец-выход
+        fill(ember, "minecraft:air");
+        Set<Long> rg4 = reachG(st.x, st.y, st.z, 2);
+        check(hallExact(d, rg4, 23) && rg4.contains(Dungeons.pack(nest.chest.x, nest.chest.y, nest.chest.z)), "с Угольным ключом достижимо Гнездо и его сундук");
+        boolean landNest = false;
+        for (Mark br : d.braziers()) if (br.y == -74) landNest = rg4.contains(Dungeons.pack(br.x + 1, br.y, br.z));
+        check(landNest, "жаровня-якорь у входа в Гнездо достижима");
+        boolean eggBlocked = !standable(34, -74, 4) && !standable(34, -70, 4) && mSolidW(34, -70, 4);
+        check(eggBlocked, "яйцо из пепла в центре — декор, на него не встать");
+        int lava = 0;
+        for (Map.Entry<Long, String> e : world.entrySet()) if (e.getValue().equals("minecraft:lava") && unpack(e.getKey())[1] == -75) lava++;
+        check(lava >= 30, "лавовые лужки в Гнезде есть: " + lava);
+        // колодец: с поверхности вниз по лестнице до глухой двери (в Гнездо не попасть), из Гнезда рычаг открывает дверь и ведёт наверх
+        Mark wl = markAt(d, "lever", "wellgate"), wsec = markAt(d, "secret", "wellgate");
+        check(wsec.sx == 1 && wsec.sy == 3 && wsec.sz == 3 && world.get(Dungeons.pack(wsec.x, wsec.y, wsec.z)).equals("minecraft:obsidian"), "дверь колодца 1x3x3 из обсидиана");
+        check(mSolidW(wsec.x, wsec.y, wsec.z) && mSolidW(wsec.x, wsec.y + 2, wsec.z + 1) && rg4.contains(Dungeons.pack(22, -74, 0)), "внизу колодца глухая дверь: с поверхности лестница доходит до неё");
+        check(reachNear(rg4, wl.x, wl.y - 1, wl.z) && rg4.contains(Dungeons.pack(wl.x, wl.y - 1, wl.z)), "рычаг двери колодца стоит в Гнезде и достижим из пещеры");
+        Set<Long> rClosed = reachG(3, -74, 4, 0);
+        check(!rClosed.contains(Dungeons.pack(22, -74, 0)) && !rClosed.contains(Dungeons.pack(18, 0, 2)), "пока дверь колодца закрыта, из Гнезда в него не войти");
+        fill(wsec, "minecraft:air");
+        Set<Long> rn = reachG(3, -74, 4, 0);
+        check(rn.contains(Dungeons.pack(22, -74, 0)) && rn.contains(Dungeons.pack(18, 0, 2)), "после рычага из Гнезда по колодцу можно выйти на поверхность (клетка (18,0,2) вровень со двором)");
+        int stepsOk = 0;
+        int[][] ring = {{2, 0}, {2, -1}, {2, -2}, {1, -2}, {0, -2}, {-1, -2}, {-2, -2}, {-2, -1}, {-2, 0}, {-2, 1}, {-2, 2}, {-1, 2}, {0, 2}, {1, 2}, {2, 2}, {2, 1}};
+        for (int j = 0; j <= 74; j++) if (rn.contains(Dungeons.pack(20 + ring[j % 16][0], -74 + j, ring[j % 16][1]))) stepsOk++;
+        check(stepsOk == 75, "все 75 ступеней колодца достижимы по порядку: " + stepsOk);
+        int into = 0, onRing = 0;
+        for (long k : rn) {
+            int[] c = unpack(k);
+            if (c[0] >= 19 && c[0] <= 21 && c[2] >= -1 && c[2] <= 1 && c[1] < -1 && c[1] > -74) into++;
+            if (c[0] >= 17 && c[0] <= 23 && c[2] >= -3 && c[2] <= 3 && c[1] > -74 && c[1] < 0) { boolean rr = false; for (int[] q : ring) rr |= c[0] == 20 + q[0] && c[2] == q[1]; if (rr) onRing++; }
+        }
+        check(into == 0 && onRing >= 70 && onRing <= 80, "в ядро шахты (столб 3x3) не попасть, на шахте только ступени кольца: внутри " + into + ", на кольце " + onRing);
+        boolean capped = true;
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) {
+            boolean open = (dx == -2 && dz >= -1);
+            if (!open && !mSolidW(20 + dx, -1, dz)) capped = false;
+        }
+        check(capped, "устье колодца закрыто вровень со двором, кроме четырёх клеток последних ступеней");
+        // ---- всё проходимое внутри данжа: под землёй и на дворе (иначе игрок остался бы вне защиты и счёта)
+        Dungeons.Mask mk = d.mask();
+        int walkOut = 0;
+        for (long k : rg4) {
+            int[] c = unpack(k);
+            boolean yard = Math.abs(c[0]) <= 26 && c[2] >= -52 && c[2] <= 4;
+            if ((c[1] < -3 || (yard && c[1] <= 64)) && (!mk.has(c[0], c[1], c[2]) || !mk.has(c[0], c[1] + 1, c[2]))) walkOut++;
+        }
+        check(walkOut == 0, "проходимые клетки Святилища все в маске: вне " + walkOut);
+        long vol = (long) w * hgt * dep;
+        check(mk.count() < vol * 0.40, "маска уже рамки: " + mk.count() + " из " + vol);
+        for (Dungeons.Hall h : d.halls()) check(mk.has(h.x, h.y, h.z) && mk.has(h.x + h.sx - 1, h.y + h.sy, h.z + h.sz - 1), "зал " + h.id + " целиком в маске");
+        for (Dungeons.Hall x : d.halls()) {
+            int cellsIn = 0;
+            for (int px = x.x; px < x.x + x.sx; px += 7) for (int pz = x.z; pz < x.z + x.sz; pz += 7) if (mk.has(px, x.y + 1, pz)) cellsIn++;
+            check(cellsIn > 0, "в маске есть клетки зала " + x.id);
+        }
+        // барьер: нет босса — флаг bossDead не ставится сам, блоки защищены
+        DungeonData data = new DungeonData();
+        DungeonData.Rec rec = new DungeonData.Rec("ash_0_0", "ash", 0, 0, 100, 64, 100);
+        rec.layout = d.signature(); rec.partsDone = d.allParts();
+        data.recs.put(rec.key, rec);
+        check(rec.contains(100.5, 64.5, 100.5 - 8, 0) && Dungeons.guardedAt(data, 100.5, 64.5, 91.5, 0) == rec && data.migrateBossDead() == 0 && !rec.bossDead, "без босса барьер Святилища стоит (босс — фаза 4.10, зал Гнезда получит метку boss)");
+        BOX = saveBox;
+        System.out.println("святилище ok: " + total + " блоков, залов " + ids.size() + ", мобов " + spawns + ", сундуков " + chests + ", маска " + mk.count());
+    }
+
+    static boolean mSolidW(int x, int y, int z) { String v = world.get(Dungeons.pack(x, y, z)); return v != null && !v.equals("minecraft:air"); }
+
+    /** Святилище обходит и Разломы, и Города: ни при каком сиде и запасной точке рамки не пересекаются. */
+    static void ashPlacement() {
+        Dungeons.Def a = Dungeons.ASH;
+        int[] ab = a.bounds();
+        int clashes0 = 0, cells = 0;
+        for (Dungeons.Def o : new Dungeons.Def[]{Dungeons.RIFT, Dungeons.SLEEP}) {
+            int[] ob = o.bounds();
+            for (long seed = 1; seed <= 25; seed++) for (int cx = -3; cx <= 3; cx++) for (int cz = -3; cz <= 3; cz++) {
+                cells++;
+                long sd = seed * 7919;
+                int[] s0 = Dungeons.site(sd, a, cx, cz, 0);
+                check(s0[0] >= cx * a.cell + a.margin && s0[0] < (cx + 1) * a.cell - a.margin && s0[1] >= cz * a.cell + a.margin && s0[1] < (cz + 1) * a.cell - a.margin, "святилище в своей клетке");
+                if (Dungeons.clashes(sd, a, Dungeons.site0Raw(sd, a, cx, cz))) clashes0++;
+                for (int at = 0; at < 8; at++) {
+                    int[] s = Dungeons.site(sd, a, cx, cz, at);
+                    if (at > 0 && Dungeons.clashes(sd, a, s)) continue;
+                    for (int ax = Math.floorDiv(s[0], o.cell) - 1; ax <= Math.floorDiv(s[0], o.cell) + 1; ax++) for (int az = Math.floorDiv(s[1], o.cell) - 1; az <= Math.floorDiv(s[1], o.cell) + 1; az++)
+                        for (int ra = 0; ra < 8; ra++) {
+                            int[] q = Dungeons.site(sd, o, ax, az, ra);
+                            boolean ov = s[0] + ab[0] < q[0] + ob[3] && q[0] + ob[0] < s[0] + ab[3] && s[1] + ab[2] < q[1] + ob[5] && q[1] + ob[2] < s[1] + ab[5];
+                            check(!ov, "святилище " + Arrays.toString(s) + " налезает на " + o.id + " " + Arrays.toString(q));
+                        }
+                }
+            }
+        }
+        System.out.println("святилище обходит Разломы и Города: проверок " + cells + ", с первой попытки мешало в " + clashes0);
+        check(clashes0 < cells / 2, "обход не должен быть правилом: " + clashes0 + " из " + cells);
+    }
+
+    /** Механики Святилища: цикл струй и гейзеров, попадание, осыпающиеся платформы. */
+    static void ashMech() {
+        // цикл: покой, предупреждение, выдох; сдвиг фазы
+        int idle = 0, warn = 0, burst = 0;
+        for (int t = 0; t < 100; t++) {
+            int ph = DungeonMech.cycle(t, 100, DungeonMech.JET_WARN, DungeonMech.JET_BURST, 0);
+            if (ph == 0) idle++; else if (ph == 1) warn++; else burst++;
+        }
+        check(idle == 50 && warn == DungeonMech.JET_WARN && burst == DungeonMech.JET_BURST, "цикл струи: покой " + idle + ", вдох " + warn + ", выдох " + burst);
+        check(DungeonMech.cycle(99, 100, 25, 25, 0) == 2 && DungeonMech.cycle(49, 100, 25, 25, 0) == 0 && DungeonMech.cycle(50, 100, 25, 25, 0) == 1 && DungeonMech.cycle(75, 100, 25, 25, 0) == 2, "границы цикла");
+        check(DungeonMech.cycle(0, 100, 25, 25, 50) == 1 && DungeonMech.cycle(25, 100, 25, 25, 50) == 2 && DungeonMech.cycle(-1, 100, 25, 25, 0) == 2, "сдвиг фазы и отрицательное время");
+        // у каждой струи уровня есть окно, когда её линия пуста, и струи соседних сопел не бьют вместе без перерыва
+        Dungeons.Def d = Dungeons.ASH;
+        for (Mark m : d.marks("jets")) {
+            int[] c = DungeonMech.jetCfg(m.a);
+            int quiet = 0;
+            for (int t = 0; t < c[3]; t++) if (DungeonMech.cycle(t, c[3], DungeonMech.JET_WARN, DungeonMech.JET_BURST, c[4]) != 2) quiet++;
+            check(quiet >= c[3] / 2, "струя оставляет окно для прохода: " + m.a);
+        }
+        // попадание: линия +z от сопла (0,5,0), игрок у соседней клетки на уровне груди; в стороне, сзади и дальше длины — мимо
+        check(DungeonMech.jetHit(0.0, -1.5, 2.5, 0, 1, 5) && DungeonMech.jetHit(0.5, -1.4, 5.5, 0, 1, 5), "игрок на линии струи горит");
+        check(!DungeonMech.jetHit(2.0, -1.5, 2.5, 0, 1, 5) && !DungeonMech.jetHit(0.0, -1.5, -1.0, 0, 1, 5) && !DungeonMech.jetHit(0.0, -1.5, 6.8, 0, 1, 5), "в стороне, позади сопла и дальше длины - мимо");
+        check(!DungeonMech.jetHit(0.0, 1.5, 2.5, 0, 1, 5) && !DungeonMech.jetHit(0.0, -4.0, 2.5, 0, 1, 5) && DungeonMech.jetHit(-3.0, -1.5, 0.0, -1, 0, 5) && !DungeonMech.jetHit(3.0, -1.5, 0.0, -1, 0, 5), "прыжок выше струи и яма ниже её - мимо; направление -x");
+        // гейзер: столб над жерлом
+        check(DungeonMech.inGeyser(0.2, 0.0, -0.3) && DungeonMech.inGeyser(0.0, 2.0, 0.0) && !DungeonMech.inGeyser(1.2, 0.0, 0.0) && !DungeonMech.inGeyser(0.0, 3.2, 0.0) && !DungeonMech.inGeyser(0.0, -1.0, 0.0), "столб гейзера");
+        check(Arrays.equals(DungeonMech.geyserCfg("-z,150"), new int[]{0, -1, 150}) && Arrays.equals(DungeonMech.geyserCfg("up,160"), new int[]{0, 0, 160}) && DungeonMech.geyserCfg("up") == null && DungeonMech.geyserCfg("++,1") == null, "разбор гейзера");
+        check(Arrays.equals(DungeonMech.jetCfg("+z,5,100,37"), new int[]{0, 1, 5, 100, 37}) && DungeonMech.jetCfg("+z,5,100") == null && DungeonMech.jetCfg("up,5,100,0") == null, "разбор струи");
+        // осыпающаяся платформа: цела -> шаг -> осыпается 30 тиков -> нет 140 тиков -> цела; на месте стоит игрок — не возвращается
+        long now = 1000;
+        int st = DungeonMech.crumbNext(0, now, now, false, false);
+        check(st == 0, "без шага платформа цела");
+        st = DungeonMech.crumbNext(0, now, now, true, false);
+        check(st == 1, "шаг запускает осыпание");
+        long since = now;
+        check(DungeonMech.crumbNext(1, since, since + DungeonMech.CRUMBLE_AFTER - 1, true, false) == 1 && DungeonMech.crumbNext(1, since, since + DungeonMech.CRUMBLE_AFTER, false, false) == 2, "осыпается через CRUMBLE_AFTER тиков, даже если игрок ушёл");
+        check(DungeonMech.crumbNext(2, since, since + DungeonMech.CRUMBLE_BACK - 1, false, false) == 2 && DungeonMech.crumbNext(2, since, since + DungeonMech.CRUMBLE_BACK, false, false) == 0, "возвращается через CRUMBLE_BACK тиков");
+        check(DungeonMech.crumbNext(2, since, since + 5000, false, true) == 2, "пока в платформе кто-то стоит, блоки не ставятся");
+        check(DungeonMech.CRUMBLE_AFTER >= 20 && DungeonMech.CRUMBLE_AFTER <= 40 && DungeonMech.CRUMBLE_BACK >= 100, "время на прыжок есть: " + DungeonMech.CRUMBLE_AFTER + " тиков");
+        Mark pad = new Mark("crumble", "basalt", 10, 5, 20, 3, 1, 3);
+        check(DungeonMech.onPad(pad, 11.5, 6.0, 21.5) && DungeonMech.onPad(pad, 9.8, 6.0, 20.0) && !DungeonMech.onPad(pad, 11.5, 7.5, 21.5) && !DungeonMech.onPad(pad, 14.0, 6.0, 21.5) && !DungeonMech.onPad(pad, 11.5, 4.0, 21.5), "стоит на платформе: сверху, у края, не в прыжке и не сбоку");
+        check(DungeonMech.inPad(pad, 11.5, 4.5, 21.5) && DungeonMech.inPad(pad, 11.5, 5.5, 21.5) && !DungeonMech.inPad(pad, 11.5, 6.3, 21.5) && !DungeonMech.inPad(pad, 11.5, 2.0, 21.5), "телом внутри места платформы (ставить блоки нельзя)");
+    }
+
     /** Город обходит Разломы: ни при каком сиде и запасной точке рамки не пересекаются; город остаётся в своей клетке. */
     static void cityPlacement() {
         Dungeons.Def c = Dungeons.SLEEP, r = Dungeons.RIFT;
@@ -476,6 +1006,8 @@ public class DungeonTest {
         rift();
         city();
         cityPlacement();
+        ash();
+        ashPlacement();
         int total = 0;
         for (DungeonTemplate t : d.templates()) total += t.count();
         int ox = 1234, oy = 70, oz = -987;
@@ -760,7 +1292,9 @@ public class DungeonTest {
         Dungeons.Def mt = Dungeons.MECH_TEST;
         check(mt.templates().size() == 1, "стенд механик: одна часть");
         mw = Dungeons.assemble(mt, 0, 0, 0);
-        for (String t : DungeonMech.TYPES) check(!mt.marks(t).isEmpty(), "на стенде есть метка " + t);
+        for (String t : new String[]{"steps", "beams", "mirror", "platform", "lever", "secret", "seal"}) check(!mt.marks(t).isEmpty(), "на стенде есть метка " + t);
+        check(DungeonMech.TYPES.length == 12 && Dungeons.ASH.hasMech(), "метки механик: 7 прежних + колокол, струи, платформы, гейзеры, жаровни (Святилище)");
+        ashMech();
         check(mt.hasMech() && Dungeons.RIFT.hasMech(), "hasMech: стенд и Разлом");
         check(mt.marks("steps").size() == 3 && mt.marks("beams").size() == 3 && mt.marks("platform").size() == 1 && mt.marks("secret").size() == 2, "число меток стенда");
 

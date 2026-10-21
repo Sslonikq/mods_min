@@ -6,7 +6,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Difficulty;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.*;
 
@@ -25,16 +29,28 @@ import java.util.*;
  *  lever    — ПКМ по рычагу открывает секрет с его id;
  *  secret   — стена, которая становится воздухом по id (от рычага или решённой головоломки; осколок не нужен);
  *  seal     — дверь логова: закрывается, пока зал разбужен и не зачищен, и открывается после зачистки.
+ * Пепельное святилище (4.8):
+ *  bell     — колокол: ПКМ звонит и открывает секрет с id метки (крышка шахты в башне);
+ *  jets     — сопло в стене: по таймеру (период, сдвиг) вдыхает 25 тиков (дымок, звук), потом 25 тиков выдыхает огонь вдоль линии
+ *             (частицы, урон и поджог тем, кто на линии); блоков не меняет;
+ *  crumble  — платформа: через 1,5 с после шага игрока блоки пропадают, через 7 с возвращаются (если на месте никого нет);
+ *  geyser   — жерло: по таймеру булькает 30 тиков, потом 14 тиков бьёт столбом огня и подбрасывает игрока над ним (вверх или в сторону).
+ * Достройка Святилища (4.8, шаг 2б):
+ *  braziers — «Четыре жаровни» (a = "id,роль,n"): b — костёр жаровни n (ПКМ зажигает), f — панель n фрески (роспись ставит движок: n-я по порядку
+ *             зажигания жаровня, цвет и узор), w — точка волны мобов. Порядок один на данж и считается из его позиции (fireOrder): верный порядок
+ *             открывает секрет с id, неверный гасит все жаровни и зовёт волну ванильных мобов. Состояние - сами костры в мире + Rec.opened.
  * Состояние: DungeonData.Rec.opened (открытые секреты) и Rec.mirrors (повороты зеркал) — в NBT; всё остальное восстанавливается из мира.
  */
 final class DungeonMech {
     private DungeonMech() {}
 
-    static final String[] TYPES = {"steps", "beams", "mirror", "platform", "lever", "secret", "seal"};
+    static final String[] TYPES = {"steps", "beams", "mirror", "platform", "lever", "secret", "seal", "bell", "jets", "crumble", "geyser", "braziers"};
     static final String[] FACING = {"north", "east", "south", "west"};
     static final int[] DX = {0, 1, 0, -1}, DZ = {-1, 0, 1, 0};
     static final int STEP_SHOW = 4, STEP_HIDE = 10, BEAM_DELAY = 10, BEAM_COOLDOWN = 40, PLAT_PERIOD = 8, PLAT_PAUSE = 3, MAX_BEAM = 80;
     static final double BEAM_HIT = 1.1;
+    /** Струи огня: предупреждение и выдох (тики); гейзеры; осыпающиеся платформы: до обвала и до возвращения (тики). */
+    static final int JET_WARN = 25, JET_BURST = 25, GEYSER_WARN = 30, GEYSER_BURST = 14, CRUMBLE_AFTER = 30, CRUMBLE_BACK = 140;
 
     // ================================================================ чистая логика (без мира)
     /** Твёрдый ли блок на позиции (координаты данжа). */
@@ -140,12 +156,139 @@ final class DungeonMech {
         return next;
     }
 
+    // ---------------------------------------------------------------- чистая логика Святилища (4.8)
+    /** Цикл по таймеру: 0 покой, 1 предупреждение (warn тиков), 2 выброс (burst тиков, в конце периода); off сдвигает фазу. */
+    static int cycle(long tk, int period, int warn, int burst, int off) {
+        if (period <= warn + burst) return 2;
+        long t = Math.floorMod(tk + off, (long) period);
+        if (t >= period - burst) return 2;
+        if (t >= period - burst - warn) return 1;
+        return 0;
+    }
+
+    /** a = "±x|±z,длина,период,сдвиг" -> {dx, dz, длина, период, сдвиг}; null при ошибке. */
+    static int[] jetCfg(String a) {
+        String[] v = a.split(",");
+        if (v.length != 4 || v[0].length() != 2) return null;
+        int sign = v[0].charAt(0) == '-' ? -1 : 1;
+        char ax = v[0].charAt(1);
+        if (ax != 'x' && ax != 'z') return null;
+        try { return new int[]{ax == 'x' ? sign : 0, ax == 'z' ? sign : 0, Integer.parseInt(v[1].trim()), Integer.parseInt(v[2].trim()), Integer.parseInt(v[3].trim())}; }
+        catch (NumberFormatException e) { return null; }
+    }
+
+    /** a = "±x|±z|up,период" -> {dx, dz, период}; null при ошибке. */
+    static int[] geyserCfg(String a) {
+        String[] v = a.split(",");
+        if (v.length != 2) return null;
+        int dx = 0, dz = 0;
+        if (!v[0].equals("up")) {
+            if (v[0].length() != 2) return null;
+            int sign = v[0].charAt(0) == '-' ? -1 : 1;
+            if (v[0].charAt(1) == 'x') dx = sign; else if (v[0].charAt(1) == 'z') dz = sign; else return null;
+        }
+        try { return new int[]{dx, dz, Integer.parseInt(v[1].trim())}; }
+        catch (NumberFormatException e) { return null; }
+    }
+
+    /**
+     * Игрок на линии струи: rx, rz — от центра блока-сопла по горизонтали, feetRel — ноги относительно центра сопла по вертикали.
+     * Линия идёт от сопла по оси (dx, dz) на len клеток; по бокам допуск 0,9, по высоте тело (центр на 0,9 над ногами) в 1,3 от оси.
+     */
+    static boolean jetHit(double rx, double feetRel, double rz, int dx, int dz, int len) {
+        double along = rx * dx + rz * dz, lat = Math.abs(rx * dz - rz * dx);
+        return along >= 0.4 && along <= len + 0.6 && lat <= 0.9 && Math.abs(feetRel + 0.9) <= 1.3;
+    }
+
+    /** Игрок в столбе гейзера над жерлом: rx, rz — от центра блока жерла, feetRel — ноги относительно верха жерла (блок m.y + 1). */
+    static boolean inGeyser(double rx, double feetRel, double rz) { return Math.abs(rx) < 0.95 && Math.abs(rz) < 0.95 && feetRel >= -0.2 && feetRel <= 2.5; }
+
+    /** Игрок стоит на осыпающейся платформе (метка crumble: верх на m.y + m.sy). Координаты данжа. */
+    static boolean onPad(Mark m, double lx, double ly, double lz) {
+        double top = m.y + m.sy;
+        return lx >= m.x - 0.25 && lx <= m.x + m.sx + 0.25 && lz >= m.z - 0.25 && lz <= m.z + m.sz + 0.25 && ly >= top - 0.1 && ly <= top + 0.6;
+    }
+
+    /** Игрок телом пересекает место платформы (ставить блоки нельзя: замуровали бы). */
+    static boolean inPad(Mark m, double lx, double ly, double lz) {
+        return lx >= m.x - 0.4 && lx <= m.x + m.sx + 0.4 && lz >= m.z - 0.4 && lz <= m.z + m.sz + 0.4 && ly >= m.y - 1.8 && ly <= m.y + 0.9;
+    }
+
+    /** Состояние платформы: 0 целая, 1 осыпается, 2 нет. Шаг автомата; since — когда состояние началось. */
+    static int crumbNext(int st, long since, long now, boolean stepped, boolean blocked) {
+        if (st == 0) return stepped ? 1 : 0;
+        if (st == 1) return now - since >= CRUMBLE_AFTER ? 2 : 1;
+        return now - since >= CRUMBLE_BACK && !blocked ? 0 : 2;
+    }
+
+    static final class Crumb { int st; long since; }
+
+    // ---------------------------------------------------------------- чистая логика «Четырёх жаровен» (4.8, шаг 2б)
+    /** Цвет жаровни i (площадка вокруг костра и краска её узора на фреске), фон фрески, узоры 3 столбца x 5 строк сверху вниз («#» - краска). */
+    static final String[] FIRE_COLORS = {"red_concrete", "blue_concrete", "yellow_concrete", "lime_concrete"};
+    static final String FIRE_BG = "black_concrete";
+    static final String[][] GLYPHS = {
+            {"###", "#.#", "#.#", "#.#", "###"},
+            {"#.#", "#.#", "###", "#.#", "#.#"},
+            {".#.", ".#.", "###", ".#.", ".#."},
+            {"#.#", ".#.", "#.#", ".#.", "#.#"}};
+    /** Результат клика по жаровне: ничего (уже горит), верно, верно и последняя, ошибка. */
+    static final int FIRE_NONE = 0, FIRE_OK = 1, FIRE_DONE = 2, FIRE_WRONG = -1;
+    /** Сколько мобов волны уже стоит, чтобы новую не звать; ступени времени между кликами не нужны: после ошибки жаровни погашены. */
+    static final int WAVE_CAP = 4;
+
+    /** Зерно порядка из позиции данжа в мире. */
+    static long fireSeed(int x, int z) { return Dungeons.mix(((long) x << 32) ^ (z & 0xFFFFFFFFL) ^ 0x46495245L); }
+
+    /** Порядок зажигания: order[k] — номер жаровни, которую зажигают k-й; перестановка 0..3 по зерну. */
+    static int[] fireOrder(long seed) {
+        int[] o = {0, 1, 2, 3};
+        long h = seed;
+        for (int i = 3; i >= 1; i--) {
+            h = Dungeons.mix(h + i);
+            int j = (int) Long.remainderUnsigned(h, i + 1);
+            int t = o[i]; o[i] = o[j]; o[j] = t;
+        }
+        return o;
+    }
+
+    /** Закрашена ли клетка узора жаровни b (col 0..2, row 0..4 сверху). */
+    static boolean fireInk(int b, int col, int row) { return b >= 0 && b < GLYPHS.length && col >= 0 && col < 3 && row >= 0 && row < 5 && GLYPHS[b][row].charAt(col) == '#'; }
+
+    /** Блок клетки панели: краска цвета жаровни или фон. */
+    static String fireBlock(int b, int col, int row) { return fireInk(b, col, row) ? FIRE_COLORS[b] : FIRE_BG; }
+
+    /** Горящие жаровни - ровно первые k по порядку (иначе состояние нарушено: гасим всё). */
+    static boolean firePrefix(int[] order, boolean[] lit) {
+        int k = 0;
+        for (boolean l : lit) if (l) k++;
+        for (int i = 0; i < k; i++) if (!lit[order[i]]) return false;
+        return true;
+    }
+
+    /** Клик по жаровне clicked при уже горящих (первые k по порядку). */
+    static int fireStep(int[] order, boolean[] lit, int clicked) {
+        if (lit[clicked]) return FIRE_NONE;
+        int k = 0;
+        for (boolean l : lit) if (l) k++;
+        if (clicked != order[k]) return FIRE_WRONG;
+        return k + 1 == order.length ? FIRE_DONE : FIRE_OK;
+    }
+
+    static String fireWaveTag(DungeonData.Rec rec) { return "ewdw" + Integer.toHexString(rec.key.hashCode()); }
+
+    /** Виды мобов волны по номеру точки: ванильные заглушки (хаски, скелеты, блейз). */
+    static String waveMob(int i) { return new String[]{"husk", "husk", "skeleton", "husk", "skeleton", "blaze"}[i % 6]; }
+
     // ================================================================ состояние в памяти (кэши, восстанавливаются из мира)
     static final Map<String, Boolean> STEPS = new HashMap<>();
     static final Map<String, Plat> PLAT = new HashMap<>();
     static final Map<String, Long> BEAM_AT = new HashMap<>(), BEAM_COOL = new HashMap<>();
 
-    static void clear() { STEPS.clear(); PLAT.clear(); BEAM_AT.clear(); BEAM_COOL.clear(); }
+    static final Map<String, Crumb> CRUMB = new HashMap<>();
+    static final Map<String, Long> HIT_CD = new HashMap<>();
+
+    static void clear() { STEPS.clear(); PLAT.clear(); BEAM_AT.clear(); BEAM_COOL.clear(); CRUMB.clear(); HIT_CD.clear(); }
 
     // ================================================================ тик
     static void tick(ServerLevel sl, DungeonData data, List<ServerPlayer> ps, long tk) {
@@ -165,7 +308,10 @@ final class DungeonMech {
     private static void run(ServerLevel sl, DungeonData data, DungeonData.Rec rec, Dungeons.Def d, List<ServerPlayer> in, long tk) {
         platforms(sl, rec, d, in, tk);
         if (tk % 5 == 0) { steps(sl, rec, d, in, tk); seals(sl, rec, d, in); }
-        if (tk % 2 == 0) beams(sl, rec, d, in, tk);
+        if (tk % 2 == 0) { beams(sl, rec, d, in, tk); jets(sl, rec, d, in, tk); geysers(sl, rec, d, in, tk); }
+        if (tk % 4 == 0) crumbles(sl, rec, d, in, tk);
+        if (tk % 20 == 0) fires(sl, rec, d, in);
+        if (tk % 1200 == 0 && HIT_CD.size() > 64) HIT_CD.values().removeIf(t -> t < tk);
         if (tk % 10 == 0) puzzles(sl, data, rec, d, in);
     }
 
@@ -251,6 +397,253 @@ final class DungeonMech {
                 Cmd.run(sl, p.m_20185_(), p.m_20186_(), p.m_20189_(), "damage " + p.m_20148_() + " 5 minecraft:magic");
     }
 
+    // ---------------------------------------------------------------- струи огня (Святилище)
+    private static void jets(ServerLevel sl, DungeonData.Rec rec, Dungeons.Def d, List<ServerPlayer> in, long tk) {
+        List<Mark> ms = d.marks("jets");
+        if (ms.isEmpty()) return;
+        boolean peaceful = sl.m_46791_() == Difficulty.valueOf("PEACEFUL");
+        for (Mark m : ms) {
+            int[] c = jetCfg(m.a);
+            if (c == null) continue;
+            double nx = rec.x + m.x + 0.5, ny = rec.y + m.y + 0.5, nz = rec.z + m.z + 0.5;
+            if (!nearAny(in, nx, ny, nz, 48, 24)) continue;
+            int ph = cycle(tk, c[3], JET_WARN, JET_BURST, c[4]);
+            if (ph == 0) continue;
+            long t = Math.floorMod(tk + c[4], (long) c[3]);
+            if (ph == 1) {   // «вдох»: дымок у сопла и тихий треск
+                Fx.send(sl, Fx.particle("smoke"), nx + c[0] * 0.6, ny, nz + c[1] * 0.6, 2, 0.15, 0.15, 0.15, 0.01);
+                if (t - (c[3] - JET_BURST - JET_WARN) < 2) Fx.sound(sl, nx, ny, nz, "block.fire.ambient", 1.3F, 0.5F);
+                continue;
+            }
+            if (t - (c[3] - JET_BURST) < 2) Fx.sound(sl, nx, ny, nz, "entity.blaze.shoot", 1.2F, 0.6F);
+            int stepLen = c[2] > 8 ? 2 : 1;
+            for (int i = 1; i <= c[2]; i += stepLen)
+                Fx.send(sl, Fx.particle("flame"), nx + c[0] * i, ny, nz + c[1] * i, 2, 0.2, 0.25, 0.2, 0.03);
+            if (peaceful) continue;   // мирный режим: данж спит, ловушки не бьют
+            for (ServerPlayer p : in) {
+                if (!jetHit(p.m_20185_() - nx, p.m_20186_() - ny, p.m_20189_() - nz, c[0], c[1], c[2])) continue;
+                String key = "j|" + p.m_20148_() + "|" + mirKey(m);
+                if (HIT_CD.getOrDefault(key, 0L) > tk) continue;
+                HIT_CD.put(key, tk + 12);
+                Cmd.run(sl, p.m_20185_(), p.m_20186_(), p.m_20189_(), "damage " + p.m_20148_() + " 4 minecraft:in_fire");
+                p.m_20254_(3);
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- гейзеры
+    private static void geysers(ServerLevel sl, DungeonData.Rec rec, Dungeons.Def d, List<ServerPlayer> in, long tk) {
+        List<Mark> ms = d.marks("geyser");
+        if (ms.isEmpty() || sl.m_46791_() == Difficulty.valueOf("PEACEFUL")) return;
+        for (Mark m : ms) {
+            int[] c = geyserCfg(m.a);
+            if (c == null || c[2] < GEYSER_WARN + GEYSER_BURST + 1) continue;
+            double vx = rec.x + m.x + 0.5, vy = rec.y + m.y + 1.0, vz = rec.z + m.z + 0.5;
+            if (!nearAny(in, vx, vy, vz, 40, 20)) continue;
+            int off = Math.floorMod(m.x * 7 + m.z * 13, c[2]);
+            int ph = cycle(tk, c[2], GEYSER_WARN, GEYSER_BURST, off);
+            if (ph == 0) continue;
+            long t = Math.floorMod(tk + off, (long) c[2]);
+            if (ph == 1) {   // бульканье
+                Fx.send(sl, Fx.particle("lava"), vx, vy + 0.1, vz, 1, 0.3, 0.05, 0.3, 0.0);
+                if (t - (c[2] - GEYSER_BURST - GEYSER_WARN) < 2) Fx.sound(sl, vx, vy, vz, "block.lava.pop", 1.2F, 0.6F);
+                continue;
+            }
+            if (t - (c[2] - GEYSER_BURST) < 2) Fx.sound(sl, vx, vy, vz, "entity.blaze.shoot", 1.0F, 0.5F);
+            for (double h = 0; h <= 5; h += 1.25) Fx.send(sl, Fx.particle("flame"), vx, vy + h, vz, 3, 0.25, 0.3, 0.25, 0.04);
+            for (ServerPlayer p : in) {
+                if (!inGeyser(p.m_20185_() - vx, p.m_20186_() - vy, p.m_20189_() - vz)) continue;
+                String key = "g|" + p.m_20148_() + "|" + mirKey(m);
+                if (HIT_CD.getOrDefault(key, 0L) > tk) continue;
+                HIT_CD.put(key, tk + GEYSER_BURST + 40);
+                p.m_20256_(new Vec3(c[0] * 0.42, 1.05, c[1] * 0.42));
+                p.f_19864_ = true; p.f_19789_ = 0.0F;
+                Cmd.run(sl, p.m_20185_(), p.m_20186_(), p.m_20189_(), "damage " + p.m_20148_() + " 2 minecraft:in_fire");
+                p.m_20254_(2);
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- осыпающиеся платформы
+    private static void crumbles(ServerLevel sl, DungeonData.Rec rec, Dungeons.Def d, List<ServerPlayer> in, long tk) {
+        for (Mark m : d.marks("crumble")) {
+            double cx = rec.x + m.x + m.sx / 2.0, cy = rec.y + m.y, cz = rec.z + m.z + m.sz / 2.0;
+            if (!nearAny(in, cx, cy, cz, 48, 40)) continue;
+            BlockPos origin = new BlockPos(rec.x + m.x, rec.y + m.y, rec.z + m.z);
+            if (!sl.m_46805_(origin)) continue;
+            String key = rec.key + "|" + mirKey(m);
+            Crumb c = CRUMB.get(key);
+            if (c == null) {   // первый проход в сессии: состояние читается из мира (платформа могла остаться сломанной с прошлого раза)
+                c = new Crumb();
+                c.st = sl.m_8055_(origin).m_60795_() ? 2 : 0;
+                c.since = tk;
+                CRUMB.put(key, c);
+            }
+            boolean stepped = false, blocked = false;
+            for (ServerPlayer p : in) {
+                double lx = p.m_20185_() - rec.x, ly = p.m_20186_() - rec.y, lz = p.m_20189_() - rec.z;
+                if (onPad(m, lx, ly, lz)) stepped = true;
+                if (inPad(m, lx, ly, lz)) blocked = true;
+            }
+            if (c.st == 2 && !blocked && tk - c.since >= CRUMBLE_BACK) {   // пора возвращаться: моб в клетках платформы тоже мешает (иначе замуруем)
+                AABB box = new AABB(rec.x + m.x - 0.1, rec.y + m.y + 0.01, rec.z + m.z - 0.1, rec.x + m.x + m.sx + 0.1, rec.y + m.y + m.sy - 0.01, rec.z + m.z + m.sz + 0.1);
+                if (!sl.m_6249_(null, box, e -> e instanceof LivingEntity && e.m_6084_() && !e.m_5833_()).isEmpty()) blocked = true;
+            }
+            int next = crumbNext(c.st, c.since, tk, stepped, blocked);
+            if (next == c.st) {
+                if (c.st == 1 && tk % 8 == 0) Fx.send(sl, Fx.particle("smoke"), cx, cy + 1.0, cz, 6, m.sx / 2.0, 0.1, m.sz / 2.0, 0.01);
+                continue;
+            }
+            c.st = next; c.since = tk;
+            if (next == 1) {
+                Fx.sound(sl, cx, cy, cz, "block.basalt.break", 0.8F, 0.6F);
+                Fx.send(sl, Fx.particle("smoke"), cx, cy + 1.0, cz, 10, m.sx / 2.0, 0.1, m.sz / 2.0, 0.02);
+            } else if (next == 2) {
+                fill(sl, rec, m, Fx.state("air"));
+                Fx.sound(sl, cx, cy, cz, "block.basalt.break", 1.4F, 0.5F);
+                Fx.send(sl, Fx.particle("large_smoke"), cx, cy + 0.5, cz, 14, m.sx / 2.0, 0.3, m.sz / 2.0, 0.03);
+            } else {
+                fill(sl, rec, m, Dungeons.state(m.a));
+                Fx.sound(sl, cx, cy, cz, "block.basalt.place", 1.0F, 0.8F);
+                Fx.send(sl, Fx.particle("ash"), cx, cy + 1.0, cz, 12, m.sx / 2.0, 0.3, m.sz / 2.0, 0.02);
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- «Четыре жаровни» (Святилище, 2б)
+    /** Метки одной роли головоломки id, разложенные по номеру n (0..size-1); пропуски - null. */
+    static Mark[] fireSlots(Dungeons.Def d, String id, String role, int size) {
+        Mark[] out = new Mark[size];
+        for (Mark m : d.marks("braziers")) {
+            String[] a = m.a.split(",");
+            if (a.length != 3 || !a[0].equals(id) || !a[1].equals(role)) continue;
+            int n = Integer.parseInt(a[2].trim());
+            if (n >= 0 && n < size) out[n] = m;
+        }
+        return out;
+    }
+
+    static Set<String> fireIds(Dungeons.Def d) {
+        Set<String> out = new LinkedHashSet<>();
+        for (Mark m : d.marks("braziers")) out.add(m.a.split(",")[0]);
+        return out;
+    }
+
+    private static boolean fireLitAt(ServerLevel sl, BlockPos pos) {
+        BlockState st = sl.m_8055_(pos);
+        return st.m_60734_() == Fx.block("campfire") && st.equals(Dungeons.setProp(st, "lit", "true"));
+    }
+
+    private static BlockPos firePos(DungeonData.Rec rec, Mark m) { return new BlockPos(rec.x + m.x, rec.y + m.y, rec.z + m.z); }
+
+    private static boolean[] fireLit(ServerLevel sl, DungeonData.Rec rec, Mark[] bs) {
+        boolean[] lit = new boolean[4];
+        for (int i = 0; i < 4; i++) lit[i] = fireLitAt(sl, firePos(rec, bs[i]));
+        return lit;
+    }
+
+    private static void fireSet(ServerLevel sl, DungeonData.Rec rec, Mark m, boolean on) {
+        BlockPos pos = firePos(rec, m);
+        BlockState st = sl.m_8055_(pos);
+        if (st.m_60734_() != Fx.block("campfire")) return;
+        sl.m_7731_(pos, Dungeons.setProp(st, "lit", on ? "true" : "false"), 3);
+    }
+
+    /** Гасит все жаровни головоломки (ошибка в порядке или нарушенное состояние). */
+    private static void fireOut(ServerLevel sl, DungeonData.Rec rec, Mark[] bs) {
+        for (Mark m : bs) {
+            if (!fireLitAt(sl, firePos(rec, m))) continue;
+            fireSet(sl, rec, m, false);
+            Fx.send(sl, Fx.particle("large_smoke"), rec.x + m.x + 0.5, rec.y + m.y + 0.8, rec.z + m.z + 0.5, 8, 0.2, 0.2, 0.2, 0.02);
+        }
+    }
+
+    /** Панель фрески n показывает узор жаровни, которую зажигают n-й по порядку; рисуется движком, пока рядом игрок, и только если в мире не так. */
+    private static void fireFresco(ServerLevel sl, DungeonData.Rec rec, Mark f, int brazier) {
+        if (f == null || !sl.m_46805_(firePos(rec, f))) return;
+        boolean alongX = f.sx >= f.sz;
+        for (int ix = 0; ix < f.sx; ix++)
+            for (int iy = 0; iy < f.sy; iy++)
+                for (int iz = 0; iz < f.sz; iz++) {
+                    BlockState want = Fx.state(fireBlock(brazier, alongX ? ix : iz, f.sy - 1 - iy));
+                    BlockPos pos = new BlockPos(rec.x + f.x + ix, rec.y + f.y + iy, rec.z + f.z + iz);
+                    if (want != null && !sl.m_8055_(pos).equals(want)) sl.m_7731_(pos, want, 3);
+                }
+    }
+
+    /** Раз в секунду, пока рядом игрок: фреска расписана, потухшие после решения жаровни горят, при нарушенном состоянии всё гаснет. */
+    private static void fires(ServerLevel sl, DungeonData.Rec rec, Dungeons.Def d, List<ServerPlayer> in) {
+        for (String id : fireIds(d)) {
+            Mark[] bs = fireSlots(d, id, "b", 4), fs = fireSlots(d, id, "f", 4);
+            if (bs[0] == null || bs[1] == null || bs[2] == null || bs[3] == null) continue;
+            if (!nearAny(in, rec.x + bs[0].x, rec.y + bs[0].y, rec.z + bs[0].z, 48, 24)) continue;
+            if (!sl.m_46805_(firePos(rec, bs[0])) || !sl.m_46805_(firePos(rec, bs[3]))) continue;
+            int[] order = fireOrder(fireSeed(rec.x, rec.z));
+            for (int k = 0; k < 4; k++) fireFresco(sl, rec, fs[k], order[k]);
+            boolean[] lit = fireLit(sl, rec, bs);
+            if (rec.opened.contains(id)) {
+                for (int i = 0; i < 4; i++) if (!lit[i]) fireSet(sl, rec, bs[i], true);
+            } else if (!firePrefix(order, lit)) {
+                fireOut(sl, rec, bs);
+                for (ServerPlayer p : in) p.m_5661_(Component.m_237115_("explosionwand.dungeon.fires_wrong"), true);
+                fireWave(sl, rec, d, id);   // зажжено не кликом (стрела, огненный шар): ошибка наказывается так же
+            }
+        }
+    }
+
+    private static void fireClick(ServerLevel sl, DungeonData data, DungeonData.Rec rec, Dungeons.Def d, ServerPlayer p, String id, int n) {
+        Mark[] bs = fireSlots(d, id, "b", 4);
+        if (n < 0 || n > 3 || bs[0] == null || bs[1] == null || bs[2] == null || bs[3] == null) return;
+        Mark m = bs[n];
+        double bx = rec.x + m.x + 0.5, by = rec.y + m.y + 0.5, bz = rec.z + m.z + 0.5;
+        if (rec.opened.contains(id)) {   // решено: костры горят насовсем
+            Fx.sound(sl, bx, by, bz, "block.fire.ambient", 1.0F, 0.8F);
+            return;
+        }
+        int[] order = fireOrder(fireSeed(rec.x, rec.z));
+        boolean[] lit = fireLit(sl, rec, bs);
+        if (!firePrefix(order, lit)) { fireOut(sl, rec, bs); lit = new boolean[4]; }
+        int res = fireStep(order, lit, n);
+        if (res == FIRE_NONE) {
+            Fx.sound(sl, bx, by, bz, "block.fire.ambient", 1.0F, 0.8F);
+            return;
+        }
+        if (res == FIRE_WRONG) {
+            fireOut(sl, rec, bs);
+            Fx.sound(sl, bx, by, bz, "block.fire.extinguish", 1.5F, 0.6F);
+            Fx.send(sl, Fx.particle("smoke"), bx, by + 0.4, bz, 20, 0.3, 0.3, 0.3, 0.04);
+            p.m_5661_(Component.m_237115_("explosionwand.dungeon.fires_wrong"), true);
+            fireWave(sl, rec, d, id);
+            return;
+        }
+        fireSet(sl, rec, m, true);
+        Fx.send(sl, Fx.particle("flame"), bx, by + 0.4, bz, 18, 0.2, 0.3, 0.2, 0.03);
+        Fx.sound(sl, bx, by, bz, "item.firecharge.use", 1.2F, 0.8F + 0.15F * (res == FIRE_DONE ? 3 : 0));
+        if (res == FIRE_DONE) {
+            for (Entity e : Cmd.tagged(sl, bx, by, bz, 60, fireWaveTag(rec))) RiftMobs.remove(e);   // волна не должна мешать спуску
+            List<ServerPlayer> one = new ArrayList<>();
+            one.add(p);
+            openId(sl, data, rec, d, id, one, "explosionwand.dungeon.fires_solved");
+        }
+    }
+
+    /** Ошибка: из тьмы выходят ванильные мобы (хаски, скелеты, блейз) в точках волны; пока прежняя волна жива, новая не зовётся. */
+    private static void fireWave(ServerLevel sl, DungeonData.Rec rec, Dungeons.Def d, String id) {
+        if (sl.m_46791_() == Difficulty.valueOf("PEACEFUL")) return;
+        Mark[] ws = fireSlots(d, id, "w", 16);
+        String tag = fireWaveTag(rec);
+        int i = 0;
+        for (Mark w : ws) {
+            if (w == null) continue;
+            double x = rec.x + w.x + 0.5, y = rec.y + w.y, z = rec.z + w.z + 0.5;
+            if (i == 0 && Cmd.tagged(sl, x, y, z, 40, tag).size() >= WAVE_CAP) return;
+            String kind = waveMob(i++);
+            String gear = kind.equals("skeleton") ? ",HandItems:[{id:\"minecraft:bow\",Count:1b},{}]" : "";
+            Cmd.run(sl, x, y, z, "summon minecraft:" + kind + " " + Cmd.f(x) + " " + Cmd.f(y) + " " + Cmd.f(z) + " {Tags:[\"ewd\",\"" + tag + "\"],CanPickUpLoot:0b" + gear + "}");
+            Fx.send(sl, Fx.particle("poof"), x, y + 1, z, 8, 0.3, 0.5, 0.3, 0.02);
+        }
+    }
+
     // ---------------------------------------------------------------- головоломка зеркал
     private static void puzzles(ServerLevel sl, DungeonData data, DungeonData.Rec rec, Dungeons.Def d, List<ServerPlayer> in) {
         for (Puzzle pz : puzzles(d).values()) {
@@ -268,6 +661,11 @@ final class DungeonMech {
     // ---------------------------------------------------------------- секреты: рычаг, решённая головоломка
     /** Открывает все секреты с id (стена -> воздух); false, если уже были открыты. */
     static boolean openId(ServerLevel sl, DungeonData data, DungeonData.Rec rec, Dungeons.Def d, String id, List<ServerPlayer> in, boolean puzzle) {
+        return openId(sl, data, rec, d, id, in, puzzle ? "explosionwand.dungeon.solved" : "explosionwand.dungeon.lever");
+    }
+
+    /** То же с произвольным ключом сообщения (колокол Святилища: explosionwand.dungeon.bell). */
+    static boolean openId(ServerLevel sl, DungeonData data, DungeonData.Rec rec, Dungeons.Def d, String id, List<ServerPlayer> in, String msgKey) {
         if (!rec.opened.add(id)) return false;
         data.m_77762_();
         BlockState air = Fx.state("air");
@@ -279,12 +677,30 @@ final class DungeonMech {
             Fx.sound(sl, cx, cy, cz, "block.amethyst_block.break", 2.0F, 0.6F);
             Fx.sound(sl, cx, cy, cz, "block.beacon.activate", 1.5F, 1.4F);
         }
-        for (ServerPlayer p : in) p.m_5661_(Component.m_237115_(puzzle ? "explosionwand.dungeon.solved" : "explosionwand.dungeon.lever"), true);
+        for (ServerPlayer p : in) p.m_5661_(Component.m_237115_(msgKey), true);
         return true;
     }
 
     /** ПКМ по блоку данжа: рычаг или зеркало. true — клик занят механикой (событие надо отменить). */
     static boolean onClick(ServerLevel sl, DungeonData data, DungeonData.Rec rec, Dungeons.Def d, ServerPlayer p, int rx, int ry, int rz, boolean main) {
+        for (Mark m : d.marks("bell")) {
+            if (m.x != rx || m.y != ry || m.z != rz) continue;
+            if (!main) return true;
+            double bx = rec.x + rx + 0.5, by = rec.y + ry + 0.5, bz = rec.z + rz + 0.5;
+            Fx.sound(sl, bx, by, bz, "block.bell.use", 6.0F, 0.6F);
+            Fx.send(sl, Fx.particle("note"), bx, by + 0.6, bz, 6, 0.6, 0.3, 0.6, 1.0);
+            List<ServerPlayer> one = new ArrayList<>();
+            one.add(p);
+            openId(sl, data, rec, d, m.a, one, "explosionwand.dungeon.bell");
+            return true;
+        }
+        for (Mark m : d.marks("braziers")) {
+            String[] a = m.a.split(",");
+            if (a.length != 3 || !a[1].equals("b") || m.x != rx || m.y != ry || m.z != rz) continue;
+            if (!main) return true;
+            fireClick(sl, data, rec, d, p, a[0], Integer.parseInt(a[2].trim()));
+            return true;
+        }
         for (Mark m : d.marks("lever")) {
             if (m.x != rx || m.y != ry || m.z != rz) continue;
             if (!main) return true;

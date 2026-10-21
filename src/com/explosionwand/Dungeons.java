@@ -126,6 +126,8 @@ final class Dungeons {
         int roof = 0, tries = 8;
         /** Данж, с которым этот не должен пересекаться (по рамкам с запасом): Город Спящих обходит Разломы. */
         Def avoid;
+        /** Все обходимые данжи (avoid — первый из них): Святилище обходит и Разломы, и Города. */
+        final List<Def> avoidAll = new ArrayList<>();
         private List<DungeonTemplate> tpl;
         private int[] bounds;
         private final List<Hall> halls = new ArrayList<>();
@@ -145,7 +147,7 @@ final class Dungeons {
 
         /** Наземный данж: предпочтительный перепад высот flat и предел maxVar (выше — в клетке данжа не будет). */
         Def ground(int flat, int maxVar) { this.flat = flat; this.maxVar = maxVar; return this; }
-        Def avoiding(Def other) { this.avoid = other; return this; }
+        Def avoiding(Def... others) { for (Def o : others) { if (avoid == null) avoid = o; avoidAll.add(o); } return this; }
         /** Подземный данж: крыша на roof (отрицательное) должна быть под землёй по всей рамке (DungeonSite), maxCover - предел, больше которого точка отвергается; пробуем tries точек. */
         Def underground(int roof, int maxCover, int tries) { this.roof = roof; this.maxVar = maxCover; this.tries = tries; return this; }
 
@@ -235,7 +237,13 @@ final class Dungeons {
      * города не ближе 256 блоков друг от друга (при размере 97 и запасных точках ±48 не пересекаются); Разломы обходит (Def.avoid).
      */
     static final Def SLEEP = new Def("sleep", 768, 128, 3, "sleep_north", "sleep_mid", "sleep_south").ground(5, 8).avoiding(RIFT);
-    static final Def[] DEFS = {RIFT, SLEEP};
+    /**
+     * Пепельное святилище (4.8): башня на поверхности (до y=64, дым), шахта и пять уровней вниз (до y=-76 у Гнезда), 173x141x142 блока, три части по z
+     * (tools/gen_ash.py). Подземно-вертикальный: вход и башня на поверхности, как у Разлома (underground: кровля -14 не должна торчать над землёй).
+     * Клетка 896, отступ 144: святилища не ближе 288 блоков друг от друга; Разломы и Города обходит (Def.avoiding).
+     */
+    static final Def ASH = new Def("ash", 896, 144, 1, "ash_north", "ash_mid", "ash_south").underground(-14, DungeonSite.COVER_MAX, 16).avoiding(RIFT, SLEEP);
+    static final Def[] DEFS = {RIFT, SLEEP, ASH};
     /** Стенд механик для теста (все метки DungeonMech на малой площади). В мире не ставится: в DEFS его нет. */
     static final Def MECH_TEST = new Def("mechtest", 768, 128, 1, "mech_test");
 
@@ -282,15 +290,18 @@ final class Dungeons {
 
     /** Рамка данжа d в точке s пересекается с рамкой обходимого данжа (с запасом AVOID_PAD) вокруг любой из его соседних точек. */
     static boolean clashes(long seed, Def d, int[] s) {
-        Def o = d.avoid;
-        int[] b, ob;
-        try { b = d.bounds(); ob = o.bounds(); } catch (IllegalStateException e) { return false; }   // шаблонов нет: обход выключен
-        int ca = Math.floorDiv(s[0], o.cell), za = Math.floorDiv(s[1], o.cell);
-        for (int ax = ca - 1; ax <= ca + 1; ax++) {
-            for (int az = za - 1; az <= za + 1; az++) {
-                int[] r = site(seed, o, ax, az, 0);
-                if (s[0] + b[0] < r[0] + ob[3] + AVOID_PAD && r[0] + ob[0] - AVOID_PAD < s[0] + b[3]
-                        && s[1] + b[2] < r[1] + ob[5] + AVOID_PAD && r[1] + ob[2] - AVOID_PAD < s[1] + b[5]) return true;
+        int[] b;
+        try { b = d.bounds(); } catch (IllegalStateException e) { return false; }   // шаблонов нет: обход выключен
+        for (Def o : d.avoidAll) {
+            int[] ob;
+            try { ob = o.bounds(); } catch (IllegalStateException e) { continue; }
+            int ca = Math.floorDiv(s[0], o.cell), za = Math.floorDiv(s[1], o.cell);
+            for (int ax = ca - 1; ax <= ca + 1; ax++) {
+                for (int az = za - 1; az <= za + 1; az++) {
+                    int[] r = site(seed, o, ax, az, 0);
+                    if (s[0] + b[0] < r[0] + ob[3] + AVOID_PAD && r[0] + ob[0] - AVOID_PAD < s[0] + b[3]
+                            && s[1] + b[2] < r[1] + ob[5] + AVOID_PAD && r[1] + ob[2] - AVOID_PAD < s[1] + b[5]) return true;
+                }
             }
         }
         return false;
@@ -987,6 +998,7 @@ final class Dungeons {
         List<String> out = new ArrayList<>();
         if (h.boss != null) out.addAll(Boss.lootOf(h));
         if (d != null && d == SLEEP) out.addAll(City.extra(h.id));
+        if (d != null && d == ASH) out.addAll(Ash.extra(h.id));
         out.addAll(LOOT.get(tier - 1));
         if (d != null) out.addAll(Mats.chestLoot(Mats.dungeonOf(d), tier, Mats.RNG));   // материалы данжа (4.11)
         return out;
@@ -1048,6 +1060,7 @@ final class Dungeons {
                 continue;
             }
             String gear = m.a.equals("skeleton") ? ",HandItems:[{id:\"minecraft:bow\",Count:1b},{}]" : "";
+            if (rec.def() == ASH) gear += Ash.gear(h.id, m.a);   // заглушка-элита арены Святилища
             Cmd.run(sl, x, y, z, "summon minecraft:" + m.a + " " + Cmd.f(x) + " " + Cmd.f(y) + " " + Cmd.f(z)
                     + " {Tags:[\"ewd\",\"" + tag + "\"],PersistenceRequired:1b,CanPickUpLoot:0b" + gear + "}");
             Fx.send(sl, Fx.particle("poof"), x, y + 1, z, 8, 0.3, 0.5, 0.3, 0.02);
@@ -1090,7 +1103,8 @@ final class Dungeons {
             if (main) lightBrazier(sl, data, rec, m, p);
             return;
         }
-        if (main && d == SLEEP && reissueSeal(sl, rec, p, rx, ry, rz)) return;
+        if (main && d == SLEEP && reissueSeal(sl, rec, p, rx, ry, rz)) { ev.setCanceled(true); return; }   // отмена: Печать не уйдёт в сундук
+        if (main && d == ASH && Ash.reissue(sl, rec, p, rx, ry, rz)) { ev.setCanceled(true); return; }     // потерянный Пепельный или Угольный ключ
         if (DungeonMech.onClick(sl, data, rec, d, p, rx, ry, rz, main)) ev.setCanceled(true);
     }
 
