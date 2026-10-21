@@ -35,6 +35,7 @@ python tools/lookup.py LivingEntity "^getHealth$"     # yarn-имя -> SRG
 python tools/lookup.py "~item/ArmorItem" "^getType$"  # ~ = часть пути yarn-класса
 python tools/lookup.py --srg m_21223_                 # SRG -> yarn (проверка смысла)
 python tools/ids.py                   # только проверка строковых ID
+python tools/linkcheck.py             # члены net/minecraft*/forge из байткода против настоящих jar Forge (EW_FORGE_DIR или MultiMC; нет jar -> «не проверено»)
 ```
 Таблицы маппингов (MCPConfig `joined.tsrg`, Fabric intermediary, yarn 1.20.1, реестр 1.20.1) скачиваются при первом запуске в `.cache/maps/`.
 
@@ -44,7 +45,7 @@ src/com/explosionwand/   # весь код мода (SRG-имена)
   ExplosionWandMod.java  # регистрация предметов, вкладки «Магия», слушателей событий
   Ticker.java            # общий тик: боссы, арены, посохи, лабиринт, бонус сета
   Fx, Cmd, Disp, Aim, Later, Loot, Minions   # утилиты: реестр по ID, команды, кватернионы block_display, прицел, отложенные задачи, сундуки, приспешники
-  Boss, Boss2, Boss3, Boss4 + Arena..Arena4  # боссы и их арены (Boss3 — Монолит Сна, Boss4 — Небесный Кит)
+  Boss, Boss2, Boss3, Boss4 + Arena2, Arena4  # боссы и арены (Boss/Boss3 живут в логовах данжей — Сердце Разлома, Монолит Сна; Boss2 — Затмение, Boss4 — Небесный Кит)
   *WandItem / *StaffItem + логика            # палочки и посохи
   Maze.java              # лабиринт Некто (портал Палки Некто)
   Arcane*.java           # Облачение Архимага: материал, предметы, бонус сета

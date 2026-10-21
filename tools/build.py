@@ -9,6 +9,8 @@
 Шаги:
   1. javac --release 17: stubs/ -> build/stubout, затем src/ -> build/classes (classpath = stubout)
   2. проверка SRG: каждое m_/f_ имя в исходниках И в байткоде есть в MCPConfig joined.tsrg
+  2b. пути классов: заглушки и байткод net/minecraft/* есть в Mojang-маппингах (tools/classcheck.py)
+  2c. линковка: члены net/minecraft*/forge сверяются с настоящими jar Forge (tools/linkcheck.py; нет jar -> пропуск)
   3. проверка строковых ID (блоки, звуки, частицы, эффекты, предметы, сущности) по реестру 1.20.1
   3b. шаблоны данжей: tools/gen_dungeons.py --check (файлы .nbt свежие, ID блоков и мобов есть в реестре)
   4. тесты: tests/*.java (main-харнессы на заглушках)
@@ -115,6 +117,22 @@ def check_srg():
     if miss: sys.exit("неизвестные SRG-имена: " + ", ".join(miss))
 
 
+def check_classes():
+    import classcheck
+    bad, n = classcheck.check(BUILD)
+    print(f"[2b] пути классов: net/minecraft в байткоде {n}, ошибок {len(bad)}")
+    if bad: sys.exit("неверные пути классов (нет в Mojang-маппингах 1.20.1):\n" + "\n".join(bad))
+
+
+def check_link():
+    import linkcheck
+    st, bad, stat = linkcheck.check(BUILD)
+    if st == "skip":
+        print("[2c] linkcheck: НЕ ПРОВЕРЕНО (" + stat + "); задайте EW_FORGE_DIR"); return
+    print(f"[2c] linkcheck: {stat}, расхождений {len(bad)}")
+    if bad: sys.exit("нет в настоящих Forge/Minecraft 1.20.1 (в игре будет NoSuchMethodError/NoClassDefFoundError):\n" + "\n".join("  " + b for b in bad))
+
+
 def check_ids():
     import ids
     bad = ids.check(ROOT)
@@ -172,7 +190,7 @@ if __name__ == "__main__":
     a = ap.parse_args()
     compile_all()
     if not a.fast:
-        check_srg(); check_ids(); check_dungeons(); tests()
+        check_srg(); check_classes(); check_link(); check_ids(); check_dungeons(); tests()
     jar = package()
     if a.install:
         dst = Path.home() / "Downloads" / jar.name
