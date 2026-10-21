@@ -240,9 +240,9 @@ final class Dungeons {
     /**
      * Пепельное святилище (4.8): башня на поверхности (до y=64, дым), шахта и пять уровней вниз (до y=-76 у Гнезда), 173x141x142 блока, три части по z
      * (tools/gen_ash.py). Подземно-вертикальный: вход и башня на поверхности, как у Разлома (underground: кровля -14 не должна торчать над землёй).
-     * Клетка 896, отступ 144: святилища не ближе 288 блоков друг от друга; Разломы и Города обходит (Def.avoiding).
+     * Клетка 896, отступ 144: святилища не ближе 288 блоков друг от друга; Разломы и Города обходит (Def.avoiding). Раскладка 2 (4.10): в Гнезде метка boss phoenix и печать, яйцо из пепла убрано из шаблона.
      */
-    static final Def ASH = new Def("ash", 896, 144, 1, "ash_north", "ash_mid", "ash_south").underground(-14, DungeonSite.COVER_MAX, 16).avoiding(RIFT, SLEEP);
+    static final Def ASH = new Def("ash", 896, 144, 2, "ash_north", "ash_mid", "ash_south").underground(-14, DungeonSite.COVER_MAX, 16).avoiding(RIFT, SLEEP);
     static final Def[] DEFS = {RIFT, SLEEP, ASH};
     /** Стенд механик для теста (все метки DungeonMech на малой площади). В мире не ставится: в DEFS его нет. */
     static final Def MECH_TEST = new Def("mechtest", 768, 128, 1, "mech_test");
@@ -581,6 +581,7 @@ final class Dungeons {
         Boss.clear();
         Later.TASKS.clear();
         Earth.clear();
+        PhoenixStaff.clear();
         warned = false; warnedMech = false; warnedMobs = false; warnedBoss = false;
         LAST_HALL.clear();
     }
