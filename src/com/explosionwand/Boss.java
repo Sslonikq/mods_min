@@ -121,6 +121,7 @@ public class Boss {
     // ================= Пробуждение и сброс =================
     /** Зал разбужен: босс начинает пробуждаться (само появление через 3 секунды в tick). */
     static void wake(ServerLevel sl, DungeonData.Rec rec, Dungeons.Hall h, String hallTag) {
+        if (isMonolith(h)) { Boss3.wake(sl, rec, h, hallTag); return; }
         init();
         if (BOSSES.containsKey(rec.key)) return;
         BOSSES.put(rec.key, new Boss(sl, rec, h, hallTag));
@@ -128,13 +129,20 @@ public class Boss {
 
     /** Сброс боя (зал опустел, мирный режим, смена раскладки): убрать босса, части, приспешников, столбы и полоску. */
     static void reset(ServerLevel sl, DungeonData.Rec rec, Dungeons.Hall h) {
+        if (isMonolith(h)) { Boss3.reset(sl, rec, h); return; }
         init();
         Boss b = BOSSES.remove(rec.key);
         if (b == null) b = new Boss(sl, rec, h, Dungeons.tagOf(rec, h.id));
         b.cleanup();
     }
 
-    static void clear() { BOSSES.clear(); SWEPT.clear(); }
+    static void clear() { BOSSES.clear(); SWEPT.clear(); Boss3.clear(); }
+
+    /** Метка boss зала — Монолит Сна (Город Спящих, 4.7), а не Сердце Разлома: общий жизненный цикл (wake/reset/tickAll/orphans) делит эти два босса. */
+    static boolean isMonolith(Dungeons.Hall h) { return h.boss != null && "monolith".equals(h.boss.a); }
+
+    /** Трофеи босса зала в сундуке (перед набором тира). */
+    static List<String> lootOf(Dungeons.Hall h) { return isMonolith(h) ? Boss3.LOOT : LOOT; }
 
     /** Убрать всё, что принадлежит этому бою: хост и части (discard), приспешников (вместе с частями облика), столбы, полоску. */
     void cleanup() {
@@ -152,6 +160,7 @@ public class Boss {
 
     // ================= Тики всех боссов =================
     static void tickAll(ServerLevel sl, DungeonData data, List<ServerPlayer> ps, long tk) {
+        Boss3.tickAll(sl, data);
         if (!BOSSES.isEmpty()) {
             Iterator<Boss> it = BOSSES.values().iterator();
             while (it.hasNext()) {
@@ -176,12 +185,12 @@ public class Boss {
     static void orphans(ServerLevel sl, DungeonData data, List<ServerPlayer> ps) {
         for (DungeonData.Rec rec : data.recs.values()) {
             Dungeons.Def d = rec.def();
-            if (d == null || rec.partsDone != d.allParts() || BOSSES.containsKey(rec.key)) continue;
+            if (d == null || rec.partsDone != d.allParts() || BOSSES.containsKey(rec.key) || Boss3.BOSSES.containsKey(rec.key)) continue;
             for (Dungeons.Hall h : d.halls()) {
                 if (h.boss == null) continue;
                 long bit = 1L << h.id;
                 boolean spawned = (rec.hallsSpawned & bit) != 0, cleared = (rec.hallsCleared & bit) != 0;
-                if (SWEPT.add(rec.key)) Cmd.run(sl, rec.x, rec.y, rec.z, "bossbar remove " + barOf(rec));   // полоска после перезапуска
+                if (SWEPT.add(rec.key)) Cmd.run(sl, rec.x, rec.y, rec.z, "bossbar remove " + (isMonolith(h) ? Boss3.barOf(rec) : barOf(rec)));   // полоска после перезапуска
                 if (!Dungeons.hallOccupied(rec, h, ps, 60) || !Dungeons.entitiesLoaded(sl, rec, h)) continue;
                 String tag = Dungeons.tagOf(rec, h.id);
                 boolean junk = !sl.m_6249_(null, Dungeons.hallBox(rec, h), en -> en.m_19880_().stream().anyMatch(s -> s.startsWith("ewbk"))).isEmpty();

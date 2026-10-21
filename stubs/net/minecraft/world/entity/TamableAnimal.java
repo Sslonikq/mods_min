@@ -1,0 +1,1 @@
+package net.minecraft.world.entity; public abstract class TamableAnimal extends Mob { public boolean m_21830_(net.minecraft.world.entity.LivingEntity e){return false;} public boolean m_21824_(){return false;} }

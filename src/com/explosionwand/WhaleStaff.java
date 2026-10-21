@@ -32,7 +32,7 @@ final class WhaleStaff {
     static final int DIVE_CD = 240, ECHOES = 8;
     static final String NS = "explosionwand";
     /** Что нельзя скормить Киту (не посохи). */
-    static final Set<String> NOT_STAFF = Set.of("whale_staff", "rift_core", "eclipse_seal", "eclipse_heart", "dream_seal", "dreaming_eye", "sky_seal");
+    static final Set<String> NOT_STAFF = Set.of("whale_staff", "rift_core", "eclipse_seal", "eclipse_heart", "dreaming_eye", "sky_seal");
     static DustParticleOptions SKY, WHITE;
 
     static void init() {

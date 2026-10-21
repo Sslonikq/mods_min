@@ -43,6 +43,8 @@ final class Minions {
         for (String t : e.m_19880_()) if (t.startsWith("ewb") && t.endsWith("_min")) return true;
         return false;
     }
+    /** Обычный моб данжа (хост Разлома или Города с тегом ewr_h), не часть босса: его можно ранить и толкать, но ИИ не трогаем. */
+    static boolean dungeonMob(Entity e) { return e.m_19880_().contains("ewr_h") && !bossPart(e); }
     /** Можно ли посоху менять ИИ/двигать этого моба. */
     static boolean controllable(Entity e) { return minion(e) || !Cmd.hasTagPrefix(e, "ew"); }
 

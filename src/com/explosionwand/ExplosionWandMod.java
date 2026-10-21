@@ -36,7 +36,6 @@ public class ExplosionWandMod {
     public static final RegistryObject<Item> ECLIPSE_STAFF = ITEMS.register("eclipse_staff", () -> new EclipseStaffItem(props()));
 
     public static final RegistryObject<Item> COMET_WAND = ITEMS.register("comet_wand", () -> new CometWandItem(props()));
-    public static final RegistryObject<Item> DREAM_SEAL = ITEMS.register("dream_seal", () -> new DreamSealItem(props()));
     public static final RegistryObject<Item> DREAMING_EYE = ITEMS.register("dreaming_eye", () -> new RiftCoreItem(new Item.Properties().m_41487_(16).m_41497_(Rarity.valueOf("EPIC"))));
 
     public static final RegistryObject<Item> DREAM_STAFF = ITEMS.register("dream_staff", () -> new DreamStaffItem(props()));
@@ -51,6 +50,8 @@ public class ExplosionWandMod {
     public static final RegistryObject<Item> RIFT_STAFF = ITEMS.register("rift_staff", () -> new RiftStaffItem(props()));
     public static final RegistryObject<Item> SEAL_SHARD_RIFT = ITEMS.register("seal_shard_rift", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "rift"));
     public static final RegistryObject<Item> SLEEP_SEAL_SHARD = ITEMS.register("sleep_seal_shard", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "sleep", "sleep_seal_shard"));
+    /** Осколок Печати: Пепел (4.7): трофей Монолита Сна, указывает на Пепельное святилище (фаза 4.8; данжа пока нет, предмет говорит «путь не открыт»). */
+    public static final RegistryObject<Item> ASH_SEAL_SHARD = ITEMS.register("ash_seal_shard", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "ash", "ash_seal_shard"));
 
     /** Печать Храма (Город Спящих, 4.5): лежит в сундуке склепа, отпирает дверь храма. Не крафтится. */
     public static final RegistryObject<Item> TEMPLE_SEAL = ITEMS.register("temple_seal", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("EPIC")), "sleep_temple", "temple_seal", true));
@@ -110,6 +111,7 @@ public class ExplosionWandMod {
         ITEMS.register(bus);
         TABS.register(bus);
         MinecraftForge.EVENT_BUS.addListener(Ticker::onLevelTick);
+        MinecraftForge.EVENT_BUS.addListener(CityMobsB::onLeave);
         MinecraftForge.EVENT_BUS.addListener(Inverted::onHurt);
         MinecraftForge.EVENT_BUS.addListener(Inverted::onHeal);
         MinecraftForge.EVENT_BUS.addListener(Tesseract::onBreak);
@@ -134,6 +136,8 @@ public class ExplosionWandMod {
         MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onUseItem);
         MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onBucket);
         MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onSpawn);
+        MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onPiston);
+        MinecraftForge.EVENT_BUS.addListener(DungeonGuard::onGrief);
         MinecraftForge.EVENT_BUS.addListener(Dungeons::onRightClick);
         MinecraftForge.EVENT_BUS.addListener(Dungeons::onDeath);
         MinecraftForge.EVENT_BUS.addListener(Dungeons::onRespawn);

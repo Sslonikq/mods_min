@@ -24,6 +24,8 @@ final class DungeonData extends SavedData {
         long partsDone;       // бит i — часть i построена
         long hallsSpawned;    // бит n — в зале n появились мобы
         long hallsCleared;    // бит n — зал n зачищен (мобы больше не появляются)
+        /** Босс данжа убит (Dungeons.lairWon): барьер снят, блоки данжа можно ломать и ставить. Сбрасывается вместе с раскладкой. */
+        boolean bossDead;
         /** Открытые секреты и решённые головоломки (id меток lever/mirror/secret). */
         final Set<String> opened = new LinkedHashSet<>();
         /** Повёрнутые зеркала: "x,y,z" (координаты данжа) -> сторона 0..3 (N,E,S,W); нет записи — сторона из метки. */
@@ -75,6 +77,7 @@ final class DungeonData extends SavedData {
             t.m_128359_("layout", r.layout);
             t.m_128356_("parts", r.partsDone);
             t.m_128356_("spawned", r.hallsSpawned); t.m_128356_("cleared", r.hallsCleared);
+            t.m_128379_("bossDead", r.bossDead);
             CompoundTag op = new CompoundTag();
             for (String k : r.opened) op.m_128405_(k, 1);
             t.m_128365_("opened", op);
@@ -102,6 +105,7 @@ final class DungeonData extends SavedData {
             r.layout = t.m_128461_("layout");   // нет поля -> "" -> не совпадёт с подписью
             r.partsDone = t.m_128454_("parts");
             r.hallsSpawned = t.m_128454_("spawned"); r.hallsCleared = t.m_128454_("cleared");
+            r.bossDead = t.m_128471_("bossDead");
             r.opened.addAll(t.m_128469_("opened").m_128431_());
             CompoundTag mr = t.m_128469_("mirrors");
             for (String mk : mr.m_128431_()) r.mirrors.put(mk, mr.m_128451_(mk) & 3);
@@ -111,6 +115,7 @@ final class DungeonData extends SavedData {
         for (String k : rp.m_128431_()) d.respawn.put(k, rp.m_128461_(k));
         for (String k : tag.m_128469_("dead").m_128431_()) d.dead.put(k, 1);
         d.checkLayouts();
+        d.migrateBossDead();
         return d;
     }
 
@@ -134,9 +139,28 @@ final class DungeonData extends SavedData {
         return n;
     }
 
+    /**
+     * Миграция старых миров: босс логова убит, если зал с боссом (метка boss) уже зачищен (hallsCleared). Флага bossDead в записях до 2.15.0
+     * нет, а победа во второй раз не случится (зачищенный зал не будится), барьер остался бы навсегда. Возвращает число записей, у которых флаг поставлен.
+     */
+    int migrateBossDead() {
+        int n = 0;
+        for (Rec r : recs.values()) {
+            if (r.bossDead) continue;
+            Dungeons.Def def = r.def();
+            if (def == null) continue;
+            try {
+                for (Dungeons.Hall h : def.halls())
+                    if (h.boss != null && (r.hallsCleared & (1L << h.id)) != 0) { r.bossDead = true; n++; break; }
+            } catch (IllegalStateException e) { Dungeons.noTemplate(def, e); }
+        }
+        if (n > 0) m_77762_();
+        return n;
+    }
+
     /** Сброс прогресса записи: данж строится заново. */
     void reset(Rec r) {
-        r.partsDone = 0; r.hallsSpawned = 0; r.hallsCleared = 0;
+        r.partsDone = 0; r.hallsSpawned = 0; r.hallsCleared = 0; r.bossDead = false;
         r.opened.clear(); r.mirrors.clear();
         String suffix = "|" + r.key;
         for (Iterator<String> it = respawn.keySet().iterator(); it.hasNext();) if (it.next().endsWith(suffix)) it.remove();

@@ -52,7 +52,7 @@ public class TimeStop {
     boolean inside(Vec3 v) { double dx = v.f_82479_ - cx, dy = v.f_82480_ - cy, dz = v.f_82481_ - cz; return dx * dx + dy * dy + dz * dz < R * R; }
 
     void freeze(Entity e) {
-        if (e == owner || frozen.containsKey(e) || Cmd.hasTagPrefix(e, "ew") || !e.m_6084_()) return;
+        if (e == owner || frozen.containsKey(e) || (Cmd.hasTagPrefix(e, "ew") && !Minions.dungeonMob(e)) || !e.m_6084_()) return;   // мобы данжей застывают, боссы нет
         F f = new F(); f.e = e; Vec3 p = e.m_20182_(); f.x = p.f_82479_; f.y = p.f_82480_; f.z = p.f_82481_;
         f.vel = e.m_20184_(); f.grav = e.m_20068_(); f.yaw = e.m_146908_(); f.pitch = e.m_146909_();
         if (e instanceof Mob m) { f.ai = m.m_21525_(); m.m_21557_(true); }

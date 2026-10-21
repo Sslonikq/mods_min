@@ -13,6 +13,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.joml.Vector3f;
@@ -329,6 +330,7 @@ final class CityMobsB {
     // ================================================================ Статуя-страж
     /** Стоит, пока на неё смотрит хоть один игрок (взгляд + прямая видимость); отвернулся — быстро идёт к нему. Касание телеграфируется 0,8 с и тоже замирает при взгляде. */
     static final class Statue extends RiftMobs.Mob {
+        @Override boolean knockable() { return false; }
         int cd = 20, wind = 0;
         boolean frozen = true;
 
@@ -709,6 +711,18 @@ final class CityMobsB {
                 for (ServerPlayer p : ps)
                     if (p.m_6084_() && hd(p.m_20185_(), p.m_20189_()) < 12) CityMobsB.bar(p, "explosionwand.mob.fog_returned");
         }
+    }
+
+    /** Ванильный despawn (Мирный режим, дальность) стирает хоста странника раньше нашего тика: вещь из его руки выбрасываем здесь. Выгрузка чанка (не DISCARDED) вещь не трогает: она сохраняется вместе с мобом. */
+    static void onLeave(EntityLeaveLevelEvent ev) {
+        Entity e = ev.getEntity();
+        if (!(e instanceof LivingEntity le) || !(e.m_9236_() instanceof ServerLevel sl)) return;
+        if (e.m_146911_() == null || !"DISCARDED".equals(e.m_146911_().name()) || !e.m_19880_().contains("ewrk_fog_walker")) return;
+        ItemStack h = le.m_21205_();
+        if (h == null || h.m_41619_()) return;
+        ItemStack drop = h.m_41777_();
+        double x = e.m_20185_(), y = e.m_20186_() + 0.5, z = e.m_20189_();
+        Later.run(sl, 1, () -> sl.m_7967_(new ItemEntity(sl, x, y, z, drop)));   // не внутри обратного вызова удаления
     }
 
     // ================================================================ появление в обычном мире

@@ -25,13 +25,11 @@ public final class Ticker {
         run(Mimic.ACTIVE, sl, m -> m.level, Mimic::tick);
         run(Tesseract.PORTALS, sl, p -> p.level, Tesseract::tick);
         Tesseract.tickSessions(sl);
-        run(Ember.ACTIVE, sl, e -> e.level, Ember::tick);
         run(Altar.ACTIVE, sl, a -> a.level, Altar::tick);
         run(Fist.ACTIVE, sl, f -> f.level, Fist::tick);
         if (Boss2.ACTIVE != null && Boss2.ACTIVE.level == sl && Boss2.ACTIVE.tick()) Boss2.ACTIVE = null;
         run(TimeStop.ACTIVE, sl, s2 -> s2.level, TimeStop::tick);
         EclipseStaff.tick(sl);
-        if (Boss3.ACTIVE != null && Boss3.ACTIVE.level == sl && Boss3.ACTIVE.tick()) Boss3.ACTIVE = null;
         if (Boss4.ACTIVE != null && Boss4.ACTIVE.level == sl && Boss4.ACTIVE.tick()) Boss4.ACTIVE = null;
         DreamStaff.tick(sl);
         ArcaneSet.tick(sl);
@@ -47,7 +45,6 @@ public final class Ticker {
         else if (Dims.is(sl, Dims.HAUNT)) Haunt.tick(sl);
         else if (Dims.is(sl, Dims.INVERTED)) Inverted.tick(sl, ticks);
         else if (Dims.is(sl, Dims.ECLIPSE)) Arena2.tick(sl);
-        else if (Dims.is(sl, Dims.DREAM)) Arena3.tick(sl);
         else if (Dims.is(sl, Dims.SKY)) Arena4.tick(sl);
         else if (Dims.is(sl, Dims.MAZE)) Maze.tick(sl);
     }

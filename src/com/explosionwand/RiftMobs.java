@@ -291,6 +291,32 @@ final class RiftMobs {
     }
 
     // ================================================================ события
+    /** Поджог от палочки: моб данжа горит указанное время (иначе хост тушится каждый тик, чтобы не сгорать на солнце). */
+    static void ignite(Entity e, int seconds) {
+        e.m_20254_(seconds);
+        Mob m = MOBS.get(e.m_20148_());
+        if (m != null) m.burnUntil = Math.max(m.burnUntil, now + seconds * 20L);
+    }
+
+    /**
+     * Толчок палочки: моб данжа получает импульс (приём в Mob.applyKnock). false - это не моб данжа, толкать обычным способом;
+     * true - моб данжа, обработано (статуя не двигается, а пока идёт Стоп-Кадр, импульс не копится).
+     */
+    static boolean knock(Entity e, double vx, double vy, double vz) {
+        Mob m = MOBS.get(e.m_20148_());
+        if (m == null) return false;
+        if (m.knockable() && TimeStop.frozenOf(e) == null) m.knock(vx, vy, vz);
+        return true;
+    }
+
+    /** Лоза: моб данжа не ходит и не летает указанное время (стрелять и бить на месте может). */
+    static boolean root(Entity e, int ticks) {
+        Mob m = MOBS.get(e.m_20148_());
+        if (m == null) return false;
+        m.rootUntil = Math.max(m.rootUntil, now + ticks);
+        return true;
+    }
+
     static void noise(ServerLevel sl, double x, double y, double z) { NOISES.add(new Noise(sl, x, y, z, now)); }
 
     static void onHurt(LivingHurtEvent ev) {
@@ -303,7 +329,8 @@ final class RiftMobs {
         }
         Mob m = MOBS.get(target.m_20148_());
         if (m == null) return;
-        if (Boss3.environmental(ev)) { ev.setCanceled(true); return; }
+        // стены, падения и утопление мобов данжа не касаются; огонь и молнии (палочки) работают, солнечный огонь гасит step
+        if (DungeonSite.envBlockedForMobs(ev.getSource() == null ? null : ev.getSource().m_19385_(), now < m.burnUntil)) { ev.setCanceled(true); return; }
         m.hurt(ev, atk);
     }
 
@@ -334,6 +361,14 @@ final class RiftMobs {
         double half = 0;
         boolean quietSent = false;
         long buffUntil = 0;
+        /** Поджог палочкой горит до этого тика (RiftMobs.ignite); иначе step гасит любой огонь (солнце). */
+        long burnUntil = 0;
+        /** Лоза держит до этого тика (RiftMobs.root): walk и fly не двигают. */
+        long rootUntil = 0;
+        /** Накопленный импульс палочек (блоков за тик) и «в воздухе после толчка» (applyKnock). */
+        double kx, ky, kz; boolean airborne; long lastFly = -100;
+        /** Статуи и подобное не толкаются. */
+        boolean knockable() { return true; }
         List<ServerPlayer> ps = List.of();
         final Pose pose = new Pose();
 
@@ -386,9 +421,10 @@ final class RiftMobs {
             this.ps = ps;
             t++;
             x = host.m_20185_(); y = host.m_20186_(); z = host.m_20189_();
-            if (host.m_6060_()) host.m_20095_();
+            if (host.m_6060_() && now >= burnUntil) host.m_20095_();
+            if (TimeStop.frozenOf(host) != null) { kx = ky = kz = 0; airborne = false; return; }   // Стоп-Кадр: думать и двигаться нельзя, импульс сброшен
             if (!ready) { calibrate(); if (!ready) return; }
-            think();
+            if (!applyKnock()) think();   // пока моб летит от толчка, он оглушён
             fillPose();
             if (quiet()) {   // нечего показывать (спрятанная Тень): последнюю позу шлём один раз
                 if (!quietSent) { render(3); quietSent = true; }
@@ -460,6 +496,50 @@ final class RiftMobs {
             return true;
         }
 
+        /** Тело из height клеток помещается в (px,py,pz): клетки свободны, широкому хосту хватает места. */
+        boolean spaceFor(double px, double py, double pz, int height) {
+            return cellFree((int) Math.floor(px), (int) Math.floor(py + 0.01), (int) Math.floor(pz), height) && roomFor(px, py, pz, height);
+        }
+
+        void knock(double vx, double vy, double vz) {
+            kx += vx; ky += vy; kz += vz;
+            double h = Math.sqrt(kx * kx + kz * kz);
+            if (h > 1.4) { kx *= 1.4 / h; kz *= 1.4 / h; }
+            ky = Math.max(-1.0, Math.min(1.0, ky));
+            airborne = true;
+        }
+
+        boolean flies() { return t - lastFly < 40; }
+
+        /**
+         * Импульс палочек для NoAI-хоста: ваниль не двигает их (скорость обнуляется), поэтому смещение считаем сами. По осям отдельно (скользит
+         * вдоль стен), потолок и пол останавливают, поводок не даёт уйти дальше leash, наземные падают (гравитация 0,08), летуны затухают.
+         * Возвращает true, пока моб в полёте (мысли в этот тик не думает).
+         */
+        boolean applyKnock() {
+            if (!airborne && kx == 0 && ky == 0 && kz == 0) return false;
+            int hg = Math.max(1, (int) Math.ceil(host.m_20206_()));
+            boolean fl = flies();
+            if (!fl) ky -= 0.08;
+            double oky = ky;
+            // подшагами <= 0,45 блока: стена или дверь-печать в 1 блок не перепрыгивается
+            double[] r = RiftLogic.knockMove(x, y, z, kx, ky, kz, (ox, oy, oz, nx, ny, nz) ->
+                    spaceFor(nx, ny, nz, hg) && !RiftLogic.leashBlocked(Math.hypot(ox - hx, oz - hz), Math.hypot(nx - hx, nz - hz), leash));
+            double cx = r[0], cy = r[1], cz = r[2];
+            kx = r[3]; ky = r[4]; kz = r[5];
+            if (ky == 0 && oky < 0 && spaceFor(cx, Math.floor(cy), cz, hg)) cy = Math.floor(cy);   // приземление на целый y
+            kx *= 0.82; kz *= 0.82;
+            if (fl) ky *= 0.82;
+            if (Math.abs(kx) < 0.02) kx = 0;
+            if (Math.abs(kz) < 0.02) kz = 0;
+            if (fl && Math.abs(ky) < 0.02) ky = 0;
+            if (cx != x || cy != y || cz != z) setPos(cx, cy, cz);
+            boolean supported = !spaceFor(x, y - 0.1, z, hg);
+            if (!fl && supported && ky <= 0) ky = 0;
+            airborne = fl ? (kx != 0 || ky != 0 || kz != 0) : !(supported && kx == 0 && kz == 0);
+            return airborne;
+        }
+
         void setPos(double nx, double ny, double nz) {
             host.m_6034_(nx, ny, nz);
             host.m_20256_(new Vec3(0, 0, 0));
@@ -468,6 +548,7 @@ final class RiftMobs {
 
         /** Шаг по земле к (tx,tz) со скоростью speed блоков/тик; скользит вдоль стен. true — сдвинулся. */
         boolean walk(double tx, double tz, double speed, int height) {
+            if (now < rootUntil) return false;
             double dx = tx - x, dz = tz - z, d = Math.sqrt(dx * dx + dz * dz);
             if (d < 1e-4) return false;
             double st = Math.min(speed, d), ux = dx / d, uz = dz / d;
@@ -488,6 +569,8 @@ final class RiftMobs {
 
         /** Шаг по воздуху к точке (нужны две свободные клетки). */
         boolean fly(double tx, double ty, double tz, double speed) {
+            lastFly = t;
+            if (now < rootUntil) return false;
             double dx = tx - x, dy = ty - y, dz = tz - z, d = Math.sqrt(dx * dx + dy * dy + dz * dz);
             if (d < 1e-3) return false;
             double st = Math.min(speed, d);

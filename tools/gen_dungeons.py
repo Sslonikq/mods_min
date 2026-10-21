@@ -783,7 +783,7 @@ RIFT_MOBS = {"explosionwand:shardling": 2, "explosionwand:crystal_archer": 5, "e
              # Город Спящих (4.6)
              "explosionwand:lunatic": 2, "explosionwand:drowsy": 3, "explosionwand:stitch_guard": 2, "explosionwand:night_moth": 3,
              "explosionwand:dreamer": 3, "explosionwand:book_guard": 3, "explosionwand:statue_guard": 3, "explosionwand:cradler": 5}
-BOSS_KINDS = ("rift_heart",)   # виды босса для метки boss (4.4)
+BOSS_KINDS = ("rift_heart", "monolith")   # виды босса для метки boss (4.4)
 MECH_TYPES = ("steps", "beams", "mirror", "platform", "lever", "secret", "seal")
 
 

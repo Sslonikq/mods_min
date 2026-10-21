@@ -291,7 +291,7 @@ public class DungeonTest {
     static void city() throws Exception {
         Dungeons.Def d = Dungeons.SLEEP;
         List<DungeonTemplate> tp = d.templates();
-        check(tp.size() == 3 && d.layout == 1 && d.signature().equals("sleep_north+sleep_mid+sleep_south:v1"), "три части города, раскладка 1: " + d.signature());
+        check(tp.size() == 3 && d.layout == 3 && d.signature().equals("sleep_north+sleep_mid+sleep_south:v3"), "три части города, раскладка 3 (подземная арена Монолита): " + d.signature());
         Set<Long> seen0 = new HashSet<>();
         int total = 0;
         for (DungeonTemplate t : tp) {
@@ -314,7 +314,7 @@ public class DungeonTest {
         Mark gate = null, temple = null;
         for (Mark m : d.doors()) { if (m.a.equals("sleep")) gate = m; else if (m.a.equals("sleep_temple")) temple = m; }
         check(d.doors().size() == 2 && gate != null && temple != null && d.start() != null, "ворота (sleep), дверь храма (sleep_temple) и старт");
-        check(d.braziers().size() == 4, "четыре жаровни: " + d.braziers().size());
+        check(d.braziers().size() == 5, "пять жаровен (четыре в городе и одна перед ареной): " + d.braziers().size());
         check(d.marks("seal").size() == 2 && d.marks("lever").size() == 3 && d.marks("secret").size() == 3 && d.marks("platform").isEmpty()
                 && d.marks("steps").isEmpty() && d.marks("beams").isEmpty() && d.marks("mirror").isEmpty(), "печати, рычаги, секреты");
         Set<Integer> ids = new TreeSet<>();
@@ -323,7 +323,7 @@ public class DungeonTest {
         for (Dungeons.Hall h : d.halls()) {
             check(ids.add(h.id) && h.id >= 1 && h.id <= 30, "номер зала " + h.id);
             spawns += h.spawns.size();
-            check(h.boss == null, "босса в городе пока нет (4.7): зал " + h.id);
+            check(h.boss == null || (h.id == 20 && h.boss.a.equals("monolith")), "босс в городе только Монолит в логове храма (зал 20): зал " + h.id);
             for (Mark m : h.spawns) check(RiftMobs.kindOfMark(m.a) != null, "моб Города известен (настоящий, не заглушка): " + m.a);
             if (h.chest != null) {
                 chests++;
@@ -331,7 +331,7 @@ public class DungeonTest {
                 check(!sp[0].isEmpty() && chestNames.add(sp[0]), "название сундука: " + h.chest.a);
                 if (h.id >= 23) { secretChests++; check(sp[1].equals("3") && h.spawns.isEmpty(), "тайник: тир 3, без мобов: зал " + h.id); }
             }
-            if (h.id <= 22) check(h.spawns.size() >= 3, "в зале " + h.id + " мобов: " + h.spawns.size());
+            if (h.id <= 22 && h.boss == null) check(h.spawns.size() >= 3, "в зале " + h.id + " мобов: " + h.spawns.size());
         }
         Set<Integer> want = new TreeSet<>();
         for (int i = 1; i <= 25; i++) want.add(i);
@@ -342,8 +342,8 @@ public class DungeonTest {
             boolean ov = x.x < y.x + y.sx && y.x < x.x + x.sx && x.y < y.y + y.sy + 1 && y.y < x.y + x.sy + 1 && x.z < y.z + y.sz && y.z < x.z + x.sz;
             check(!ov, "залы " + x.id + " и " + y.id + " пересекаются");
         }
-        check(d.sealed(19) && d.sealed(20) && !d.sealed(1) && !d.sealed(21), "печати у библиотеки (19) и логова храма (20)");
-        check(d.hall(20) != null && d.hall(20).chest != null && d.hall(20).spawns.size() == 6, "логово храма: заглушка с мобами и сундуком (босс — 4.7)");
+        check(d.sealed(19) && d.sealed(20) && !d.sealed(1) && !d.sealed(21), "печати у библиотеки (19) и арены Монолита (20)");
+        check(d.hall(20) != null && d.hall(20).chest != null && d.hall(20).spawns.isEmpty() && d.hall(20).boss != null, "логово храма: босс Монолит и сундук, обычных мобов нет (4.7)");
         check(Dungeons.chestSpec(d.hall(21).chest.a)[0].equals("Склеп Спящих") && City.extra(21).equals(List.of("explosionwand:temple_seal")), "Печать Храма в сундуке склепа");
         check(!City.extra(19).isEmpty() && !City.extra(25).isEmpty() && City.extra(7).isEmpty() && Dungeons.lootFor(d, d.hall(21), 2).contains("explosionwand:temple_seal")
                 && !Dungeons.lootFor(Dungeons.RIFT, Dungeons.RIFT.hall(7), 2).contains("explosionwand:temple_seal"), "особая добыча только у сундуков города");
@@ -377,7 +377,7 @@ public class DungeonTest {
 
         // ---- прохождение по этапам
         int[] saveBox = BOX;
-        BOX = new int[]{-60, 60, -60, 62, -22, 14};
+        BOX = new int[]{-60, 60, -60, 62, -40, 14};
         Mark st = d.start();
         check(standable(st.x, st.y, st.z), "старт у ворот — место, где можно стоять");
         Set<Long> r = reach(st.x, st.y, st.z);
@@ -416,7 +416,8 @@ public class DungeonTest {
             check(r.contains(Dungeons.pack(br.x + Integer.parseInt(o[0]), br.y + Integer.parseInt(o[1]), br.z + Integer.parseInt(o[2]))), "точка возрождения жаровни (после двери храма) недостижима: " + br.x + "," + br.y + "," + br.z);
             check(world.get(Dungeons.pack(br.x, br.y, br.z)).contains("campfire"), "на метке жаровни костёр");
         }
-        for (Mark m : d.hall(20).spawns) check(at(r, m), "точка моба логова недостижима " + m.x + "," + m.z);
+        Mark lb = d.hall(20).boss;
+        check(lb != null && at(r, lb), "площадка босса логова достижима: " + lb);
         check(r.contains(Dungeons.pack(d.hall(20).chest.x, d.hall(20).chest.y, d.hall(20).chest.z)), "сундук логова достижим");
         for (Mark m : d.marks("seal")) if (m.a.startsWith("20,")) {
             Map<Long, String> save = new HashMap<>(world);
@@ -438,7 +439,7 @@ public class DungeonTest {
             int x = (int) (k >> 38), y = (int) (k & 0xFFF) - 2048, z = (int) ((k >> 12) & 0x3FFFFFF);
             if (x >= 1 << 25) x -= 1 << 26;
             if (z >= 1 << 25) z -= 1 << 26;
-            if (Math.abs(x) <= 48 && Math.abs(z) <= 48 && y >= -9 && (!mk.has(x, y, z) || !mk.has(x, y + 1, z))) walkOut++;
+            if (Math.abs(x) <= 48 && Math.abs(z) <= 48 && y >= -40 && (!mk.has(x, y, z) || !mk.has(x, y + 1, z))) walkOut++;
         }
         check(walkOut == 0, "проходимые клетки города все в маске: вне " + walkOut);
         BOX = saveBox;
@@ -548,6 +549,7 @@ public class DungeonTest {
         check(!real.at(ox + bd[0] - 1, oy, oz) && !real.at(ox + bd[3], oy, oz), "щит настоящего разлома не шире границ");
         maskTests(d, ox, oy, oz, real);
         layoutTests(d);
+        siteTests(d);
         sealRespawnTests(d);
         // океан: запись «мёртвой» клетки пропускается ближайшим данжем
         Dungeons.Hit near0 = Dungeons.nearest(seed, d, 100, 100, null);
@@ -596,6 +598,8 @@ public class DungeonTest {
         check(mk.near(chest.x, chest.y, chest.z, 24), "грубая маска: рядом с сундуком");
         // пешеходные клетки под землёй — внутри данжа (иначе игрок в проходе остался бы вне защиты и счёта)
         int walkOut = 0;
+        world = Dungeons.assemble(d, 0, 0, 0);   // свой мир Разлома (после city() там мир города), двери открыты
+        for (Mark dm : d.doors()) fill(dm, "minecraft:air");
         Set<Long> rr = reach(d.start().x, d.start().y, d.start().z);
         for (long k : rr) {
             int x = (int) (k >> 38), y = (int) (k & 0xFFF) - 2048, z = (int) ((k >> 12) & 0x3FFFFFF);
@@ -607,6 +611,55 @@ public class DungeonTest {
     }
 
     // ================================================================ подпись раскладки (MAJOR 2)
+    /** Выбор высоты Разлома (крыша под землёй по всей рамке) и снятие барьера после победы над боссом. */
+    static void siteTests(Dungeons.Def d) {
+        check(d.roof < 0 && d.tries > 8 && d.maxVar == DungeonSite.COVER_MAX, "Разлом проверяет крышу по рамке и пробует больше точек");
+        check(Dungeons.SLEEP.roof == 0, "наземный город крышу не проверяет");
+        int U = DungeonSite.UNKNOWN;
+        // ровная земля на уровне входа: крыша (-4) глубоко под землёй
+        check(DungeonSite.exposure(64, -4, new int[]{64, 64, 65, 63}) == 0, "ровно: не торчит");
+        // вход на холме, вокруг на 10 ниже: крыша торчит на 10-4... = 64-4-54=6
+        check(DungeonSite.exposure(64, -4, new int[]{64, 54, 60}) == 6, "холм: крыша торчит на 6");
+        check(DungeonSite.exposure(64, -4, new int[]{U, 70, 80}) == 0 && DungeonSite.exposure(64, -4, new int[0]) == 0, "неизвестные колонны и склон вверх не мешают");
+        check(DungeonSite.choose(new int[]{9, 3, 1, 0}) == 2 && DungeonSite.choose(new int[]{9, 4, 6}) == 1, "берётся первая годная, иначе наименее торчащая");
+        check(DungeonSite.choose(new int[]{9, 6, 12}) == -1 && DungeonSite.choose(new int[0]) == -1, "все точки хуже предела: данж не строим криво");
+        // реальная рамка Разлома: колонны с подземными блоками покрывают почти всю площадь
+        Dungeons.Mask mk = d.mask();
+        int under = 0, all = mk.gx * mk.gz;
+        for (int i = 0; i < mk.gx; i++) for (int k = 0; k < mk.gz; k++) if (mk.colMin(i, k) < d.roof) under++;
+        check(under > all / 3 && under <= all, "в рамке Разлома много подземных колонн: " + under + "/" + all);
+        // барьер: пока босс жив, блоки данжа под защитой, после победы нет
+        DungeonData data = new DungeonData();
+        DungeonData.Rec r = new DungeonData.Rec("rift_9_9", "rift", 9, 9, 1000, 64, 1000);
+        r.layout = d.signature(); r.partsDone = d.allParts();
+        data.recs.put(r.key, r);
+        DungeonTemplate.Mark start = d.start();
+        double sx = 1000 + start.x + 0.5, sy = 64 + start.y + 0.5, sz = 1000 + start.z + 0.5;
+        check(r.contains(sx, sy, sz, 0) && Dungeons.guardedAt(data, sx, sy, sz, 0) == r, "босс жив: клетка данжа под защитой");
+        Dungeons.markCleared(data, r);
+        check(r.bossDead && Dungeons.guardedAt(data, sx, sy, sz, 0) == null && Dungeons.at(data, sx, sy, sz, 0) == r, "босс убит: барьер снят, данж по-прежнему данж (телепорты, спавн)");
+        data.reset(r);
+        check(!r.bossDead && Dungeons.guardedAt(data, sx, sy, sz, 0) == r, "сброс раскладки возвращает защиту");
+        // политика урона по мобам данжа: огонь только от палочки, молнии проходят, стены и падения нет
+        check(!DungeonSite.envBlockedForMobs("onFire", true) && !DungeonSite.envBlockedForMobs("inFire", true) && !DungeonSite.envBlockedForMobs("lightningBolt", false)
+                && DungeonSite.envBlockedForMobs("onFire", false) && DungeonSite.envBlockedForMobs("inFire", false)
+                && DungeonSite.envBlockedForMobs("inWall", true) && DungeonSite.envBlockedForMobs("fall", true) && DungeonSite.envBlockedForMobs("drown", false) && !DungeonSite.envBlockedForMobs(null, false),
+                "огонь по мобам данжа проходит только от палочки, молнии проходят, стены и падения нет");
+        // вода над кровлей: колонна считается выставленной
+        check(DungeonSite.exposure(64, -4, new int[]{64, DungeonSite.WET}) == DungeonSite.WET_EXPOSURE && DungeonSite.choose(new int[]{DungeonSite.WET_EXPOSURE}) == -1, "озеро над данжем отвергает точку");
+        // миграция: старая запись с зачищенным залом босса получает bossDead, без зачистки - нет, зачищенный зал без босса - нет
+        DungeonTemplate.Mark none = null;
+        Dungeons.Hall bossHall = null, plain = null;
+        for (Dungeons.Hall h : d.halls()) { if (h.boss != null) bossHall = h; else if (plain == null) plain = h; }
+        check(bossHall != null && plain != null, "в Разломе есть зал с боссом и обычный зал");
+        DungeonData old = new DungeonData();
+        DungeonData.Rec a = new DungeonData.Rec("rift_1_1", "rift", 1, 1, 0, 64, 0), b = new DungeonData.Rec("rift_2_2", "rift", 2, 2, 0, 64, 0), c = new DungeonData.Rec("rift_3_3", "rift", 3, 3, 0, 64, 0);
+        a.hallsCleared = 1L << bossHall.id; b.hallsCleared = 1L << plain.id; c.hallsCleared = 0;
+        old.recs.put(a.key, a); old.recs.put(b.key, b); old.recs.put(c.key, c);
+        check(old.migrateBossDead() == 1 && a.bossDead && !b.bossDead && !c.bossDead, "миграция bossDead: только зал босса зачищен");
+        check(old.migrateBossDead() == 0, "миграция идемпотентна");
+    }
+
     static void layoutTests(Dungeons.Def d) {
         String sig = d.signature();
         check(sig.startsWith("rift_entrance+rift_mid+rift_deep:") && sig.equals(d.signature()), "подпись раскладки стабильна: " + sig);

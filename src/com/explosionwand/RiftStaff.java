@@ -6,7 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.animal.TamableAnimal;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
@@ -66,7 +66,7 @@ final class RiftStaff {
 
     static boolean warned = false;
 
-    /** Затянуть одного моба к трещине и ударить (урон - как удар игрока, проверенный источник). */
+    /** Затянуть одного моба к трещине и ударить (урон indirect_magic от игрока: броню игнорирует, как до 2.14.0). */
     private static void pull(ServerLevel l, ServerPlayer p, Entity e, Vec3 a, double ux, double uy, double uz, double len) {
         if (!Minions.controllable(e)) return;
         if (e.m_19880_().contains("ewd")) return;   // мобы данжа, хосты боссов и ew-существа не трогаем (в данже посох и так запрещён)
@@ -80,7 +80,7 @@ final class RiftStaff {
         if (d > WIDTH) return;
         double k = Math.min(1.1D, 0.25D + d * 0.35D) / Math.max(0.3D, d);
         e.m_20256_(new Vec3(dx * k, dy * k * 0.6D + 0.1D, dz * k)); e.f_19864_ = true;
-        e.m_6469_(l.m_269111_().m_269075_(p), DAMAGE);
+        e.m_6469_(l.m_269111_().m_269104_(p, p), DAMAGE);
         Fx.send(l, VIOLET, ex, ey, ez, 12, 0.3, 0.5, 0.3, 0);
     }
 

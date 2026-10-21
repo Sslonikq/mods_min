@@ -64,10 +64,10 @@ public class Comet {
         Fx.send(level, Fx.particle("firework"), x, y, z, 4, 0.3, 0.3, 0.3, 0.05);
         if (t % 5 == 0) Fx.sound(level, x, y, z, "entity.blaze.burn", 2.0F, 0.5F);
         // сбивает всех на пути
-        for (Entity e : level.m_6249_(p, new AABB(x - 2.5, y - 2.5, z - 2.5, x + 2.5, y + 2.5, z + 2.5), q -> q instanceof LivingEntity && q.m_6084_() && !Cmd.hasTagPrefix(q, "ew"))) {
+        for (Entity e : level.m_6249_(p, new AABB(x - 2.5, y - 2.5, z - 2.5, x + 2.5, y + 2.5, z + 2.5), q -> q instanceof LivingEntity && q.m_6084_() && (!Cmd.hasTagPrefix(q, "ew") || Minions.dungeonMob(q)))) {
             if (!hit.add(e)) continue;
-            e.m_6469_(level.m_269111_().m_269425_(), 12.0F); e.m_20254_(4);
-            e.m_20256_(new Vec3(lk.f_82479_ * 2, 0.8, lk.f_82481_ * 2)); e.f_19864_ = true;
+            e.m_6469_(level.m_269111_().m_269425_(), 12.0F); RiftMobs.ignite(e, 4);
+            if (!RiftMobs.knock(e, lk.f_82479_ * 1.2, 0.5, lk.f_82481_ * 1.2)) { e.m_20256_(new Vec3(lk.f_82479_ * 2, 0.8, lk.f_82481_ * 2)); e.f_19864_ = true; }
             Fx.sound(level, x, y, z, "entity.player.attack.knockback", 2.0F, 0.6F);
         }
         // столкновение

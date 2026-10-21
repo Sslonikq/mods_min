@@ -6,14 +6,14 @@ import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.level.ExplosionEvent;
 
 /**
- * Арены боссов (ECLIPSE, DREAM, SKY) нельзя ломать и застраивать (кроме творческого режима),
+ * Арены боссов (ECLIPSE, SKY) нельзя ломать и застраивать (кроме творческого режима),
  * взрывы в них не разрушают блоки. Эффекты боссов идут через команды setblock/fill — этих событий не вызывают.
  */
 final class ArenaGuard {
     private ArenaGuard() {}
 
     static boolean isArena(ServerLevel l) {
-        return Dims.is(l, Dims.ECLIPSE) || Dims.is(l, Dims.DREAM) || Dims.is(l, Dims.SKY);
+        return Dims.is(l, Dims.ECLIPSE) || Dims.is(l, Dims.SKY);
     }
 
     static void onBreak(BlockEvent.BreakEvent ev) {

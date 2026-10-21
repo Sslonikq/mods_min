@@ -26,6 +26,7 @@ public class ExplosionWandJei implements IModPlugin {
         info(reg, new ItemStack(ExplosionWandMod.WHALE_STAFF.get()), "whale_staff");
         info(reg, new ItemStack(ExplosionWandMod.RIFT_STAFF.get()), "rift_staff");
         info(reg, new ItemStack(ExplosionWandMod.SLEEP_SEAL_SHARD.get()), "sleep_seal_shard");
+        info(reg, new ItemStack(ExplosionWandMod.ASH_SEAL_SHARD.get()), "ash_seal_shard");
         info(reg, new ItemStack(ExplosionWandMod.TEMPLE_SEAL.get()), "temple_seal");
         info(reg, new ItemStack(ExplosionWandMod.MAGIC_ROD.get()), "magic_rod");
         info(reg, new ItemStack(ExplosionWandMod.SIMPLE_CORE.get()), "simple_core");

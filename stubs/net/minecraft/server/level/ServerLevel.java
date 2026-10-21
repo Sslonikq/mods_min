@@ -6,5 +6,6 @@ public abstract class ServerLevel extends net.minecraft.world.level.Level {
  public net.minecraft.server.MinecraftServer m_7654_(){return null;}
  public net.minecraft.world.level.storage.DimensionDataStorage m_8895_(){return null;}
  public long m_7328_(){return 0;}
+ public ServerChunkCache m_7726_(){return null;}
  public boolean m_143319_(long chunk){return false;}
  public Iterable<net.minecraft.world.entity.Entity> m_8583_(){return null;} }

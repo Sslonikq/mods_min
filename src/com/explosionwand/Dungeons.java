@@ -95,6 +95,8 @@ final class Dungeons {
 
         boolean has(int x, int y, int z) { int i = idx(x, y, z); return i >= 0 && bits.get(i); }
         int count() { return count; }
+        /** Низшая клетка колонны сетки 16x16 (gi, gk) относительно начала данжа; Integer.MAX_VALUE - колонна пуста. */
+        int colMin(int gi, int gk) { return cmin[gi * gz + gk]; }
 
         /** Есть ли клетка маски в кубе радиуса r вокруг клетки (точно, для малого r). */
         boolean hasNear(int x, int y, int z, int r) {
@@ -120,6 +122,8 @@ final class Dungeons {
         final String id; final int cell, margin, layout; final String[] parts;
         /** Допустимый перепад высот земли под данжем (0 — не проверять) и жёсткий предел, после которого клетка пропускается; наземные данжи. */
         int flat = 0, maxVar = Integer.MAX_VALUE;
+        /** Подземный данж: кровля (y относительно входа), которая не должна торчать над землёй по всей рамке (0 - не проверять), и число запасных точек. */
+        int roof = 0, tries = 8;
         /** Данж, с которым этот не должен пересекаться (по рамкам с запасом): Город Спящих обходит Разломы. */
         Def avoid;
         private List<DungeonTemplate> tpl;
@@ -142,6 +146,8 @@ final class Dungeons {
         /** Наземный данж: предпочтительный перепад высот flat и предел maxVar (выше — в клетке данжа не будет). */
         Def ground(int flat, int maxVar) { this.flat = flat; this.maxVar = maxVar; return this; }
         Def avoiding(Def other) { this.avoid = other; return this; }
+        /** Подземный данж: крыша на roof (отрицательное) должна быть под землёй по всей рамке (DungeonSite), maxCover - предел, больше которого точка отвергается; пробуем tries точек. */
+        Def underground(int roof, int maxCover, int tries) { this.roof = roof; this.maxVar = maxCover; this.tries = tries; return this; }
 
         synchronized List<DungeonTemplate> templates() {
             if (tpl == null) {
@@ -223,12 +229,12 @@ final class Dungeons {
      * Разлом: вход на поверхности, 3 уровня вниз, 16 залов (основной путь 1-7), ~190x200 блоков, три части по z (tools/gen_dungeons.py).
      * Клетка 768, отступ от края клетки 192: данжи одного типа не ближе ~290 блоков, запасные точки (±48) их не сближают.
      */
-    static final Def RIFT = new Def("rift", 768, 192, 4, "rift_entrance", "rift_mid", "rift_deep");
+    static final Def RIFT = new Def("rift", 768, 192, 4, "rift_entrance", "rift_mid", "rift_deep").underground(-4, DungeonSite.COVER_MAX, 16);
     /**
      * Город Спящих (4.5): наземный, ~97x97 с рвом, шпиль Монолита до ~64 блоков, три части по z (tools/gen_city.py). Клетка 768, отступ 128:
      * города не ближе 256 блоков друг от друга (при размере 97 и запасных точках ±48 не пересекаются); Разломы обходит (Def.avoid).
      */
-    static final Def SLEEP = new Def("sleep", 768, 128, 1, "sleep_north", "sleep_mid", "sleep_south").ground(5, 8).avoiding(RIFT);
+    static final Def SLEEP = new Def("sleep", 768, 128, 3, "sleep_north", "sleep_mid", "sleep_south").ground(5, 8).avoiding(RIFT);
     static final Def[] DEFS = {RIFT, SLEEP};
     /** Стенд механик для теста (все метки DungeonMech на малой площади). В мире не ставится: в DEFS его нет. */
     static final Def MECH_TEST = new Def("mechtest", 768, 128, 1, "mech_test");
@@ -493,7 +499,7 @@ final class Dungeons {
         List<Mask> ms = new ArrayList<>();
         for (DungeonData.Rec r : data.recs.values()) {
             Def d = r.def();
-            if (d == null) continue;
+            if (d == null || r.bossDead) continue;   // босс убит: блоки данжа больше не защищены
             try {
                 int[] b = d.bounds();
                 l2.add(new int[]{r.x + b[0], r.y + b[1], r.z + b[2], r.x + b[3], r.y + b[4], r.z + b[5], r.x, r.y, r.z});
@@ -515,6 +521,20 @@ final class Dungeons {
     static DungeonData.Rec at(DungeonData data, double x, double y, double z, int pad) {
         for (DungeonData.Rec r : data.recs.values()) if (r.contains(x, y, z, pad)) return r;
         return null;
+    }
+
+    /** Как at, но без данжей с убитым боссом: защита блоков (ломать и ставить нельзя) действует, пока босс жив. */
+    static DungeonData.Rec guardedAt(DungeonData data, double x, double y, double z, int pad) {
+        for (DungeonData.Rec r : data.recs.values()) if (!r.bossDead && r.contains(x, y, z, pad)) return r;
+        return null;
+    }
+
+    /** Блок под защитой данжа (босс этого данжа жив), только обычный мир. */
+    static boolean guarded(Level l, BlockPos p) { return guarded(l, p.m_123341_() + 0.5, p.m_123342_() + 0.5, p.m_123343_() + 0.5, 0); }
+
+    static boolean guarded(Level l, double x, double y, double z, int pad) {
+        if (!(l instanceof ServerLevel sl) || !Dims.is(sl, Level.f_46428_)) return false;
+        return guardedAt(DungeonData.get(sl), x, y, z, pad) != null;
     }
 
     /** Данж, в границах которого лежит позиция (только обычный мир). */
@@ -543,7 +563,7 @@ final class Dungeons {
 
     /** Конец сервера (в одиночке — выход в меню): статическое состояние не должно перейти в следующий мир. */
     static void clearState() {
-        PLACING.clear(); SPAWNED_AT.clear(); LAST_INSIDE.clear(); PENDING.clear(); NO_TEMPLATE.clear();
+        PLACING.clear(); SITES.clear(); SPAWNED_AT.clear(); LAST_INSIDE.clear(); PENDING.clear(); NO_TEMPLATE.clear();
         DungeonMech.clear();
         City.clear();
         RiftMobs.clear();
@@ -587,7 +607,7 @@ final class Dungeons {
      */
     private static void purgeFalling(ServerLevel sl, DungeonData data, List<ServerPlayer> ps) {
         for (DungeonData.Rec rec : data.recs.values()) {
-            if (rec.partsDone == 0) continue;
+            if (rec.partsDone == 0 || rec.bossDead) continue;   // после победы над боссом блоки ломаются, падающие тоже не мешают
             Def d = rec.def();
             if (d == null) continue;
             int[] b;
@@ -663,6 +683,7 @@ final class Dungeons {
      * а клетка при пропуске по незагрузке без годной точки не становится dead, а ждёт игрока.
      */
     private static void register(ServerLevel sl, DungeonData data, Def d, int cx, int cz, long seed) {
+        if (d.roof < 0) { registerCover(sl, data, d, cx, cz, seed); return; }
         int[] best = null; int bestVar = Integer.MAX_VALUE;
         boolean skipped = false;   // хоть одна точка не оценена из-за незагруженного чанка
         for (int a = 0; a < 8; a++) {
@@ -694,8 +715,104 @@ final class Dungeons {
         data.m_77762_();
     }
 
+    /** Оценка точек подземного данжа, растянутая на несколько проходов discover: сколько точек оценено, их якоря и «выставленность». */
+    static final class SiteState {
+        int a = 0, unknown = 0; boolean done = false;
+        final List<int[]> sites = new ArrayList<>();
+        final List<Integer> exposures = new ArrayList<>();
+    }
+    static final Map<String, SiteState> SITES = new HashMap<>();
+    /** Сколько точек подземного данжа оценивается за один проход discover (раз в 10 тиков). */
+    static final int SITES_PER_PASS = 3;
+
+    /**
+     * Подземный данж (Def.roof < 0): точки оцениваются без загрузки чанков (по загруженным или оценкой генератора), по SITES_PER_PASS за проход;
+     * выбор - DungeonSite.choose. Чанк грузится один раз, только у выбранной точки: там заново берётся настоящая высота и проверяется
+     * вода и выставленность. Нет годной точки - клетка dead.
+     */
+    private static void registerCover(ServerLevel sl, DungeonData data, Def d, int cx, int cz, long seed) {
+        String key = d.key(cx, cz);
+        SiteState st = SITES.computeIfAbsent(key, k -> new SiteState());
+        for (int n = 0; n < SITES_PER_PASS && !st.done && st.a < d.tries; n++) {
+            int[] s = site(seed, d, cx, cz, st.a++);
+            if (d.avoid != null && clashes(seed, d, s)) continue;
+            int[] col = column(sl, s[0], s[1]);
+            if (col[0] == DungeonSite.UNKNOWN) { st.unknown++; continue; }   // оценить нельзя
+            if (col[1] != 0) continue;   // вода у входа
+            int var = exposure(sl, d, s[0], col[0], s[1]);
+            st.sites.add(new int[]{s[0], col[0], s[1]});
+            st.exposures.add(var);
+            if (var <= DungeonSite.COVER_OK) st.done = true;
+        }
+        if (!st.done && st.a < d.tries) return;   // остальные точки - в следующем проходе
+        SITES.remove(key);
+        int[] ex = new int[st.exposures.size()];
+        for (int i = 0; i < ex.length; i++) ex[i] = st.exposures.get(i);
+        int pick = DungeonSite.choose(ex);
+        int[] best = null;
+        if (st.sites.isEmpty() && st.unknown > 0) {   // оценки недоступны (генератор не отвечает): старое поведение - загрузить основную точку
+            int[] s0 = site(seed, d, cx, cz, 0);
+            sl.m_6325_(s0[0] >> 4, s0[1] >> 4);
+            int y0 = groundY(sl, s0[0], s0[1]);
+            if (!wet(sl, s0[0], y0 - 1, s0[1])) best = new int[]{s0[0], y0, s0[1]};
+        } else if (pick >= 0) {   // настоящая высота выбранной точки: один чанк
+            int[] s = st.sites.get(pick);
+            sl.m_6325_(s[0] >> 4, s[2] >> 4);
+            int y = groundY(sl, s[0], s[2]);
+            if (!wet(sl, s[0], y - 1, s[2]) && exposure(sl, d, s[0], y, s[2]) <= DungeonSite.COVER_MAX) best = new int[]{s[0], y, s[2]};
+        }
+        if (best == null) { data.dead.put(key, 1); data.m_77762_(); return; }
+        DungeonData.Rec rec = new DungeonData.Rec(key, d.id, cx, cz, best[0], best[1], best[2]);
+        try { rec.layout = d.signature(); } catch (IllegalStateException e) { noTemplate(d, e); }
+        data.recs.put(key, rec);
+        data.m_77762_();
+    }
+
     /** Годна ли лучшая из оценённых точек (есть и перепад не больше maxVar). Иначе клетка dead, если оценены все 8 точек. */
     static boolean keepCell(int[] best, int bestVar, int maxVar) { return best != null && bestVar <= maxVar; }
+
+    /**
+     * Насколько крыша подземного данжа торчит над землёй при входе на высоте y (DungeonSite.exposure): высоты берутся по центрам колонн 16x16
+     * маски, где есть блоки ниже кровли. Загруженные чанки читаем как есть, незагруженные оцениваем генератором мира (без их генерации).
+     */
+    private static int exposure(ServerLevel sl, Def d, int x, int y, int z) {
+        Mask mk;
+        try { mk = d.mask(); } catch (IllegalStateException e) { return 0; }
+        List<Integer> hs = new ArrayList<>();
+        for (int i = 0; i < mk.gx; i += 2) {   // через колонну (шаг 32 блока): дешевле вдвое-вчетверо, допуск COVER_OK это покрывает
+            for (int k = 0; k < mk.gz; k += 2) {
+                if (mk.colMin(i, k) >= d.roof) continue;   // колонна без подземных блоков (вход и обломки на поверхности)
+                int px = x + mk.x0 + i * 16 + Math.min(8, (mk.sx - i * 16) / 2), pz = z + mk.z0 + k * 16 + Math.min(8, (mk.sz - k * 16) / 2);
+                int[] c = column(sl, px, pz);
+                hs.add(c[1] != 0 ? DungeonSite.WET : c[0]);   // озеро или река над данжем: кровля упирается в воду, считаем выставленной
+            }
+        }
+        int[] g = new int[hs.size()];
+        for (int i = 0; i < g.length; i++) g[i] = hs.get(i);
+        return DungeonSite.exposure(y, d.roof, g);
+    }
+
+    /**
+     * Колонна {первый свободный y над землёй, 1 если над землёй вода}: по загруженному чанку (деревья пропускаются) или оценкой
+     * генератора мира без загрузки чанка (WORLD_SURFACE_WG против OCEAN_FLOOR_WG); {UNKNOWN, 0}, если оценить нельзя.
+     */
+    static int[] column(ServerLevel sl, int px, int pz) {
+        if (sl.m_46805_(new BlockPos(px, 64, pz))) {
+            int y = groundY(sl, px, pz);
+            return new int[]{y, wet(sl, px, y - 1, pz) ? 1 : 0};
+        }
+        try {
+            net.minecraft.server.level.ServerChunkCache cc = sl.m_7726_();
+            int surf = cc.m_8481_().m_223221_(px, pz, Heightmap.Types.valueOf("WORLD_SURFACE_WG"), sl, cc.m_214994_());
+            if (surf >= 66) return new int[]{surf, 0};   // выше уровня моря (63) воды над землёй нет: вторая оценка шума не нужна
+            int floor = cc.m_8481_().m_223221_(px, pz, Heightmap.Types.valueOf("OCEAN_FLOOR_WG"), sl, cc.m_214994_());
+            return new int[]{floor, surf > floor ? 1 : 0};
+        } catch (RuntimeException | LinkageError e) {
+            if (!columnWarned) { columnWarned = true; System.err.println("[explosionwand] оценка высоты генератором недоступна, незагруженные колонны пропускаются: " + e); }
+            return new int[]{DungeonSite.UNKNOWN, 0};
+        }
+    }
+    private static boolean columnWarned = false;
 
     /** Результаты variation: чанк не загружен (отложить), место обжито (пропустить точку). */
     static final int UNLOADED = -1, SETTLED = -2;
@@ -868,7 +985,7 @@ final class Dungeons {
     /** То же с учётом данжа: у Города Спящих в ряде сундуков лежат особые предметы (книги Архимага, Печать Храма). */
     static List<String> lootFor(Def d, Hall h, int tier) {
         List<String> out = new ArrayList<>();
-        if (h.boss != null) out.addAll(Boss.LOOT);
+        if (h.boss != null) out.addAll(Boss.lootOf(h));
         if (d != null && d == SLEEP) out.addAll(City.extra(h.id));
         out.addAll(LOOT.get(tier - 1));
         if (d != null) out.addAll(Mats.chestLoot(Mats.dungeonOf(d), tier, Mats.RNG));   // материалы данжа (4.11)
@@ -885,8 +1002,18 @@ final class Dungeons {
 
     /** Босс логова побеждён: зал засчитывается (хранится в Rec.hallsCleared, переживает перезапуск) и ставится сундук. */
     static void lairWon(ServerLevel sl, DungeonData data, DungeonData.Rec rec, Hall h, List<ServerPlayer> in) {
-        rec.hallsCleared |= 1L << h.id; data.m_77762_();
+        rec.hallsCleared |= 1L << h.id;
+        markCleared(data, rec);
         onCleared(sl, rec, h, in);
+    }
+
+    /**
+     * Босс данжа убит: барьер снят (блоки данжа можно ломать и ставить: кирка, взрывы, палочки), флаг хранится в Rec.bossDead.
+     * Зовёт lairWon (общий для Сердца Разлома и Монолита Сна); остальные игровые правила данжа (телепорты, спавн, элитры) не меняются.
+     */
+    static void markCleared(DungeonData data, DungeonData.Rec rec) {
+        if (!rec.bossDead) { rec.bossDead = true; }
+        data.m_77762_();
     }
 
     private static void onCleared(ServerLevel sl, DungeonData.Rec rec, Hall h, List<ServerPlayer> in) {
@@ -963,7 +1090,25 @@ final class Dungeons {
             if (main) lightBrazier(sl, data, rec, m, p);
             return;
         }
+        if (main && d == SLEEP && reissueSeal(sl, rec, p, rx, ry, rz)) return;
         if (DungeonMech.onClick(sl, data, rec, d, p, rx, ry, rz, main)) ev.setCanceled(true);
+    }
+
+    /** Печать Храма потеряна (лава, кактус): ПКМ по саркофагу в зачищенном склепе выдаёт новую, пока у игрока её нет и дверь храма закрыта. Саркофаги: x -42/-35 (+1), z 18/22/26 (+1), на уровне пола склепа. */
+    private static boolean reissueSeal(ServerLevel sl, DungeonData.Rec rec, ServerPlayer p, int rx, int ry, int rz) {
+        Hall h = rec.def().hall(21);
+        if (h == null || (rec.hallsCleared & (1L << h.id)) == 0 || ry != h.y + 1) return false;
+        boolean sx = rx == -42 || rx == -41 || rx == -35 || rx == -34;
+        boolean szz = rz == 18 || rz == 19 || rz == 22 || rz == 23 || rz == 26 || rz == 27;
+        if (!sx || !szz) return false;
+        Mark door = null;
+        for (Mark m : rec.def().doors()) if (m.a.equals("sleep_temple")) door = m;
+        if (door == null || sl.m_8055_(new BlockPos(rec.x + door.x, rec.y + door.y, rec.z + door.z)).m_60795_()) return false;   // храм уже открыт
+        if (p.m_150109_().m_18947_(ExplosionWandMod.TEMPLE_SEAL.get()) > 0) return false;
+        Cmd.run(sl, p.m_20185_(), p.m_20186_(), p.m_20189_(), "give " + p.m_20148_() + " explosionwand:temple_seal");
+        p.m_5661_(Component.m_237115_("explosionwand.dungeon.seal_reissued"), true);
+        Fx.sound(sl, p.m_20185_(), p.m_20186_(), p.m_20189_(), "block.amethyst_block.chime", 1.0F, 0.7F);
+        return true;
     }
 
     private static void openDoor(ServerLevel sl, DungeonData.Rec rec, Mark m) {

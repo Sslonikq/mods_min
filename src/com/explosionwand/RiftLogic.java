@@ -183,6 +183,28 @@ final class RiftLogic {
     /** Поводок: шаг к точке, которая дальше leash от дома и дальше текущего положения, запрещён. */
     static boolean leashBlocked(double homeDist, double newDist, double leash) { return newDist > leash && newDist > homeDist; }
 
+    /** Можно ли перейти из (ox,oy,oz) в (nx,ny,nz): один подшаг импульса. */
+    interface Step { boolean ok(double ox, double oy, double oz, double nx, double ny, double nz); }
+
+    /** Подшаг импульса не длиннее 0,45 блока: тоньше стены в 1 блок, шаг не перепрыгивает её. */
+    static final double KNOCK_SUBSTEP = 0.45;
+
+    /**
+     * Смещение по импульсу подшагами (по осям отдельно, скользит вдоль стен). Возвращает {x, y, z, kx, ky, kz}; упёршаяся ось
+     * получает скорость 0 и дальше не двигается.
+     */
+    static double[] knockMove(double x, double y, double z, double kx, double ky, double kz, Step st) {
+        int n = (int) Math.ceil(Math.max(Math.abs(kx), Math.max(Math.abs(ky), Math.abs(kz))) / KNOCK_SUBSTEP);
+        if (n < 1) n = 1;
+        double sx = kx / n, sy = ky / n, sz = kz / n;
+        for (int i = 0; i < n; i++) {
+            if (sx != 0) { if (st.ok(x, y, z, x + sx, y, z)) x += sx; else { sx = 0; kx = 0; } }
+            if (sz != 0) { if (st.ok(x, y, z, x, y, z + sz)) z += sz; else { sz = 0; kz = 0; } }
+            if (sy != 0) { if (st.ok(x, y, z, x, y + sy, z)) y += sy; else { sy = 0; ky = 0; } }
+        }
+        return new double[]{x, y, z, kx, ky, kz};
+    }
+
     static final int BEETLE_CAP = 6, BEETLE_FLOCK_MIN = 2, BEETLE_FLOCK_MAX = 3;
 
     /** Сколько жуков добавить стайкой: не выше предела на Разлом. */

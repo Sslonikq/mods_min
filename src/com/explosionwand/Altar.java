@@ -13,25 +13,24 @@ import org.joml.Vector3f;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Алтарь с колоннами и портал на арену босса: Король Затмения (kind 1), Монолит Сна (2), Небесный Кит (3). Сердце Разлома живёт в данже, алтаря у него нет. */
+/** Алтарь с колоннами и портал на арену босса: Король Затмения (kind 1), Небесный Кит (3). Сердце Разлома и Монолит Сна живут в данжах, алтаря у них нет (kind 2 свободен). */
 public class Altar {
     static final List<Altar> ACTIVE = new ArrayList<>();
-    static DustParticleOptions PURPLE, BLACK, PINK, DREAM1, DREAM2, SKY1, SKY2;
+    static DustParticleOptions PURPLE, BLACK, PINK, SKY1, SKY2;
     final ServerLevel level; final double cx, cy, cz; final int kind; int t = 0;
 
     Altar(ServerLevel level, int bx, int by, int bz, int kind) {
         this.level = level; this.kind = kind; boolean eclipse = kind == 1;
         Boss2.init();
-        if (DREAM1 == null) { DREAM1 = new DustParticleOptions(new org.joml.Vector3f(0.2F,0.95F,0.95F),1.6F); DREAM2 = new DustParticleOptions(new org.joml.Vector3f(0.1F,0.6F,1.0F),1.3F); }
         if (PURPLE == null) {
             PURPLE = new DustParticleOptions(new Vector3f(0.6F, 0.2F, 1.0F), 1.8F);
             BLACK = new DustParticleOptions(new Vector3f(0.05F, 0, 0.1F), 2.4F);
             PINK = new DustParticleOptions(new Vector3f(1.0F, 0.45F, 0.95F), 1.3F);
         }
         if (SKY1 == null) { SKY1 = new DustParticleOptions(new Vector3f(0.45F, 0.8F, 1.0F), 1.6F); SKY2 = new DustParticleOptions(new Vector3f(1.0F, 1.0F, 1.0F), 1.3F); }
-        boolean dream = kind == 2, sky = kind == 3;
-        BlockState base = Fx.state(sky ? "calcite" : dream ? "polished_deepslate" : "polished_blackstone_bricks"), crying = Fx.state(eclipse ? "gold_block" : (dream || sky) ? "sea_lantern" : "crying_obsidian"), am = Fx.state(eclipse ? "polished_blackstone" : sky ? "quartz_pillar" : dream ? "warped_planks" : "amethyst_block"),
-                rod = Fx.state(eclipse ? "shroomlight" : (dream || sky) ? "sea_lantern" : "end_rod"), air = Fx.state("air"), cl = Fx.state(eclipse ? "gilded_blackstone" : sky ? "light_blue_stained_glass" : dream ? "sculk" : "amethyst_cluster");
+        boolean sky = kind == 3;
+        BlockState base = Fx.state(sky ? "calcite" : "polished_blackstone_bricks"), crying = Fx.state(eclipse ? "gold_block" : sky ? "sea_lantern" : "crying_obsidian"), am = Fx.state(eclipse ? "polished_blackstone" : sky ? "quartz_pillar" : "amethyst_block"),
+                rod = Fx.state(eclipse ? "shroomlight" : sky ? "sea_lantern" : "end_rod"), air = Fx.state("air"), cl = Fx.state(eclipse ? "gilded_blackstone" : sky ? "light_blue_stained_glass" : "amethyst_cluster");
         for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) {
             level.m_7731_(new BlockPos(bx + x, by - 1, bz + z), (x == 0 && z == 0) || (Math.abs(x) + Math.abs(z) == 1) ? crying : base, 3);
             for (int y = 0; y <= 4; y++) level.m_7731_(new BlockPos(bx + x, by + y, bz + z), air, 3);
@@ -52,7 +51,7 @@ public class Altar {
         double r = 1.3 * Math.min(1, t / 30.0);
         for (int i = 0; i < 26; i++) {                       // вихрь
             double a = t * 0.12 + i * Math.PI * 2 / 26;
-            var c1 = kind == 3 ? (i % 3 == 0 ? SKY2 : SKY1) : kind == 2 ? (i % 3 == 0 ? DREAM1 : DREAM2) : (i % 3 == 0 ? Boss2.GOLD : Boss2.ORANGE);
+            var c1 = kind == 3 ? (i % 3 == 0 ? SKY2 : SKY1) : (i % 3 == 0 ? Boss2.GOLD : Boss2.ORANGE);
             Fx.send(level, c1, cx + Math.cos(a) * r, cy + Math.sin(a) * r * 1.4, cz, 1, 0, 0, 0, 0);
             Fx.send(level, c1, cx, cy + Math.sin(a) * r * 1.4, cz + Math.cos(a) * r, 1, 0, 0, 0, 0);
         }
@@ -72,7 +71,7 @@ public class Altar {
             double dx = cx - p.f_82479_, dy = cy - (p.f_82480_ + 0.9), dz = cz - p.f_82481_;
             if (dx * dx + dy * dy + dz * dz < 1.6 * 1.6) {
                 Fx.sound(level, p.f_82479_, p.f_82480_, p.f_82481_, "block.portal.travel", 0.5F, 0.6F);
-                Dims.send(e, level, kind == 3 ? Dims.SKY : kind == 2 ? Dims.DREAM : Dims.ECLIPSE);
+                Dims.send(e, level, kind == 3 ? Dims.SKY : Dims.ECLIPSE);
             }
         }
         return t >= 1200;

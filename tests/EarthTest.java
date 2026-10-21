@@ -126,6 +126,7 @@ public class EarthTest {
         String en = Files.readString(Path.of("resources/assets/explosionwand/lang/en_us.json"));
         String guard = Files.readString(Path.of("src/com/explosionwand/DungeonGuard.java"));
         check(guard.contains("EarthWandItem") && guard.contains("noDungeon"), "DungeonGuard.forbidden знает палочки Земли");
+        check(guard.contains("static boolean teleports") && guard.contains("static boolean breaksBalance") && guard.contains("EarthLogic.Kind.RETURN"), "DungeonGuard делит запреты: телепорты всегда, баланс - до смерти босса");
         List<String> ids = new java.util.ArrayList<>();
         for (EarthLogic.Kind k : EarthLogic.Kind.values()) ids.add(k.id);
         ids.add("explosion_wand");

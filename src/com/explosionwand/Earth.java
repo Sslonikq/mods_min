@@ -12,10 +12,14 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.animal.TamableAnimal;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.AbstractVillager;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.projectile.FishingHook;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.ThrownEnderpearl;
+import net.minecraft.world.entity.projectile.ThrownTrident;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -153,12 +157,13 @@ final class Earth {
             for (Iterator<EarthData.Temp> it = d.temps.iterator(); it.hasNext() && n >= EarthLogic.LIGHT_MAX;) {   // старейший гаснет первым
                 EarthData.Temp x = it.next();
                 if (x.kind != EarthData.LIGHT) continue;
+                if (x.handle != null) x.handle.snuff();
                 expire(sl, x); it.remove(); n--;
             }
             sl.m_7731_(pos, Fx.state("light"), 3);
             addTemp(sl, d, pos, EarthData.LIGHT, until, handle);
         } else {
-            while (WISPS.size() >= EarthLogic.LIGHT_MAX) WISPS.remove(0);
+            while (WISPS.size() >= EarthLogic.LIGHT_MAX) { Wisp old = WISPS.remove(0); if (old.handle != null) old.handle.snuff(); }
             WISPS.add(new Wisp(sl, cx, cy, cz, until, handle));
         }
         Fx.send(sl, Fx.particle("end_rod"), cx, cy, cz, 14, 0.2, 0.2, 0.2, 0.05);
@@ -187,7 +192,8 @@ final class Earth {
         AABB box = new AABB(eye.f_82479_ - R, eye.f_82480_ - R, eye.f_82481_ - R, eye.f_82479_ + R, eye.f_82480_ + R, eye.f_82481_ + R);
         int hit = 0;
         for (Entity e : sl.m_6249_(p, box, (Entity en) -> en.m_6084_() && !en.m_5833_())) {
-            if (!(e instanceof LivingEntity le) || e instanceof Player) continue;
+            if (!foe(e, p)) continue;
+            LivingEntity le = (LivingEntity) e;
             Vec3 c = e.m_20182_();
             if (!EarthLogic.inCone(c.f_82479_ - eye.f_82479_, c.f_82480_ + e.m_20206_() * 0.5 - eye.f_82480_, c.f_82481_ - eye.f_82481_,
                     look.f_82479_, look.f_82480_, look.f_82481_, R, EarthLogic.FROST_COS)) continue;
@@ -392,7 +398,8 @@ final class Earth {
         BlockPos bed = p.m_8961_();
         ServerLevel dest = bed == null || p.m_8963_() == null ? null : Dims.get(sl, p.m_8963_());
         if (dest == null || Dims.isOurs(dest) || !isBed(path(dest.m_8055_(bed)))) { interrupt(sl, p, "return_nobed"); return; }
-        int x = bed.m_123341_(), z = bed.m_123343_(), y = Dims.nearY(dest, x, bed.m_123342_(), z);
+        int[] spot = Dims.nearSpot(dest, bed);
+        int x = spot[0], y = spot[1], z = spot[2];
         if (Dungeons.near(dest, x + 0.5, y, z + 0.5, 1)) { interrupt(sl, p, "return_blocked"); return; }
         Fx.send(sl, Fx.particle("portal"), p.m_20185_(), p.m_20186_() + 1, p.m_20189_(), 60, 0.4, 0.8, 0.4, 0.5);
         Fx.sound(sl, p.m_20185_(), p.m_20186_(), p.m_20189_(), "entity.enderman.teleport", 1.0F, 1.0F);
@@ -490,7 +497,7 @@ final class Earth {
     /** Цель эффекта: живое существо, не игрок, не свой/чужой питомец, не житель. */
     static boolean foe(Entity e, ServerPlayer p) {
         if (!(e instanceof LivingEntity) || e instanceof Player || !e.m_6084_() || e.m_5833_()) return false;
-        if (e instanceof AbstractVillager) return false;
+        if (e instanceof AbstractVillager || e instanceof ArmorStand) return false;
         if (e instanceof TamableAnimal t && (t.m_21830_(p) || t.m_21824_())) return false;
         return !Cmd.hasTagPrefix(e, "ewdecoy");
     }
@@ -498,7 +505,19 @@ final class Earth {
     /** Подвижная цель (можно толкать и тянуть): к тому же не часть босса и не моб данжа. */
     static boolean movable(Entity e, ServerPlayer p) { return foe(e, p) && Minions.controllable(e); }
 
-    static void shove(Entity e, double vx, double vy, double vz) { e.m_20256_(new Vec3(vx, vy, vz)); e.f_19864_ = true; }
+    /**
+     * Цель для толчка, притяжения, ветра и лозы: как movable, но и обычные мобы данжей (хосты ewr_h). Им меняется только скорость и эффекты
+     * (ИИ, цель и NoAI не трогаем), боссы и их хитбоксы - нет. Двойник по-прежнему берёт строгий movable: мобы данжа ходят своим ИИ и иллюзию игнорируют.
+     */
+    static boolean shovable(Entity e, ServerPlayer p) {
+        return foe(e, p) && (Minions.controllable(e) || Minions.dungeonMob(e));
+    }
+
+    /** Толчок: мобам данжа (NoAI-хосты) - импульс RiftMobs.knock, остальным - скорость. */
+    static void shove(Entity e, double vx, double vy, double vz) {
+        if (RiftMobs.knock(e, vx, vy, vz)) return;
+        e.m_20256_(new Vec3(vx, vy, vz)); e.f_19864_ = true;
+    }
 
     static DustParticleOptions GREEN;
     static DustParticleOptions green() {
@@ -532,7 +551,7 @@ final class Earth {
                 for (Entity e : sl.m_6249_(p, box, (Entity en) -> foe(en, p))) {
                     if (!hit.add(e)) continue;                          // каждого один раз за линию
                     e.m_6469_(sl.m_269111_().m_269075_(p), EarthLogic.SPIKE_DAMAGE);
-                    if (Minions.controllable(e)) shove(e, 0.0D, EarthLogic.SPIKE_LIFT, 0.0D);
+                    if (shovable(e, p)) shove(e, 0.0D, EarthLogic.SPIKE_LIFT, 0.0D);
                 }
             });
         }
@@ -566,10 +585,11 @@ final class Earth {
         Iterator<Map.Entry<UUID, Long>> it = SKIN.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<UUID, Long> e = it.next();
+            if (now >= e.getValue()) { it.remove(); continue; }          // срок вышел: убираем независимо от того, на сервере ли игрок
             ServerPlayer p = null;
             for (ServerPlayer q : sl.m_6907_()) if (q.m_20148_().equals(e.getKey())) { p = q; break; }
             if (p == null) continue;                                    // игрок в другом измерении: проверит его уровень
-            if (now >= e.getValue() || !p.m_6084_()) { it.remove(); continue; }
+            if (!p.m_6084_()) { it.remove(); continue; }
             Fx.send(sl, Fx.blockParticle(Fx.state("stone")), p.m_20185_(), p.m_20186_() + 1.0, p.m_20189_(), 2, 0.35, 0.8, 0.35, 0.0);
         }
     }
@@ -578,7 +598,9 @@ final class Earth {
     static int wind(ServerLevel sl, ServerPlayer p) {
         Vec3 look = p.m_20252_(1.0F), eye = p.m_146892_();
         CityMobs.gust(sl, p.m_20185_(), p.m_20186_(), p.m_20189_());      // моли Города разгоняются
-        if (p.m_6144_()) {                                                // Shift: подброс себя вверх
+        boolean inDungeon = Dungeons.at(sl, p.m_20185_(), p.m_20186_(), p.m_20189_()) != null;
+        if (p.m_6144_() && inDungeon) deny(p, "wind_dungeon");            // в данже подброса нет: обычный порыв
+        else if (p.m_6144_()) {                                           // Shift: подброс себя вверх
             double[] h = EarthLogic.horizontal(look.f_82479_, look.f_82481_);
             shove(p, h[0] * 0.15, EarthLogic.WIND_SELF_LIFT, h[1] * 0.15);
             p.f_19789_ = 0.0F;
@@ -596,10 +618,11 @@ final class Earth {
             if (!EarthLogic.inCone(c.f_82479_ - eye.f_82479_, c.f_82480_ + e.m_20206_() * 0.5 - eye.f_82480_, c.f_82481_ - eye.f_82481_,
                     look.f_82479_, look.f_82480_, look.f_82481_, R, EarthLogic.WIND_COS)) continue;
             if (e instanceof Projectile pr) {                                // снаряд сбит
-                if (pr.m_150171_(p)) continue;
+                Entity own = pr.m_19749_();
+                if (pr.m_150171_(p) || own instanceof Player || pr instanceof ThrownTrident || pr instanceof ThrownEnderpearl || pr instanceof FishingHook) continue;   // снаряды игроков не трогаем
                 Fx.send(sl, Fx.particle("cloud"), c.f_82479_, c.f_82480_, c.f_82481_, 8, 0.2, 0.2, 0.2, 0.05);
                 e.m_146870_();
-            } else if (movable(e, p)) {
+            } else if (shovable(e, p)) {
                 shove(e, v[0], v[1], v[2]);
                 Fx.send(sl, Fx.particle("cloud"), c.f_82479_, c.f_82480_ + e.m_20206_() * 0.5, c.f_82481_, 6, 0.3, 0.3, 0.3, 0.05);
             }
@@ -621,10 +644,11 @@ final class Earth {
         AABB box = new AABB(c.f_82479_ - R, c.f_82480_ - EarthLogic.VINE_H - 1, c.f_82481_ - R, c.f_82479_ + R, c.f_82480_ + EarthLogic.VINE_H + 2, c.f_82481_ + R);
         List<Entity> bound = new ArrayList<>();
         MobEffect slow = Fx.effect("slowness");
-        for (Entity e : sl.m_6249_(p, box, (Entity en) -> movable(en, p))) {      // мобов данжей и боссов лоза не держит
+        for (Entity e : sl.m_6249_(p, box, (Entity en) -> shovable(en, p))) {      // боссов лоза не держит, мобов данжей держит
             if (!EarthLogic.inCircle(e.m_20185_() - c.f_82479_, e.m_20186_() - c.f_82480_, e.m_20189_() - c.f_82481_, R, EarthLogic.VINE_H + 1)) continue;
             if (slow != null) ((LivingEntity) e).m_7292_(new MobEffectInstance(slow, EarthLogic.VINE_TICKS, EarthLogic.VINE_SLOW_AMP));
             bound.add(e);
+            RiftMobs.root(e, EarthLogic.VINE_TICKS);      // мобы данжа: ходить и летать нельзя, пока держит лоза
         }
         for (int t = 0; t <= EarthLogic.VINE_TICKS; t += 4) {
             final int k = t;
@@ -656,7 +680,7 @@ final class Earth {
         double bt = Double.MAX_VALUE;
         double R = EarthLogic.PULL_RANGE;
         AABB box = new AABB(eye.f_82479_ - R, eye.f_82480_ - R, eye.f_82481_ - R, eye.f_82479_ + R, eye.f_82480_ + R, eye.f_82481_ + R);
-        for (Entity e : sl.m_6249_(p, box, (Entity en) -> en.m_6084_() && (en instanceof ItemEntity || en instanceof ExperienceOrb || movable(en, p)))) {
+        for (Entity e : sl.m_6249_(p, box, (Entity en) -> en.m_6084_() && (en instanceof ItemEntity || en instanceof ExperienceOrb || shovable(en, p)))) {
             Vec3 c = e.m_20182_();
             double[] r = EarthLogic.toRay(c.f_82479_ - eye.f_82479_, c.f_82480_ + e.m_20206_() * 0.5 - eye.f_82480_, c.f_82481_ - eye.f_82481_,
                     look.f_82479_, look.f_82480_, look.f_82481_);
@@ -699,7 +723,7 @@ final class Earth {
         double x = p.m_20185_() + h[0] * EarthLogic.DECOY_AHEAD, y = p.m_20186_(), z = p.m_20189_() + h[1] * EarthLogic.DECOY_AHEAD;
         BlockPos at = pos(x, y, z);
         if (!sl.m_8055_(at).m_60795_() || !sl.m_8055_(new BlockPos(at.m_123341_(), at.m_123342_() + 1, at.m_123343_())).m_60795_()) { x = p.m_20185_(); z = p.m_20189_(); }   // впереди стена: прямо на игроке
-        String tag = "ewdecoy" + (decoySeq++);
+        String tag = "ewdecoy" + sl.m_46467_() + "x" + (decoySeq++) + "e";   // время мира: после перезапуска тег не повторяется
         String tags = "Tags:[\"ewdecoy\",\"" + tag + "\"]";
         // хост: невидимый безмолвный житель без ИИ, мобы его атакуют; много здоровья, чтобы не умер раньше срока
         Cmd.run(sl, x, y, z, "summon minecraft:villager " + Cmd.f(x) + " " + Cmd.f(y) + " " + Cmd.f(z) + " {" + tags
@@ -820,7 +844,7 @@ final class Earth {
             for (Entity e : sl.m_6249_(s.p, new AABB(s.x - hr, s.y - hr, s.z - hr, s.x + hr, s.y + hr, s.z + hr), (Entity en) -> foe(en, s.p))) { victim = e; break; }
             if (victim != null) {
                 victim.m_6469_(sl.m_269111_().m_269075_(s.p), EarthLogic.SPARK_DAMAGE);
-                victim.m_20254_(EarthLogic.SPARK_FIRE_SECONDS);
+                RiftMobs.ignite(victim, EarthLogic.SPARK_FIRE_SECONDS);
                 Fx.send(sl, Fx.particle("lava"), s.x, s.y, s.z, 8, 0.2, 0.2, 0.2, 0.0);
                 Fx.send(sl, Fx.particle("flame"), s.x, s.y, s.z, 12, 0.2, 0.2, 0.2, 0.08);
                 Fx.sound(sl, s.x, s.y, s.z, "entity.generic.burn", 0.8F, 1.3F);
@@ -869,16 +893,23 @@ final class Earth {
     }
 
     // ================================================================ тик и уборка
+    static boolean tickWarned;
+
+    private static void guard(Runnable r) {
+        try { r.run(); }
+        catch (RuntimeException | LinkageError ex) { if (!tickWarned) { tickWarned = true; System.err.println("[explosionwand] Earth.tick: сбой: " + ex); ex.printStackTrace(); } }
+    }
+
     static void tick(ServerLevel sl) {
         long now = sl.m_46467_();
-        if (now % 10 == 0) { tickTemps(sl, now); tickWisps(sl, now); }
-        if (now % 2 == 0 && !PULLS.isEmpty()) tickPulls(sl, now);
-        if (now % 4 == 0 && !BEACONS.isEmpty()) tickBeacons(sl, now);
-        if (!CASTS.isEmpty()) tickCasts(sl);
-        if (now % 2 == 0 && !SPARKS.isEmpty()) tickSparks(sl);
-        if (now % 5 == 0 && !DECOYS.isEmpty()) tickDecoys(sl, now);
-        if (now % 10 == 0 && !SKIN.isEmpty()) tickSkin(sl, now);
-        if (now % 200 == 0) sweepDecoys(sl);
+        if (now % 10 == 0) { guard(() -> tickTemps(sl, now)); guard(() -> tickWisps(sl, now)); }
+        if (now % 2 == 0 && !PULLS.isEmpty()) guard(() -> tickPulls(sl, now));
+        if (now % 4 == 0 && !BEACONS.isEmpty()) guard(() -> tickBeacons(sl, now));
+        if (!CASTS.isEmpty()) guard(() -> tickCasts(sl));
+        if (now % 2 == 0 && !SPARKS.isEmpty()) guard(() -> tickSparks(sl));
+        if (now % 5 == 0 && !DECOYS.isEmpty()) guard(() -> tickDecoys(sl, now));
+        if (now % 10 == 0 && !SKIN.isEmpty()) guard(() -> tickSkin(sl, now));
+        if (now % 200 == 0) guard(() -> sweepDecoys(sl));
     }
 
     /** Конец сервера: статическое состояние не должно перейти в следующий мир. Временные блоки лежат в EarthData и уберутся по сроку. */

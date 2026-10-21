@@ -38,8 +38,30 @@ public class RiftMobsTest {
         modelTests();
         summonTests();
         hallTests();
+        knockTests();
         System.out.println(fails == 0 ? "мобы Разлома ok" : fails + " проверок не прошли");
         if (fails > 0) System.exit(1);
+    }
+
+    // ---------------------------------------------------------------- импульс палочек
+    static void knockTests() {
+        // стена в одну клетку (x от 1 до 2): импульс 1,4 из x=0,9 не должен её перепрыгнуть
+        RiftLogic.Step wall = (ox, oy, oz, nx, ny, nz) -> !(nx >= 1 && nx < 2);
+        double[] r = RiftLogic.knockMove(0.9, 5, 0, 1.4, 0, 0, wall);
+        check(r[0] < 1 && r[3] == 0, "стена в 1 блок: моб остался перед стеной, x=" + r[0]);
+        r = RiftLogic.knockMove(0.9, 5, 0, -1.4, 0, 0, wall);
+        check(near(r[0], -0.5) && r[3] == -1.4, "в обратную сторону летит целиком");
+        // дверь-печать на оси z (z от 3 до 4), вдоль x свободно: скользит и не проходит
+        RiftLogic.Step seal = (ox, oy, oz, nx, ny, nz) -> !(nz >= 3 && nz < 4);
+        r = RiftLogic.knockMove(0, 5, 2.9, 0.5, 0, 1.4, seal);
+        check(r[2] < 3 && r[5] == 0 && near(r[0], 0.5) && r[3] == 0.5, "печать: не проходит, вдоль неё скользит, z=" + r[2]);
+        // потолок и пол
+        RiftLogic.Step ceil = (ox, oy, oz, nx, ny, nz) -> ny < 6 && ny >= 4;
+        r = RiftLogic.knockMove(0, 5.5, 0, 0, 1.0, 0, ceil);
+        check(r[1] <= 6 && r[4] == 0, "потолок останавливает");
+        // свободный путь проходит целиком
+        r = RiftLogic.knockMove(0, 5, 0, 1.4, 0.3, -0.7, (a, b, c, d, e, f) -> true);
+        check(near(r[0], 1.4) && near(r[1], 5.3) && near(r[2], -0.7), "без преград смещение полное");
     }
 
     // ---------------------------------------------------------------- Осколочник
