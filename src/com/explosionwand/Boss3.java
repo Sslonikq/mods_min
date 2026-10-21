@@ -81,7 +81,7 @@ public class Boss3 {
     final double[] segY = new double[4], segAng = new double[4], segSpd = {0.035, -0.05, 0.028, -0.042};
     double spin = 1, lift = 0, eyeOpen = 1, crownAng = 0;
     int broken = 0, phase = 1, breakT = -1, dyingT = 0;
-    boolean lethal = false, won = false;
+    boolean lethal = false, won = false, paid = false;
     // атаки
     int ringCd = 120, beamCd = 90, armCd = 140, shardCd = 80, spinCd = 160, nearT = 0;
     int stompT = -1, spinT = -1, fogCd = 160, sinkCd = 240, sinkT = -1;
@@ -143,10 +143,8 @@ public class Boss3 {
             boolean done;
             try { done = b.tick(); }
             catch (RuntimeException e) { b.cleanup(); it.remove(); throw e; }
-            if (done) {
-                it.remove();
-                if (b.won) Dungeons.lairWon(sl, data, b.rec, b.hall, b.players());
-            }
+            if (b.won && !b.paid) { b.paid = true; Dungeons.lairWon(sl, data, b.rec, b.hall, b.players()); }   // победа засчитана в начале гибели (startDeath)
+            if (done) it.remove();
         }
     }
 
@@ -180,7 +178,7 @@ public class Boss3 {
 
     /** Игроки в логове (коробка зала с запасом, потолок включая): заголовки и полоска не видны в коридоре за печатью. */
     String sel() {
-        return "@a[x=" + Cmd.f(ax - rx - 1) + ",y=" + Cmd.f(floor - 2) + ",z=" + Cmd.f(az - rz - 1) + ",dx=" + Cmd.f(2 * rx + 2) + ",dy=" + Cmd.f(CEIL + 4) + ",dz=" + Cmd.f(2 * rz + 2) + "]";
+        return "@a[gamemode=!spectator,x=" + Cmd.f(ax - rx - 1) + ",y=" + Cmd.f(floor - 2) + ",z=" + Cmd.f(az - rz - 1) + ",dx=" + Cmd.f(2 * rx + 2) + ",dy=" + Cmd.f(CEIL + 4) + ",dz=" + Cmd.f(2 * rz + 2) + "]";
     }
 
     ServerPlayer nearest() {
@@ -252,7 +250,7 @@ public class Boss3 {
     boolean tick() {
         t++;
         long bit = 1L << hall.id;
-        if ((rec.hallsSpawned & bit) == 0 || (rec.hallsCleared & bit) != 0) { cleanup(); return true; }   // зал сброшен или засчитан без нас
+        if ((rec.hallsSpawned & bit) == 0 || ((rec.hallsCleared & bit) != 0 && stage != 3)) { cleanup(); return true; }   // зал сброшен или засчитан без нас
         if (stage == -1) {      // пробуждение: сердцебиение и бирюзовые искры над помостом, босс ещё не виден
             if (t == 1) purge();
             if (t == 1 || (t % 15 == 0 && t < 60)) Fx.sound(level, ax, floor + 4, az, "entity.warden.heartbeat", 20.0F, 0.3F + t / 180F);
@@ -738,6 +736,7 @@ public class Boss3 {
     // ================= Гибель =================
     void startDeath() {
         stage = 3; dyingT = 0;
+        won = true;     // зал засчитывает tickAll сразу (lairWon), эффект гибели доигрывается 5 с; выход игрока из мира победу не отменит
         rings.clear(); lances.clear(); shards.clear(); fogs.clear(); sinkOff = 0; stompT = -1; spinT = -1; sinkT = -1;
         Cmd.run(level, ax, floor, az, "bossbar remove " + bar);
         minionsOff();
@@ -758,8 +757,7 @@ public class Boss3 {
             Fx.sound(level, bx, floor + 2, bz, "block.deepslate.break", 8.0F, 0.4F + dyingT / 120F);
         }
         if (dyingT == 100) {
-            purge();   // хост и части уходят; победу засчитывает tickAll (Dungeons.lairWon: hallsCleared + сундук)
-            won = true;
+            purge();   // хост и части уходят; победу уже засчитал tickAll (Dungeons.lairWon: hallsCleared + сундук)
             double c = floor + 2;
             Fx.send(level, Fx.particle("flash"), bx, c, bz, 5, 2, 2, 2, 0);
             Fx.send(level, Fx.particle("explosion_emitter"), bx, c, bz, 4, 2, 2, 2, 0);
@@ -800,6 +798,10 @@ public class Boss3 {
         for (Boss3 x : BOSSES.values()) if (x.host != null && x.host == target) { b = x; break; }
         // приспешники не бьют друг друга и босса
         if (b == null) {
+            // окно между summon хоста и его поиском (host == null): удар прошёл бы без множителя и обрезки
+            if (target.m_19880_().contains(TAG + "_host")) {
+                for (Boss3 x : BOSSES.values()) if (x.host == null) { ev.setCanceled(true); return; }
+            }
             if (Cmd.hasTagPrefix(target, MIN) && ev.getSource() != null && ev.getSource().m_7639_() != null && Cmd.hasTagPrefix(ev.getSource().m_7639_(), TAG)) ev.setCanceled(true);
             return;
         }
