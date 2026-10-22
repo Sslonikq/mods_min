@@ -120,22 +120,21 @@ final class DungeonGuard {
 
     /**
      * Палочки с телепортом, порталами и переходом в другие измерения: в данжах (с боссом и без) не работают всегда, иначе в обход ловушек
-     * и залов (таблица палочка -> можно/нельзя -> почему: docs/dungeons.md).
-     */
+     * и залов (таблица палочка -> можно/нельзя -> почему: docs/dungeons.md). Посохи в данжах разрешены все (2.19.1): Посох Разлома и нырок Кита сами не пускают сквозь стены и в чужой зал ({@link Dungeons#canReach}), Посох Затмения держит {@code Dungeons.shield}. */
     static boolean teleports(Item i) {
         return i instanceof PortalWandItem || i instanceof PortalGunItem || i instanceof TesseractWandItem || i instanceof MimicWandItem
-                || i instanceof SkySealItem || i instanceof EclipseSealItem || i instanceof WhaleStaffItem || i instanceof RiftStaffItem
+                || i instanceof SkySealItem || i instanceof EclipseSealItem
                 || (i instanceof EarthWandItem w && w.kind == EarthLogic.Kind.RETURN);
     }
 
     /**
-     * Палочки, ломающие баланс боёв и правящие местность массово (Разлом, Чёрная дыра, Ледяная буря, Хронос, Затмение, Копатель): запрещены,
+     * Палочки, ломающие баланс боёв и правящие местность массово (Разлом, Чёрная дыра, Ледяная буря, Хронос, Копатель): запрещены,
      * пока жив босс данжа; после победы над боссом блоки данжа не защищены (Dungeons.markCleared), и они разрешены.
      * Палочки боя, огня, льда, шипов, искр, притяжения, лечения и взрывные работают всегда (блоки держат Shield и onDetonate).
      */
     static boolean breaksBalance(Item i) {
         return i instanceof RiftWandItem || i instanceof BlackHoleWandItem || i instanceof IceStormWandItem
-                || i instanceof ChronosWandItem || i instanceof EclipseStaffItem
+                || i instanceof ChronosWandItem
                 || (i instanceof EarthWandItem w && w.kind.noDungeon && w.kind != EarthLogic.Kind.RETURN);
     }
 

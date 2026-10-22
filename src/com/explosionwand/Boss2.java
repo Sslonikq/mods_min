@@ -597,7 +597,7 @@ public class Boss2 {
             Fx.sound(level, bx, c, bz, "entity.generic.explode", 30.0F, 0.5F);
             Fx.sound(level, bx, c, bz, "ui.toast.challenge_complete", 15.0F, 1.0F);
             Loot.chest(level, 0, FLOOR, 5, "Добыча Короля Затмения", List.of(
-                    "explosionwand:eclipse_heart", "minecraft:nether_star", "16 minecraft:diamond", "3 minecraft:netherite_ingot",
+                    "explosionwand:eclipse_heart", "explosionwand:eclipse_staff", "minecraft:nether_star", "16 minecraft:diamond", "3 minecraft:netherite_ingot",
                     "2 minecraft:enchanted_golden_apple"));
             String at = Cmd.f(AX) + " " + (FLOOR + 1) + " " + Cmd.f(AZ + 3);
             for (int i = 0; i < 10; i++) Cmd.run(level, AX, FLOOR, AZ, "summon experience_orb " + at + " {Value:300}");

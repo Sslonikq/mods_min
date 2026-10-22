@@ -92,8 +92,19 @@ public class AshMobsTest {
             String rm = Files.readString(Path.of("src/com/explosionwand/RiftMobs.java")), mb = Files.readString(Path.of("src/com/explosionwand/AshMobsB.java")), dm = Files.readString(Path.of("src/com/explosionwand/DungeonMech.java"));
             check(rm.contains("t.equals(AshLogic.TRAP_TAG)") && rm.contains("am.expire = now + AshLogic.TRAP_SPARK_LIFE"), "adopt задаёт срок жизни Искре ловушки после перезагрузки");
             check(mb.contains("AshLogic.TRAP_TAG") && mb.contains("am.summoned = true") && mb.contains("Loot.wild("), "Искры ловушки с тегом ловушки, сундук огонька без светокамня");
+            check(rm.contains("t.startsWith(\"ewd\") && t.length() > 3 && !t.endsWith(\"_min\")"), "adopt не принимает ewdw_min за тег зала");
             check(dm.contains("ewdw_min"), "мобы волн жаровен помечены _min (без материалов)");
         } catch (java.io.IOException e) { check(false, "чтение исходников: " + e); }
+        // лимит сундука: один за ночь на Святилище
+        long dusk = 13000, dawn = 23000, nextDusk = 24000 + 13000, midnight2 = 24000 + 18000, morning = 24000 + 2000;
+        check(AshLogic.nightId(dusk) == AshLogic.nightId(dawn) && AshLogic.nightId(dusk) == AshLogic.nightId(morning), "ночь: вечер, рассвет и раннее утро - одна ночь");
+        check(AshLogic.nightId(nextDusk) == AshLogic.nightId(dusk) + 1 && AshLogic.nightId(midnight2) == AshLogic.nightId(nextDusk), "следующая ночь - новый номер");
+        check(AshLogic.chestAllowed(null, AshLogic.nightId(dusk)) && !AshLogic.chestAllowed(AshLogic.nightId(dusk), AshLogic.nightId(dawn)) && AshLogic.chestAllowed(AshLogic.nightId(dusk), AshLogic.nightId(nextDusk)),
+                "сундук: первый за ночь есть, второй нет, на следующую ночь снова");
+        try {
+            String mb = Files.readString(Path.of("src/com/explosionwand/AshMobsB.java"));
+            check(mb.contains("AshLogic.chestAllowed(WISP_NIGHT.get(key), night)") && mb.contains("!chest || !Loot.wild("), "огонёк сверх лимита даёт 3 угля без сундука");
+        } catch (java.io.IOException e) { check(false, "чтение AshMobsB: " + e); }
         check(Kind.ASH_WISP.host.equals("bat"), "хост огонька - летучая мышь (мирный режим её не стирает)");
         check(Mats.dungeonOf(Kind.ASH_WISP) == null && Mats.dungeonOf(Kind.ASH_WALKER) == Mats.Dungeon.ASH && Mats.dungeonOf(Kind.ASH_KEEPER) == Mats.Dungeon.ASH
                 && Mats.strong(Kind.ASH_KEEPER) && Mats.strong(Kind.ASH_GUARD) && !Mats.strong(Kind.ASH_SPARK), "материалы Святилища с мобов (огонёк не даёт), элита щедрее");

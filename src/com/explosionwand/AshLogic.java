@@ -113,6 +113,12 @@ final class AshLogic {
     static final int WISP_CAP = 2, WISP_PERIOD = 200, WISP_CHANCE = 20, TRAP_PERCENT = 55, WISP_LIFE = 6000, TRAP_WIND = 28, TRAP_SPARKS = 3, TRAP_SPARK_LIFE = 800;
     static final double WISP_RANGE = 110, WISP_MIN = 30, WISP_MAX = 70, DEST_MIN = 26, DEST_MAX = 44, LURE_RANGE = 12, WISP_SPEED = 0.085, TRAP_R = 5, ARRIVE = 2.5;
 
+    /** Номер ночи по времени суток мира (getDayTime): ночь идёт с 12000 до 36000 (до 12000 следующих суток), номер один на всю ночь. Сон через ночь номер не ломает. */
+    static long nightId(long dayTime) { return Math.floorDiv(dayTime + 12000, 24000); }
+
+    /** Сундук огонька за эту ночь ещё не выдавался (last - номер ночи прошлого сундука или null). */
+    static boolean chestAllowed(Long last, long night) { return last == null || last != night; }
+
     /** Огонёк появляется ночью у святилища: не больше WISP_CAP, шанс WISP_CHANCE процентов за проверку. */
     static boolean wispSpawns(boolean night, int have, int roll) { return night && have < WISP_CAP && roll < WISP_CHANCE; }
 

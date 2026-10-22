@@ -125,7 +125,7 @@ final class AshMobs {
             }
             pose.atk = Math.max(0, pose.atk - 0.12);
             if (cd > 0) cd--;
-            ServerPlayer p = nearest(22, 5);
+            ServerPlayer p = notice(22, 5);
             if (p == null) return;
             face(p.m_20185_(), p.m_20189_(), 0.18);
             double d = hd(p.m_20185_(), p.m_20189_());
@@ -156,7 +156,7 @@ final class AshMobs {
         { leash = 24; }
 
         @Override void act() {
-            ServerPlayer p = nearest(20, 12);
+            ServerPlayer p = notice(20, 12);
             double tx, tz, ty;
             if (p != null) { ang += 0.04; tx = p.m_20185_() + Math.cos(ang) * AshLogic.SPARK_KEEP; tz = p.m_20189_() + Math.sin(ang) * AshLogic.SPARK_KEEP; ty = p.m_20186_() + 2.2; }
             else { ang += 0.02; tx = hx + Math.cos(ang) * 2.5; tz = hz + Math.sin(ang) * 2.5; ty = hy; }
@@ -195,8 +195,7 @@ final class AshMobs {
             for (ServerPlayer p : ps) {
                 if (!p.m_6084_() || p.m_5833_()) continue;
                 if (RiftLogic.segDist(x, y + 0.3, z, end[0], end[1], end[2], p.m_20185_(), p.m_20186_() + 1.0, p.m_20189_()) < AshLogic.SPARK_HIT_R) {
-                    hitPlayer(p, AshLogic.SPARK_BOLT, 0.1);
-                    p.m_20254_(AshLogic.SPARK_FIRE_SECONDS);
+                    if (hitBeam(p, AshLogic.SPARK_BOLT, 0.1)) p.m_20254_(AshLogic.SPARK_FIRE_SECONDS);
                 }
             }
         }
@@ -224,7 +223,7 @@ final class AshMobs {
             }
             pose.atk = Math.max(0, pose.atk - 0.2);
             if (cd > 0) cd--;
-            ServerPlayer p = nearest(26, 5);
+            ServerPlayer p = notice(26, 5);
             if (p == null) { idle(); return; }
             double d = hd(p.m_20185_(), p.m_20189_());
             face(p.m_20185_(), p.m_20189_(), 0.3);
@@ -270,7 +269,7 @@ final class AshMobs {
         int wind = -1, cd = 80 + RiftMobs.RNG.nextInt(60);
 
         @Override void act() {
-            ServerPlayer p = nearest(24, 6);
+            ServerPlayer p = notice(24, 6);
             if (wind >= 0) { windStep(); return; }
             pose.charge = Math.max(0, pose.charge - 0.08);
             if (p == null) return;

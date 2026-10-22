@@ -128,7 +128,7 @@ final class RiftMobs {
         String id = newId();
         Mob m = make(k);
         m.setup(k, id, sl);
-        if (extraTags != null && !extraTags.isEmpty()) { m.tags = "," + extraTags; m.summoned = true; }
+        if (extraTags != null && !extraTags.isEmpty()) { m.tags = "," + extraTags; m.summoned = !extraTags.startsWith("\"ewwh_"); }   // ewwh_<ключ Святилища> у огонька - не приспешник
         m.x = x; m.y = y + lift(k); m.z = z;
         m.yaw = RNG.nextDouble() * Math.PI * 2;
         m.initPose();
@@ -189,7 +189,8 @@ final class RiftMobs {
         for (String t : host.m_19880_()) {
             if (t.endsWith("_min")) m.summoned = true;   // приспешник босса (после перезапуска): материалов нет
             if (t.equals(AshLogic.TRAP_TAG) && m instanceof AshMobs.AMob am) am.expire = now + AshLogic.TRAP_SPARK_LIFE;   // Искра ловушки огонька: срок жизни заново
-            if (t.startsWith("ewd") && t.length() > 3) m.hallTag = t;
+            if (t.startsWith("ewwh_") && m instanceof AshMobsB.Wisp w) w.home = t.substring(5);   // ключ Святилища огонька переживает выгрузку чанка
+            if (t.startsWith("ewd") && t.length() > 3 && !t.endsWith("_min")) m.hallTag = t;
             else if (t.startsWith("ewrh")) {   // точка появления (в полублоках): у Тени хост прячется под полом, оттуда её не взять
                 String[] c = t.substring(4).split("_");
                 if (c.length == 3) m.home(Integer.parseInt(c[0]) / 2.0, Integer.parseInt(c[1]) / 2.0, Integer.parseInt(c[2]) / 2.0);
@@ -365,6 +366,7 @@ final class RiftMobs {
             if (killer instanceof ServerPlayer && m.level != null && !m.summoned) {
                 LivingEntity h = ev.getEntity();
                 Mats.onMobDeath(m.level, m.kind, h.m_20185_(), h.m_20186_(), h.m_20189_());
+                ArmorSets.onMobKilled(m.level, (ServerPlayer) killer, m.kind, h.m_20185_(), h.m_20186_(), h.m_20189_());   // часть сета брони данжа (4.12)
             }
         } catch (RuntimeException e) { if (!warned) { warned = true; e.printStackTrace(); } }
         m.discardParts();
@@ -630,15 +632,19 @@ final class RiftMobs {
 
         double hd(double px, double pz) { double dx = px - x, dz = pz - z; return Math.sqrt(dx * dx + dz * dz); }
 
-        /** Ближайший живой игрок не дальше range по горизонтали и dy по вертикали. */
-        ServerPlayer nearest(double range, double dy) { return nearestFrom(x, y, z, range, dy); }
+        /** Ближайший живой игрок не дальше range по горизонтали и dy по вертикали (радиус как есть: атаки, бегство, проводка). */
+        ServerPlayer nearest(double range, double dy) { return nearestFrom(x, y, z, range, dy, false); }
 
-        ServerPlayer nearestFrom(double fx, double fy, double fz, double range, double dy) {
-            ServerPlayer best = null; double bd = range * range;
+        /** То же для обнаружения цели: Облачение Сновидца уменьшает радиус замечания (ArmorSets.noticeMul). */
+        ServerPlayer notice(double range, double dy) { return nearestFrom(x, y, z, range, dy, true); }
+
+        ServerPlayer nearestFrom(double fx, double fy, double fz, double range, double dy, boolean notice) {
+            ServerPlayer best = null; double bd = Double.MAX_VALUE;
             for (ServerPlayer p : ps) {
                 if (!p.m_6084_() || p.m_5833_() || Math.abs(p.m_20186_() - fy) > dy) continue;
+                double r = notice ? range * ArmorSets.noticeMul(p) : range;
                 double dx = p.m_20185_() - fx, dz = p.m_20189_() - fz, d = dx * dx + dz * dz;
-                if (d <= bd) { bd = d; best = p; }
+                if (d <= r * r && d <= bd) { bd = d; best = p; }
             }
             return best;
         }
@@ -651,6 +657,13 @@ final class RiftMobs {
             double dx = p.m_20185_() - x, dz = p.m_20189_() - z, l = Math.max(0.3, Math.sqrt(dx * dx + dz * dz));
             p.m_20256_(new Vec3(dx / l * kb, 0.32, dz / l * kb));
             p.f_19864_ = true;
+        }
+
+        /** Дальняя атака (луч, плевок, залп) по игроку: «Грань» Кристального доспеха может вернуть её в стрелка. true - игрок получил удар. */
+        boolean hitBeam(ServerPlayer p, double dmg, double kb) {
+            if (ArmorSets.tryReflectBeam(p, host, scaled(dmg))) return false;
+            hitPlayer(p, dmg, kb);
+            return true;
         }
 
         void dust(ParticleOptions o, double px, double py, double pz) { Fx.send(level, o, px, py, pz, 1, 0, 0, 0, 0); }
@@ -683,7 +696,7 @@ final class RiftMobs {
             }
             pose.atk = Math.max(0, pose.atk - 0.15);
             if (cd > 0) cd--;
-            ServerPlayer p = nearest(24, 4);
+            ServerPlayer p = notice(24, 4);
             if (p == null) return;
             face(p.m_20185_(), p.m_20189_(), 0.3);
             double d = hd(p.m_20185_(), p.m_20189_());
@@ -732,7 +745,7 @@ final class RiftMobs {
             }
             if (ph != 0) { aim = -1; pose.charge = 0; return; }
             if (cd > 0) cd--;
-            ServerPlayer p = nearest(26, 8);
+            ServerPlayer p = notice(26, 8);
             double[] tip = tip();
             if (aim < 0) {
                 if (p == null) { yaw += 0.01; return; }
@@ -777,8 +790,7 @@ final class RiftMobs {
             for (ServerPlayer p : ps) {
                 if (!p.m_6084_() || p.m_5833_()) continue;
                 if (RiftLogic.segDist(tip[0], tip[1], tip[2], end[0], end[1], end[2], p.m_20185_(), p.m_20186_() + 1.0, p.m_20189_()) < 0.9) {
-                    hitPlayer(p, 6, 0.2);
-                    Fx.send(level, VIO, p.m_20185_(), p.m_20186_() + 1, p.m_20189_(), 15, 0.3, 0.4, 0.3, 0.1);
+                    if (hitBeam(p, 6, 0.2)) Fx.send(level, VIO, p.m_20185_(), p.m_20186_() + 1, p.m_20189_(), 15, 0.3, 0.4, 0.3, 0.1);
                 }
             }
         }
@@ -801,7 +813,7 @@ final class RiftMobs {
                     pose.e = 0; pose.crack = 0; pose.atk = 0; pose.strike = 0;
                     if (Math.abs(y - (hy - 3)) > 0.01 || Math.abs(x - hx) > 0.01 || Math.abs(z - hz) > 0.01) setPos(hx, hy - 3, hz);
                     if (cd > 0) { cd--; return; }
-                    ServerPlayer p = nearestFrom(hx, hy, hz, 14, 5);
+                    ServerPlayer p = nearestFrom(hx, hy, hz, 14, 5, true);
                     if (p == null) return;
                     double[] a = ambush(p);
                     if (a == null) { cd = 20; return; }
@@ -905,7 +917,7 @@ final class RiftMobs {
         @Override void think() {
             pose.t = t;
             if (t % 20 == 0) buff();
-            ServerPlayer p = nearest(24, 9);
+            ServerPlayer p = notice(24, 9);
             double tx, tz, ty = hy + 4.5;
             if (p != null) { ang += 0.02; tx = p.m_20185_() + Math.cos(ang) * 4; tz = p.m_20189_() + Math.sin(ang) * 4; ty = Math.max(ty, p.m_20186_() + 3.5); }
             else { ang += 0.012; tx = hx + Math.cos(ang) * 5; tz = hz + Math.sin(ang) * 5; }
@@ -936,6 +948,7 @@ final class RiftMobs {
                 if (!p.m_6084_() || p.m_5833_()) continue;
                 double dx = p.m_20185_() - lx, dz = p.m_20189_() - lz;
                 if (dx * dx + dz * dz < 1.4 * 1.4 && Math.abs(p.m_20186_() - ly) < 3) {
+                    if (ArmorSets.tryReflectBeam(p, host, scaled(7))) continue;   // «Грань»: луч Призмы бьёт саму Призму
                     p.m_6469_(level.m_269111_().m_269333_(host), scaled(7));
                     p.m_20256_(new Vec3(dx * 0.3, 0.4, dz * 0.3)); p.f_19864_ = true;
                 }
@@ -1025,7 +1038,7 @@ final class RiftMobs {
             for (ServerPlayer p : ps) {
                 if (!p.m_6084_() || p.m_5833_()) continue;
                 double dx = p.m_20185_() - x, dy = p.m_20186_() - y, dz = p.m_20189_() - z;
-                double r = RiftLogic.hearRadius(p.m_20142_(), p.m_6144_(), MOVED.contains(p.m_20148_()));
+                double r = RiftLogic.hearRadius(p.m_20142_(), p.m_6144_(), MOVED.contains(p.m_20148_())) * ArmorSets.noticeMul(p);
                 if (RiftLogic.hears(dx, dy, dz, r)) { double d = dx * dx + dy * dy + dz * dz; if (d < best) { best = d; res = new double[]{p.m_20185_(), p.m_20189_()}; } }
             }
             for (Noise n : NOISES) {
@@ -1061,7 +1074,7 @@ final class RiftMobs {
             for (int i = 0; i < GolemArmor.CRYSTALS; i++) pose.cr[i] += ((ar.hp[i] > 0 ? 1 : 0) - pose.cr[i]) * 0.25;
             pose.strike = Math.max(0, pose.strike - 0.1);
             if (ar.stunned()) { wind = -1; pose.atk = 0; return; }
-            ServerPlayer p = nearest(30, 6);
+            ServerPlayer p = notice(30, 6);
             if (p == null) return;
             if (wind < 0) {
                 face(p.m_20185_(), p.m_20189_(), 0.06);

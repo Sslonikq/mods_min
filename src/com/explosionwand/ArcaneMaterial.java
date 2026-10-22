@@ -10,7 +10,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 /** Материал «Облачения Архимага»: на уровне незерита, лучше зачаровывается. */
 final class ArcaneMaterial implements ArmorMaterial {
     static final ArcaneMaterial INSTANCE = new ArcaneMaterial();
-    static final int[] DUR = {13, 15, 16, 11}, DEF = {3, 8, 6, 3};
+    static final int[] DUR = {11, 16, 15, 13}, DEF = {3, 8, 6, 3};   // по ordinal Type: шлем, нагрудник, поножи, сапоги (прочность как у незерита)
 
     @Override public int m_266425_(ArmorItem.Type t) { return DUR[t.ordinal()] * 37; }
     @Override public int m_7366_(ArmorItem.Type t) { return DEF[t.ordinal()]; }

@@ -1,0 +1,1 @@
+package net.minecraft.world.entity.ai.attributes; public class AttributeModifier { public AttributeModifier(java.util.UUID id, String name, double amount, Operation op){} public enum Operation { ADDITION, MULTIPLY_BASE, MULTIPLY_TOTAL } }

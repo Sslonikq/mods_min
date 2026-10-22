@@ -144,6 +144,12 @@ public class BossAshTest {
             check(len >= 0 && len <= 12, "длина скольжения 0..12: " + len);
         }
         check(worstEnd <= Boss5.R - 3 + 1e-9, "скольжение не выходит за R-3 от центра: " + worstEnd);
+        check(Boss5.PERCH_TICKS == 60, "окно после пике ровно 3 с (60 тиков): " + Boss5.PERCH_TICKS);
+        try {
+            String b5 = java.nio.file.Files.readString(java.nio.file.Path.of("src/com/explosionwand/Boss5.java"));
+            check(b5.contains("modeT >= PERCH_TICKS") && !b5.contains("life == 2 ? 45 : 70"), "посадка держится PERCH_TICKS, без отдельных чисел по жизням");
+            check(b5.contains("if (--diveCd <= 0) { startWarn") && b5.indexOf("--diveCd") == b5.lastIndexOf("--diveCd"), "таймер пике идёт только в круге (в окне Феникс не пикирует)");
+        } catch (java.io.IOException e) { check(false, "Boss5.java не читается"); }
         check(Boss5.PERCH_Y < 3 && Boss5.CRUISE_Y >= 5 && Boss5.CRUISE_Y + 3 < Boss5.vault(Boss5.ORBIT_R + 10) + 1, "посадка у пола, круг под сводом");
 
         // ---- места Пеплоходов (кольцо r 8,5 на полу, сталагмитов нет) и Искр (высота 8 над меткой: выше любого сталагмита)

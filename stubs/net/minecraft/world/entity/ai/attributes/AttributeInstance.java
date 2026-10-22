@@ -1,0 +1,1 @@
+package net.minecraft.world.entity.ai.attributes; public class AttributeInstance { public void m_22118_(AttributeModifier m){} public void m_22120_(java.util.UUID id){} public AttributeModifier m_22111_(java.util.UUID id){return null;} }

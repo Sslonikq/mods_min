@@ -101,6 +101,12 @@ final class CityMobs {
     }
 
     static void effect(ServerLevel level, ServerPlayer p, String id, int ticks, int amp) {
+        if (ArmorSets.sleepImmune(p)) return;   // Облачение Сновидца, 4 части: усыпление и замедление Города не действуют
+        give(level, p, id, ticks, amp);
+    }
+
+    /** Эффект без проверки иммунитета Сновидца (слепота укуса Ночной моли действует и в полном сете). */
+    static void give(ServerLevel level, ServerPlayer p, String id, int ticks, int amp) {
         Cmd.run(level, p.m_20185_(), p.m_20186_(), p.m_20189_(), "effect give " + p.m_20148_() + " minecraft:" + id + " " + Math.max(1, ticks / 20) + " " + amp + " true");
     }
 
@@ -163,7 +169,7 @@ final class CityMobs {
         }
 
         void rage() {
-            ServerPlayer p = nearest(24, 6);
+            ServerPlayer p = notice(24, 6);
             if (p == null) idle++; else idle = 0;
             if (CityLogic.calmsDown(idle)) { sleep(); return; }
             if (wind > 0) {
@@ -212,7 +218,7 @@ final class CityMobs {
             init();
             pose.t = t;
             if (t % 20 == 0) aura();
-            ServerPlayer p = nearest(22, 8);
+            ServerPlayer p = notice(22, 8);
             double tx, tz, ty = hy + 2.5;
             if (p != null) { ang += 0.02; tx = p.m_20185_() + Math.cos(ang) * 5; tz = p.m_20189_() + Math.sin(ang) * 5; ty = Math.max(ty, p.m_20186_() + 3); }
             else { ang += 0.012; tx = hx + Math.cos(ang) * 3; tz = hz + Math.sin(ang) * 3; }
@@ -254,7 +260,7 @@ final class CityMobs {
             for (ServerPlayer p : ps) {
                 if (!p.m_6084_() || p.m_5833_()) continue;
                 if (RiftLogic.segDist(tip[0], tip[1], tip[2], end[0], end[1], end[2], p.m_20185_(), p.m_20186_() + 1.0, p.m_20189_()) < 0.9) {
-                    hitPlayer(p, CityLogic.DROWSY_RAY, 0.1);
+                    if (!hitBeam(p, CityLogic.DROWSY_RAY, 0.1)) continue;   // «Грань»: отражённый луч не усыпляет
                     effect(level, p, "slowness", CityLogic.RAY_SLOW_TICKS, CityLogic.RAY_SLOW_AMP);
                     Fx.send(level, TEAL, p.m_20185_(), p.m_20186_() + 1, p.m_20189_(), 15, 0.3, 0.4, 0.3, 0.1);
                 }
@@ -296,7 +302,7 @@ final class CityMobs {
             if (wind > 0) { windStep(); return; }
             pose.atk = Math.max(0, pose.atk - 0.15);
             pose.charge = Math.max(0, pose.charge - 0.1);
-            ServerPlayer p = nearest(26, 5);
+            ServerPlayer p = notice(26, 5);
             if (p == null) return;
             if (cd > 0) cd--;
             face(p.m_20185_(), p.m_20189_(), recover > 0 ? 0.08 : 0.25);
@@ -417,7 +423,7 @@ final class CityMobs {
             if (windy && t % 4 == 0) Fx.send(level, PALE, x, y + 0.5, z, 3, 0.6, 0.4, 0.6, 0.05);
             Light l = nearestLight(level, x, y, z, CityLogic.MOTH_SEEK_LIGHT);
             if (l != null) { bite = -1; pose.atk = Math.max(0, pose.atk - 0.1); seekLight(l, sp); return; }
-            ServerPlayer p = nearest(22, 8);
+            ServerPlayer p = notice(22, 8);
             if (bite >= 0) { biteStep(p); return; }
             pose.atk = Math.max(0, pose.atk - 0.08);
             if (p == null) { wander(sp * 0.5); return; }
@@ -451,7 +457,7 @@ final class CityMobs {
             for (ServerPlayer q : ps) {
                 if (!q.m_6084_() || q.m_5833_() || hd(q.m_20185_(), q.m_20189_()) > CityLogic.MOTH_BITE_R || Math.abs(q.m_20186_() + 1.0 - y) > 3) continue;
                 hitPlayer(q, CityLogic.MOTH_HIT, 0.2);
-                effect(level, q, "blindness", CityLogic.MOTH_BLIND_TICKS, 0);
+                give(level, q, "blindness", CityLogic.MOTH_BLIND_TICKS, 0);   // не усыпление: Облачение Сновидца не защищает
                 Fx.send(level, PALE, q.m_20185_(), q.m_20186_() + 1.4, q.m_20189_(), 14, 0.3, 0.3, 0.3, 0.05);
             }
             sound("entity.bee.sting", 0.9F, 0.7F);

@@ -23,7 +23,9 @@ import java.util.*;
 final class AshMobsB {
     private AshMobsB() {}
 
-    static void clear() { }
+    /** Святилище (Rec.key) -> номер ночи, в которую огонёк уже отдал сундук. В памяти сервера: после перезапуска лимит обнуляется. */
+    static final Map<String, Long> WISP_NIGHT = new HashMap<>();
+    static void clear() { WISP_NIGHT.clear(); }
 
     private static boolean peaceful(ServerLevel l) { return l.m_46791_() == Difficulty.valueOf("PEACEFUL"); }
 
@@ -68,7 +70,7 @@ final class AshMobsB {
         @Override void act() {
             if (cells == null) cells = lavaCells();
             pose.open += ((st == UP ? 1 : 0) - pose.open) * 0.25;
-            ServerPlayer p = nearest(AshLogic.WORM_RANGE, 8);
+            ServerPlayer p = notice(AshLogic.WORM_RANGE, 8);
             if (st == HIDDEN) {
                 pose.charge = 0;
                 if (tm > 0) { tm--; return; }
@@ -121,6 +123,7 @@ final class AshMobsB {
                 if (!p.m_6084_() || p.m_5833_()) continue;
                 double dx = p.m_20185_() - sx, dz = p.m_20189_() - sz;
                 if (dx * dx + dz * dz < AshLogic.WORM_SPIT_R * AshLogic.WORM_SPIT_R && Math.abs(p.m_20186_() - sy) < 2.5) {
+                    if (ArmorSets.tryReflectBeam(p, host, scaled(AshLogic.WORM_SPIT))) continue;   // «Грань»: плевок возвращается червю
                     p.m_6469_(level.m_269111_().m_269333_(host), scaled(AshLogic.WORM_SPIT));
                     p.m_20254_(2);
                 }
@@ -142,7 +145,7 @@ final class AshMobsB {
         final List<double[]> circles = new ArrayList<>();
 
         @Override void act() {
-            ServerPlayer p = nearest(26, 6);
+            ServerPlayer p = notice(26, 6);
             if (heal >= 0) { healStep(); return; }
             if (circle >= 0) { circleStep(); return; }
             pose.charge = Math.max(0, pose.charge - 0.1);
@@ -264,7 +267,7 @@ final class AshMobsB {
             }
             pose.atk = Math.max(0, pose.atk - 0.15);
             if (cd > 0) cd--;
-            ServerPlayer p = nearest(24, 5);
+            ServerPlayer p = notice(24, 5);
             if (p == null) return;
             face(p.m_20185_(), p.m_20189_(), 0.12);
             double d = hd(p.m_20185_(), p.m_20189_());
@@ -336,7 +339,7 @@ final class AshMobsB {
             }
             pose.atk = Math.max(0, pose.atk - 0.12);
             pose.charge = Math.max(0, pose.charge - 0.1);
-            ServerPlayer p = nearest(30, 6);
+            ServerPlayer p = notice(30, 6);
             if (p == null) return;
             if (cd > 0) cd--;
             if (circleCd > 0) circleCd--;
@@ -494,6 +497,7 @@ final class AshMobsB {
         long born = 0;
         double dx, dz, dgy, hover = 0;
         boolean hasDest;
+        String home;   // ключ Святилища, у которого появился огонёк (хранится в теге хоста ewwh_<ключ>, читается в RiftMobs.adopt; null - только у огонька без Святилища: общий ключ "wild")
         { leash = 120; }
 
         @Override void act() {
@@ -565,11 +569,16 @@ final class AshMobsB {
 
         void reward() {
             ServerLevel lv = level; int ix = (int) Math.floor(dx), iz = (int) Math.floor(dz), gy = (int) dgy;
+            // не больше одного сундука за ночь на Святилище (защита от фермы): сверх лимита - только 3 Пепельного угля на землю
+            long night = AshLogic.nightId(level.m_46468_());
+            String key = home == null ? "wild" : home;
+            boolean chest = AshLogic.chestAllowed(WISP_NIGHT.get(key), night);
+            if (chest) WISP_NIGHT.put(key, night);
             List<String> loot = new ArrayList<>(Mats.chestLoot(Mats.Dungeon.ASH, 1, RiftMobs.RNG));
             loot.add((2 + RiftMobs.RNG.nextInt(4)) + " minecraft:coal");
             loot.add((1 + RiftMobs.RNG.nextInt(3)) + " minecraft:gold_nugget");
             CityMobsB.QUEUE.add(() -> {   // сундук только в воздух на твёрдом грунте, без светокамня под ним; иначе добыча падает на землю
-                if (!Loot.wild(lv, ix, gy, iz, "explosionwand.mob.ash_wisp_chest_name", loot)) Mats.drop(lv, Mats.Dungeon.ASH, 0, 3, ix + 0.5, gy, iz + 0.5);
+                if (!chest || !Loot.wild(lv, ix, gy, iz, "explosionwand.mob.ash_wisp_chest_name", loot)) Mats.drop(lv, Mats.Dungeon.ASH, 0, 3, ix + 0.5, gy, iz + 0.5);
             });
             Fx.send(level, AshMobs.GOLD, x, y + 0.3, z, 30, 0.4, 0.4, 0.4, 0.08);
             sound("block.amethyst_block.chime", 1.4F, 1.2F);
@@ -615,7 +624,8 @@ final class AshMobsB {
             if (Math.hypot(bx - p.m_20185_(), bz - p.m_20189_()) > 64 || !RiftBeetles.chunkLoaded(sl, bx, bz)) continue;
             int ix = (int) Math.floor(bx), iz = (int) Math.floor(bz), by = Dungeons.groundY(sl, ix, iz);
             if (Math.abs(by - p.m_20186_()) > 20 || Dungeons.wet(sl, ix, by - 1, iz) || Dungeons.near(sl, bx, by, bz, 8)) continue;
-            RiftMobs.spawnKind(sl, Kind.ASH_WISP, bx, by + 1.6, bz, null);
+            String ht = "\"ewwh_" + r.key.replace("\\", "").replace("\"", "") + "\"";
+            if (RiftMobs.spawnKind(sl, Kind.ASH_WISP, bx, by + 1.6, bz, null, ht) instanceof Wisp w) w.home = r.key;
         }
     }
 }

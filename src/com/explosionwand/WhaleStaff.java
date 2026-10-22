@@ -55,8 +55,7 @@ final class WhaleStaff {
         if (until != null && now < until) { bar(l, p, text("Нырок — перезарядка " + ((until - now) / 20 + 1) + " сек", "red")); return; }
         CompoundTag tg = staff.m_41783_();
         boolean charged = tg != null && tg.m_128441_("Devoured") && tg.m_128451_("Echoes") > 0;
-        CD.put(p.m_20148_(), now + (long) ((charged ? DIVE_CD / 2 : DIVE_CD) * ArcaneSet.cd(p)));
-        dive(l, p, staff);
+        if (dive(l, p, staff)) CD.put(p.m_20148_(), now + (long) ((charged ? DIVE_CD / 2 : DIVE_CD) * ArcaneSet.cd(p)));
     }
 
     // ================= Пожирание =================
@@ -83,13 +82,18 @@ final class WhaleStaff {
     }
 
     // ================= Нырок =================
-    static void dive(ServerLevel l, ServerPlayer p, ItemStack staff) {
+    /** @return false, если нырять некуда (точка не видна: за стеной, печатью, дверью или в чужом зале данжа) - перезарядка не начинается */
+    static boolean dive(ServerLevel l, ServerPlayer p, ItemStack staff) {
         Aim aim = Aim.of(l, p, 16.0D);
         Vec3 tgt = aim.target;
         if (aim.hit && aim.entity == null) tgt = tgt.m_82546_(aim.look.m_82490_(0.5));
         Integer y = stand(l, tgt.f_82479_, tgt.f_82480_, tgt.f_82481_);
         final double dx = Math.floor(tgt.f_82479_) + 0.5, dz = Math.floor(tgt.f_82481_) + 0.5;
         final double dy = y != null ? y : tgt.f_82480_;
+        if (!Dungeons.canReach(l, p, dx, dy, dz)) {
+            bar(l, p, "{\"translate\":\"explosionwand.whale_staff.no_sight\",\"color\":\"red\"}");
+            return false;
+        }
         Vec3 from = p.m_20182_();
         var inv = Fx.effect("invisibility");
         if (inv != null) p.m_7292_(new MobEffectInstance(inv, 24, 0, false, false));
@@ -106,12 +110,18 @@ final class WhaleStaff {
         }
         Later.run(l, 20, () -> {
             if (!p.m_6084_() || p.m_9236_() != l) return;
+            if (!Dungeons.canReach(l, p, dx, dy, dz)) {   // ушёл за стену за время нырка: не телепортируем, перезарядку возвращаем
+                CD.remove(p.m_20148_());
+                bar(l, p, "{\"translate\":\"explosionwand.whale_staff.no_sight\",\"color\":\"red\"}");
+                return;
+            }
             p.m_6021_(dx, dy, dz);
             p.f_19789_ = 0;
             p.m_20256_(new Vec3(0, 0.5, 0)); p.f_19864_ = true;
             surface(l, p, dx, dy, dz);
             echo(l, p, staff, dx, dy, dz);
         });
+        return true;
     }
 
     /** Безопасная высота: пол под ногами и два блока воздуха. */

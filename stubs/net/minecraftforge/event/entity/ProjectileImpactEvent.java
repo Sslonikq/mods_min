@@ -1,0 +1,1 @@
+package net.minecraftforge.event.entity; public class ProjectileImpactEvent extends net.minecraftforge.eventbus.api.Event { public net.minecraft.world.entity.projectile.Projectile getProjectile(){return null;} public net.minecraft.world.phys.HitResult getRayTraceResult(){return null;} }

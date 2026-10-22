@@ -78,7 +78,7 @@ final class CityMobsB {
             if (cloneCd > 0) cloneCd--;
             if (wind > 0) { casting(); return; }
             pose.charge = Math.max(0, pose.charge - 0.1);
-            ServerPlayer p = nearest(26, 6);
+            ServerPlayer p = notice(26, 6);
             if (p == null) return;
             face(p.m_20185_(), p.m_20189_(), 0.2);
             double dx = p.m_20185_() - x, dz = p.m_20189_() - z, d = Math.max(0.01, Math.sqrt(dx * dx + dz * dz));
@@ -216,7 +216,7 @@ final class CityMobsB {
             if (o == null || o.host == null || o.host.m_213877_() || !o.host.m_6084_() || --life <= 0) { RiftMobs.retire(this); return; }
             pose.charge = o.pose.charge;
             if (life < 40 && t % 4 == 0) Fx.send(level, CityMobs.PALE, x, y + 1.0, z, 3, 0.3, 0.6, 0.3, 0.01);
-            ServerPlayer p = nearest(26, 6);
+            ServerPlayer p = notice(26, 6);
             if (p == null) return;
             face(p.m_20185_(), p.m_20189_(), 0.2);
             double dx = p.m_20185_() - x, dz = p.m_20189_() - z, d = Math.max(0.01, Math.sqrt(dx * dx + dz * dz));
@@ -250,7 +250,7 @@ final class CityMobsB {
             pose.t = t;
             flyPages();
             pose.atk = Math.max(0, pose.atk - 0.08);
-            ServerPlayer p = nearest(24, 8);
+            ServerPlayer p = notice(24, 8);
             double tx, tz, ty = hy + 1.5;
             if (p != null) { ang += 0.015; tx = p.m_20185_() + Math.cos(ang) * 7; tz = p.m_20189_() + Math.sin(ang) * 7; ty = Math.max(ty, p.m_20186_() + 1.6); }
             else { ang += 0.01; tx = hx + Math.cos(ang) * 3; tz = hz + Math.sin(ang) * 3; }
@@ -309,7 +309,7 @@ final class CityMobsB {
                     if (!p.m_6084_() || p.m_5833_()) continue;
                     double dx = p.m_20185_() - nx, dy = p.m_20186_() + 1.0 - ny, dz = p.m_20189_() - nz;
                     if (dx * dx + dy * dy + dz * dz <= CityLogic.PAGE_R * CityLogic.PAGE_R) {
-                        hitPlayer(p, CityLogic.PAGE_HIT, 0.1);
+                        hitBeam(p, CityLogic.PAGE_HIT, 0.1);
                         Fx.send(level, CityMobsB.CREAM, nx, ny, nz, 10, 0.2, 0.2, 0.2, 0.05);
                         sound("item.book.page_turn", 1.0F, 0.8F);
                         it.remove();
@@ -339,7 +339,7 @@ final class CityMobsB {
             pose.t = t;
             if (cd > 0) cd--;
             pose.strike = Math.max(0, pose.strike - 0.1);
-            ServerPlayer p = nearest(CityLogic.STATUE_RANGE, 3);
+            ServerPlayer p = notice(CityLogic.STATUE_RANGE, 3);
             if (p == null) {
                 wind = 0;
                 pose.atk = Math.max(0, pose.atk - 0.1);
@@ -419,7 +419,7 @@ final class CityMobsB {
             pose.charge = Math.max(0, pose.charge - 0.05);
             if (fist >= 0) { fistStep(); return; }
             pose.atk = Math.max(0, pose.atk - 0.1);
-            ServerPlayer p = nearest(30, 6);
+            ServerPlayer p = notice(30, 6);
             if (p == null) return;
             if (chimeCd > 0) chimeCd--;
             if (cd > 0) cd--;
@@ -450,7 +450,7 @@ final class CityMobsB {
             chimeWind--;
             double f = 1 - chimeWind / (double) CityLogic.CHIME_WIND;
             pose.charge = f;
-            ServerPlayer p = nearest(30, 6);
+            ServerPlayer p = notice(30, 6);
             if (p != null) face(p.m_20185_(), p.m_20189_(), 0.04);
             if (chimeWind % 2 == 0) {
                 ring(CityMobs.TEAL, x, y + 0.1, z, CityLogic.CHIME_RADIUS, 40);

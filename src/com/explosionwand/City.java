@@ -112,6 +112,7 @@ final class City {
     }
 
     private static void fog(ServerLevel sl, ServerPlayer p) {
+        if (ArmorSets.sleepImmune(p)) { TRACK.remove(p.m_20148_()); return; }   // Облачение Сновидца, 4 части: сонный туман не действует
         double x = p.m_20185_(), y = p.m_20186_(), z = p.m_20189_();
         double[] t = TRACK.get(p.m_20148_());
         if (t == null) { TRACK.put(p.m_20148_(), new double[]{x, z, 0}); t = TRACK.get(p.m_20148_()); }

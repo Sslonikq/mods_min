@@ -28,7 +28,7 @@ final class EarthLogic {
         VINE("vine_wand", 160, false),
         PULL("pull_wand", 80, false),
         DECOY("decoy_wand", 300, false),
-        SPARKS("spark_wand", 100, false),
+        SPARKS("spark_wand", 80, false),
         HEAT("heat_wand", 240, false);
         final String id; final int cd; final boolean noDungeon;
         Kind(String id, int cd, boolean noDungeon) { this.id = id; this.cd = cd; this.noDungeon = noDungeon; }
@@ -119,10 +119,10 @@ final class EarthLogic {
 
     // ---- Взрывная
     static final double SHOT_RANGE = 48.0D;
-    static final float SHOT_DAMAGE = 6.0F;    // тычок как стрела с Силой I
+    static final float SHOT_DAMAGE = 8.0F;    // тычок (2.19.1: 6 -> 8)
     static final float BLAST_POWER = 1.4F;    // динамит - 4.0
     static final float BREAK_MAX_HARDNESS = 4.0F;
-    static final int SHOT_CD = 25;
+    static final int SHOT_CD = 30;         // 1,5 с
 
     /** Взрыв ломает 2-4 блока. */
     static int blocksToBreak(Random r) { return 2 + r.nextInt(3); }
@@ -182,7 +182,7 @@ final class EarthLogic {
     // ---- Искры
     static final int SPARK_COUNT = 3, SPARK_STEPS = 40, SPARK_MAX = 24, SPARK_FIRE_SECONDS = 4;
     static final double SPARK_SPEED = 0.6D, SPARK_TURN = 0.5D, SPARK_HIT = 0.9D, SPARK_SEEK = 24.0D;
-    static final float SPARK_DAMAGE = 4.0F;
+    static final float SPARK_DAMAGE = 5.0F;
     /** Новая скорость: старое направление плюс притяжение к цели (turn - сила), длина остаётся speed. */
     static double[] steer(double[] v, double[] to, double turn, double speed) {
         double tl = Math.sqrt(to[0] * to[0] + to[1] * to[1] + to[2] * to[2]);

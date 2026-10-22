@@ -16,13 +16,13 @@ import org.joml.Vector3f;
 /**
  * Посох Разлома (посох 1-го уровня, добыча Сердца Разлома).
  *  ПКМ        — короткая трещина по линии прицела (до 14 блоков): мобы рядом с линией затягиваются к ней и получают урон.
- *  Shift+ПКМ  — шаг сквозь разлом: перенос на 8 блоков вперёд (если там нет места — на ближайшую свободную точку ближе).
- * В данжах не работает (DungeonGuard.forbidden).
+ *  Shift+ПКМ  — шаг сквозь разлом: перенос на 8 блоков вперёд (только в видимую точку) (если там нет места — на ближайшую свободную точку ближе).
+ * В данжах работает (с 2.19.1); шаг идёт только в видимую точку того же зала: не сквозь стены, печати и двери ({@link Dungeons#canReach}).
  */
 final class RiftStaff {
     static final double RANGE = 14.0D, WIDTH = 2.6D, STEP = 8.0D;
-    static final float DAMAGE = 6.0F;
-    static final int CRACK_CD = 100, STEP_CD = 80;
+    static final float DAMAGE = 8.0F;
+    static final int CRACK_CD = 80, STEP_CD = 80;
     static DustParticleOptions VIOLET, DARK;
 
     static void init() {
@@ -96,11 +96,11 @@ final class RiftStaff {
         final double fdx = dx, fdy = dy, fdz = dz;
         double s = pick(sx, sy, sz, dx, dy, dz, new Probe() {
             public boolean free(double x, double y, double z) { return RiftStaff.free(l, x, y, z); }
-            public boolean dungeon(double x, double y, double z) { return Dungeons.near(l, x, y, z, 1); }
+            public boolean clear(double x, double y, double z) { return Dungeons.canReach(l, p, x, y, z); }
         });
-        if (s == NO_ROOM || s == DUNGEON) {
+        if (s == NO_ROOM || s == BLOCKED) {
             Cmd.run(l, sx, sy, sz, "title " + p.m_36316_().getName() + " actionbar {\"translate\":\""
-                    + (s == DUNGEON ? "explosionwand.rift_staff.no_dungeon" : "explosionwand.rift_staff.no_room") + "\",\"color\":\"red\"}");
+                    + (s == BLOCKED ? "explosionwand.rift_staff.no_sight" : "explosionwand.rift_staff.no_room") + "\",\"color\":\"red\"}");
             return false;
         }
         double x = sx + fdx * s, y = sy + fdy * s, z = sz + fdz * s;
@@ -112,29 +112,28 @@ final class RiftStaff {
         return true;
     }
 
-    static final double NO_ROOM = -1.0D, DUNGEON = -2.0D;
+    static final double NO_ROOM = -1.0D, BLOCKED = -2.0D;
 
     /** Проверки мира для выбора точки шага (в тестах подменяются). */
     interface Probe {
         boolean free(double x, double y, double z);
-        boolean dungeon(double x, double y, double z);
+        /** Точка видима с места игрока и в том же зале (Dungeons.canReach): не за стеной, печатью или дверью. */
+        boolean clear(double x, double y, double z);
     }
 
     /**
-     * Дальность шага: самая дальняя свободная точка от STEP до 2 блоков, у которой ни сама точка,
-     * ни путь к ней (через ~1 блок) не задевает данж. NO_ROOM - нет места, DUNGEON - место есть, но только через данж.
+     * Дальность шага: самая дальняя свободная точка от STEP до 2 блоков, которая видима (не за стеной, печатью, дверью, не в чужом зале).
+     * NO_ROOM - нет места, BLOCKED - место есть, но не видно (путь закрыт).
      */
     static double pick(double sx, double sy, double sz, double dx, double dy, double dz, Probe pr) {
         boolean blocked = false;
         for (double s = STEP; s >= 2.0D; s -= 1.0D) {
-            if (!pr.free(sx + dx * s, sy + dy * s, sz + dz * s)) continue;
-            boolean bad = false;
-            for (double t = 1.0D; t < s + 0.01D && !bad; t += 1.0D) bad = pr.dungeon(sx + dx * t, sy + dy * t, sz + dz * t);
-            if (!bad) bad = pr.dungeon(sx + dx * s, sy + dy * s, sz + dz * s);
-            if (bad) { blocked = true; continue; }
+            double x = sx + dx * s, y = sy + dy * s, z = sz + dz * s;
+            if (!pr.free(x, y, z)) continue;
+            if (!pr.clear(x, y, z)) { blocked = true; continue; }
             return s;
         }
-        return blocked ? DUNGEON : NO_ROOM;
+        return blocked ? BLOCKED : NO_ROOM;
     }
 
     /** Клетки ног и головы свободны (воздух), в пределах мира. */

@@ -65,6 +65,11 @@ public class Boss5 {
     static final double ORBIT_R = 6, CRUISE_Y = 6.0;
     /** Центр тела над полом при посадке/пике и над площадкой при яйце. */
     static final double PERCH_Y = 1.4, EGG_Y = 3.2;
+    /**
+     * После пике Феникс ровно 3 секунды (60 тиков) висит низко над полом (PERCH_Y): окно для ближнего боя. Урон по нему x1,5, пике и залпы в это время не начинаются
+     * (таймеры diveCd/volleyCd идут только в круге). В фазе 4 двойное пике считается за одно: окно после второго пике, между пике окна нет.
+     */
+    static final int PERCH_TICKS = 60;
     /** Доля пещеры, куда не залетают пике и не растекается жар (центр: помост у яйца). */
     static final double PLAT_SAFE = 5.5;
     /** Искры появляются высоко (сталагмиты Гнезда не выше 8 над полом пещеры), Пеплоходы - на полу у помоста (r 8,5: сталагмитов в круге 9,5 нет). */
@@ -578,7 +583,7 @@ public class Boss5 {
                 if (modeT == 1) actionbar("perch", "yellow");
                 if (modeT % 4 == 0) Fx.send(level, flame(), px, py + 1, pz, 4, 1.4, 0.8, 1.4, 0.03);
                 setPos(px, py, pz);
-                if (modeT >= (life == 2 ? 45 : 70)) { mode = Mode.RISE; modeT = 0; }
+                if (modeT >= PERCH_TICKS) { mode = Mode.RISE; modeT = 0; }
             }
             case RISE -> {
                 double a = Math.atan2(pz - az, px - ax) + 0.4 * orbDir;
