@@ -102,7 +102,7 @@ final class EclipseStaff {
             Fx.send(level, Fx.particle("lava"), hx, hy + 0.3, hz, 2, 0.8, 0.1, 0.8, 0);
             Fx.send(level, WHITE, hx, hy + 0.3, hz, 10, 1.6, 0.1, 1.6, 0);
             if (t % 2 == 0) burn();
-            if (t % 5 == 0) for (Entity e : level.m_6249_(owner, new AABB(hx - 3, hy - 3, hz - 3, hx + 3, hy + 40, hz + 3), x -> x instanceof LivingEntity && x.m_6084_())) {
+            if (t % 5 == 0) for (Entity e : level.m_6249_(owner, new AABB(hx - 3, hy - 3, hz - 3, hx + 3, hy + 40, hz + 3), x -> x instanceof LivingEntity && x.m_6084_() && !Cmd.hasTagPrefix(x, "ew"))) {      // ew*-сущности (боссы, мобы данжей) столп не бьёт, как и Луны
                 Vec3 v = e.m_20182_(); double dx = v.f_82479_ - hx, dz = v.f_82481_ - hz;
                 if (dx * dx + dz * dz > 2.8 * 2.8) continue;
                 e.m_6469_(level.m_269111_().m_269425_(), 6.0F); e.m_20254_(5);

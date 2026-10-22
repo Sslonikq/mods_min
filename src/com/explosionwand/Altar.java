@@ -15,6 +15,11 @@ import java.util.List;
 
 /** Алтарь с колоннами и портал на арену босса: Король Затмения (kind 1), Небесный Кит (3). Сердце Разлома и Монолит Сна живут в данжах, алтаря у них нет (kind 2 свободен). */
 public class Altar {
+    /**
+     * Алтари Короля Затмения и Небесного Кита выключены (4.13): оба босса вернутся в Аду и Рае. Печати остаются предметами, но по ним алтарь не ставится,
+     * рецептов печатей нет (файлы лежат в resources/data/explosionwand/recipes_off/). Вернуть боссов - поставить true и вернуть рецепты.
+     */
+    static final boolean ENABLED = false;
     static final List<Altar> ACTIVE = new ArrayList<>();
     static DustParticleOptions PURPLE, BLACK, PINK, SKY1, SKY2;
     final ServerLevel level; final double cx, cy, cz; final int kind; int t = 0;
