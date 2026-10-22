@@ -499,7 +499,7 @@ public class DungeonTest {
     static void ash() throws Exception {
         Dungeons.Def d = Dungeons.ASH;
         List<DungeonTemplate> tp = d.templates();
-        check(tp.size() == 3 && d.layout == 1 && d.signature().equals("ash_north+ash_mid+ash_south:v1"), "три части Святилища, раскладка 1: " + d.signature());
+        check(tp.size() == 3 && d.layout == 2 && d.signature().equals("ash_north+ash_mid+ash_south:v2"), "три части Святилища, раскладка 2 (4.10: босс и печать в Гнезде): " + d.signature());
         Set<Long> seen0 = new HashSet<>();
         int total = 0;
         for (DungeonTemplate t : tp) {
@@ -528,19 +528,19 @@ public class DungeonTest {
         check(d.marks("bell").size() == 1 && d.marks("bell").get(0).a.equals("shaft") && d.marks("secret").size() == 7 && d.marks("lever").size() == 5, "колокол, секреты (7), рычаги (5)");
         check(d.marks("braziers").size() == 14 && DungeonMech.fireIds(d).equals(Set.of("fires")), "головоломка жаровен: 4 костра, 4 панели, 6 точек волны: " + d.marks("braziers").size());
         check(d.marks("jets").size() >= 15 && d.marks("crumble").size() >= 10 && d.marks("geyser").size() >= 6, "струи " + d.marks("jets").size() + ", платформы " + d.marks("crumble").size() + ", гейзеры " + d.marks("geyser").size());
-        check(d.marks("steps").isEmpty() && d.marks("beams").isEmpty() && d.marks("boss").isEmpty(), "ступеней и лучей нет, босса нет (босс — 4.10, метка boss зарезервирована)");
-        check(d.marks("seal").size() == 1 && d.marks("seal").get(0).a.startsWith("20,") && d.sealed(20) && !d.sealed(23), "печать только на арене Хранителя (зал 20)");
+        check(d.marks("steps").isEmpty() && d.marks("beams").isEmpty() && d.marks("boss").size() == 1 && d.marks("boss").get(0).a.equals("phoenix"), "ступеней и лучей нет, один босс: Пепельный Феникс (метка boss phoenix)");
+        check(d.marks("seal").size() == 2 && d.sealed(20) && d.sealed(23) && d.marks("seal").stream().allMatch(m -> m.a.startsWith("20,") || m.a.startsWith("23,")), "печати: арена Хранителя (зал 20) и Гнездо (зал 23)");
         for (Mark m : d.marks("jets")) check(DungeonMech.jetCfg(m.a) != null, "струя: разбор a " + m.a);
         for (Mark m : d.marks("geyser")) check(DungeonMech.geyserCfg(m.a) != null, "гейзер: разбор a " + m.a);
-        Set<String> mobs = Set.of("husk", "skeleton", "blaze", "magma_cube", "zombie", "wither_skeleton");
+        Set<String> mobs = Set.of("explosionwand:ash_walker", "explosionwand:ash_spark", "explosionwand:ash_hound", "explosionwand:ash_ringer", "explosionwand:ash_worm", "explosionwand:ash_priest", "explosionwand:ash_guard", "explosionwand:ash_keeper");
         Set<Integer> ids = new TreeSet<>();
         int chests = 0, spawns = 0, secretChests = 0;
         Set<String> chestNames = new HashSet<>();
         for (Dungeons.Hall h : d.halls()) {
             check(ids.add(h.id) && h.id >= 1 && h.id <= 30, "номер зала " + h.id);
             spawns += h.spawns.size();
-            check(h.boss == null, "босса в Святилище 4.8 нет: зал " + h.id);
-            for (Mark m : h.spawns) check(mobs.contains(m.a), "моб-заглушка ванильный: " + m.a);
+            check((h.boss != null) == (h.id == 23), "босс только в Гнезде (зал 23): зал " + h.id);
+            for (Mark m : h.spawns) check(mobs.contains(m.a), "моб Святилища: " + m.a);
             if (h.chest != null) {
                 chests++;
                 String[] sp = Dungeons.chestSpec(h.chest.a);
@@ -554,7 +554,7 @@ public class DungeonTest {
         check(ids.equals(new TreeSet<>(List.of(1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23))), "залы 1-6, 8-21, 23 (7, 22, 24-30 свободны): " + ids);
         check(secretChests == 4 && chests == 16 && spawns >= 62, "сундуков " + chests + ", мобов " + spawns);
         Dungeons.Hall nest = d.hall(23);
-        check(nest != null && nest.sx == 61 && nest.sz == 61 && nest.chest != null && nest.boss == null && Ash.GUARD_HALL == 20, "Гнездо: зал 61x61 с сундуком-заглушкой, босса нет");
+        check(nest != null && nest.sx == 61 && nest.sz == 61 && nest.chest != null && nest.boss != null && Boss.isPhoenix(nest) && nest.spawns.isEmpty() && Ash.GUARD_HALL == 20, "Гнездо: зал 61x61, сундук добычи и босс phoenix без обычных мобов");
         for (Dungeons.Hall x : d.halls()) for (Dungeons.Hall y : d.halls()) {
             if (x.id >= y.id) continue;
             boolean ov = x.x < y.x + y.sx && y.x < x.x + x.sx && x.y < y.y + y.sy + 1 && y.y < x.y + x.sy + 1 && x.z < y.z + y.sz && y.z < x.z + x.sz;
@@ -568,11 +568,10 @@ public class DungeonTest {
         // повторная выдача ключа: зал зачищен, дверь закрыта, ключа нет ни у игрока, ни в сундуке
         check(Ash.reissueWanted(true, true, false, false) && !Ash.reissueWanted(false, true, false, false) && !Ash.reissueWanted(true, false, false, false)
                 && !Ash.reissueWanted(true, true, true, false) && !Ash.reissueWanted(true, true, false, true), "ключ выдаётся заново только когда потерян (иначе сундук открывается как обычно)");
-        // элита арены: усиление только у wither_skeleton зала 20
-        String eg = Ash.gear(20, "wither_skeleton");
-        check(eg.startsWith(",") && eg.contains("generic.max_health") && eg.contains("explosionwand.ash.guard") && Ash.gear(20, "husk").isEmpty() && Ash.gear(9, "wither_skeleton").isEmpty() && Ash.gear(13, "blaze").isEmpty(), "заглушка-элита арены усилена, остальные мобы без добавки");
-        long mobsE = d.hall(20).spawns.stream().filter(m -> m.a.equals("wither_skeleton")).count();
-        check(mobsE == 1 && d.hall(20).spawns.size() == 5, "в арене одна элита и четыре хаски");
+        // мини-босс арены: Хранитель Углей и четыре Пеплохода (4.9)
+        long mobsE = d.hall(20).spawns.stream().filter(m -> m.a.equals("explosionwand:ash_keeper")).count();
+        long mobsW = d.hall(20).spawns.stream().filter(m -> m.a.equals("explosionwand:ash_walker")).count();
+        check(mobsE == 1 && mobsW == 4 && d.hall(20).spawns.size() == 5, "в арене Хранитель Углей и четыре Пеплохода");
         check(Mats.dungeonOf(d) == Mats.Dungeon.ASH && Dungeons.lootFor(d, d.hall(10), 1).stream().anyMatch(x -> x.contains("explosionwand:ash_coal") || x.contains("explosionwand:smoldering_feather")), "сундуки дают материалы Святилища");
         // дверь и ключ, тексты (файлы, не игра)
         String mod = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("src/com/explosionwand/ExplosionWandMod.java")), java.nio.charset.StandardCharsets.UTF_8);
@@ -581,7 +580,7 @@ public class DungeonTest {
         for (String lang : new String[]{"ru_ru", "en_us"}) {
             String js = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("resources/assets/explosionwand/lang/" + lang + ".json")), java.nio.charset.StandardCharsets.UTF_8);
             for (String k : new String[]{"explosionwand.dungeon.ash", "explosionwand.dungeon.locked.ash", "explosionwand.dungeon.locked.ash_gate", "explosionwand.dungeon.bell", "item.explosionwand.ash_key", "item.explosionwand.ash_key.desc", "explosionwand.jei.ash_key",
-                    "explosionwand.dungeon.locked.ember_gate", "item.explosionwand.ember_key", "item.explosionwand.ember_key.desc", "explosionwand.jei.ember_key", "explosionwand.dungeon.fires_wrong", "explosionwand.dungeon.fires_solved", "explosionwand.dungeon.key_reissued", "explosionwand.ash.guard"})
+                    "explosionwand.dungeon.locked.ember_gate", "item.explosionwand.ember_key", "item.explosionwand.ember_key.desc", "explosionwand.jei.ember_key", "explosionwand.dungeon.fires_wrong", "explosionwand.dungeon.fires_solved", "explosionwand.dungeon.key_reissued"})
                 check(js.contains("\"" + k + "\""), lang + ": нет ключа " + k);
         }
 
@@ -641,9 +640,19 @@ public class DungeonTest {
             check(bn != null && bn.startsWith("minecraft:iron_bars") && bn.contains("east=true") && bn.contains("west=true"), "арка N соединена решёткой вдоль x: " + bn);
             check(bw != null && bw.startsWith("minecraft:iron_bars") && bw.contains("north=true") && bw.contains("south=true"), "арка W соединена решёткой вдоль z: " + bw);
             check(bs != null && bs.contains("east=true") && bs.contains("west=true") && bk != null && bk.contains("north=true") && bk.contains("south=true"), "бойницы соединены по виду стены");
-            int bare = 0;
-            for (Map.Entry<Long, String> en : world.entrySet()) if (en.getValue().startsWith("minecraft:iron_bars") && !en.getValue().contains("=true")) bare++;
-            check(bare == 0, "решётки без соединений (столбики со щелью): " + bare);
+            int bare = 0, bars = 0;
+            for (Map.Entry<Long, String> en : world.entrySet()) {
+                String v = en.getValue();
+                if (!v.startsWith("minecraft:iron_bars")) continue;
+                bars++;
+                int[] c = unpack(en.getKey());
+                boolean zWall = c[2] == -50 || c[2] == -49 || c[2] == -19 || c[2] == -18;       // стены N/S: решётка вдоль x
+                boolean xWall = Math.abs(c[0]) == 15 || Math.abs(c[0]) == 16;                   // стены W/E: решётка вдоль z
+                boolean ok = zWall ? v.contains("east=true") && v.contains("west=true")
+                        : xWall && v.contains("north=true") && v.contains("south=true");
+                if (!ok) bare++;
+            }
+            check(bars > 0 && bare == 0, "решётки без соединений или поперёк стены (столбики со щелью): " + bare + " из " + bars);
         }
         fill(door, "minecraft:air");
         r = reach(st.x, st.y, st.z);
@@ -817,7 +826,7 @@ public class DungeonTest {
             if (same) seen[k] = bi;
         }
         check(Arrays.equals(seen, ord), "по узорам панелей слева направо читается порядок зажигания");
-        check(!DungeonMech.waveMob(0).isEmpty() && Set.of("husk", "skeleton", "blaze").containsAll(List.of(DungeonMech.waveMob(0), DungeonMech.waveMob(2), DungeonMech.waveMob(5), DungeonMech.waveMob(11))) && DungeonMech.WAVE_CAP >= 2, "волна из ванильных заглушек");
+        check(!DungeonMech.waveMob(0).isEmpty() && Set.of("ash_walker", "ash_spark", "ash_hound", "ash_guard").containsAll(List.of(DungeonMech.waveMob(0), DungeonMech.waveMob(2), DungeonMech.waveMob(5), DungeonMech.waveMob(11))) && DungeonMech.WAVE_CAP >= 2 && RiftModels.Kind.byId(DungeonMech.waveMob(5)) != null, "волна из мобов Святилища");
 
         // ---- уровень 4: спуск, арена (печать), элита, сундук с Угольным ключом, дверь Гнезда
         fill(sF, "minecraft:air");
@@ -833,8 +842,8 @@ public class DungeonTest {
         check(!hallExact(d, rg3, 23) && !rg3.contains(Dungeons.pack(3, -64, 4)), "до Угольного ключа в Гнездо не пройти");
         check(world.get(Dungeons.pack(ember.x, ember.y, ember.z)) != null && ember.sx == 2 && ember.sy == 4 && ember.sz == 3 && mSolidW(ember.x, ember.y, ember.z + 1), "дверь Гнезда на месте");
         Mark aElite = null;
-        for (Mark m : h20.spawns) if (m.a.equals("wither_skeleton")) aElite = m;
-        check(aElite != null && !mSolidW(aElite.x, aElite.y, aElite.z) && !mSolidW(aElite.x, aElite.y + 2, aElite.z) && mSolidW(aElite.x, aElite.y - 1, aElite.z), "элита стоит на помосте со свободной головой");
+        for (Mark m : h20.spawns) if (m.a.equals("explosionwand:ash_keeper")) aElite = m;
+        check(aElite != null && !mSolidW(aElite.x, aElite.y, aElite.z) && !mSolidW(aElite.x, aElite.y + 3, aElite.z) && mSolidW(aElite.x, aElite.y - 1, aElite.z), "элита стоит на помосте со свободной головой");
 
         // ---- уровень 5: Гнездо и колодец-выход
         fill(ember, "minecraft:air");
@@ -843,8 +852,7 @@ public class DungeonTest {
         boolean landNest = false;
         for (Mark br : d.braziers()) if (br.y == -74) landNest = rg4.contains(Dungeons.pack(br.x + 1, br.y, br.z));
         check(landNest, "жаровня-якорь у входа в Гнездо достижима");
-        boolean eggBlocked = !standable(34, -74, 4) && !standable(34, -70, 4) && mSolidW(34, -70, 4);
-        check(eggBlocked, "яйцо из пепла в центре — декор, на него не встать");
+        check(!mSolidW(34, -73, 4) && !mSolidW(34, -62, 4) && mSolidW(34, -74, 4) && mSolidW(34 + 6, -74, 4), "в центре Гнезда яйца в шаблоне нет (его рисует Феникс): на помосте пусто до свода");
         int lava = 0;
         for (Map.Entry<Long, String> e : world.entrySet()) if (e.getValue().equals("minecraft:lava") && unpack(e.getKey())[1] == -75) lava++;
         check(lava >= 30, "лавовые лужки в Гнезде есть: " + lava);
@@ -897,7 +905,15 @@ public class DungeonTest {
         DungeonData.Rec rec = new DungeonData.Rec("ash_0_0", "ash", 0, 0, 100, 64, 100);
         rec.layout = d.signature(); rec.partsDone = d.allParts();
         data.recs.put(rec.key, rec);
-        check(rec.contains(100.5, 64.5, 100.5 - 8, 0) && Dungeons.guardedAt(data, 100.5, 64.5, 91.5, 0) == rec && data.migrateBossDead() == 0 && !rec.bossDead, "без босса барьер Святилища стоит (босс — фаза 4.10, зал Гнезда получит метку boss)");
+        check(rec.contains(100.5, 64.5, 100.5 - 8, 0) && Dungeons.guardedAt(data, 100.5, 64.5, 91.5, 0) == rec && data.migrateBossDead() == 0 && !rec.bossDead, "пока Феникс жив, барьер Святилища стоит (bossDead сам не ставится)");
+        rec.hallsCleared |= 1L << nest.id;   // Феникс убит: Boss5 зовёт Dungeons.lairWon -> markCleared
+        Dungeons.markCleared(data, rec);
+        check(rec.bossDead && Dungeons.guardedAt(data, 100.5, 64.5, 91.5, 0) == null && rec.contains(100.5, 64.5, 91.5, 0) && data.migrateBossDead() == 0, "после победы над Фениксом барьер снят, данж остаётся данжем; миграция записи не трогает");
+        // победа над Хранителем (зал 20) барьер не снимает: босс Святилища только Феникс
+        DungeonData.Rec rec2 = new DungeonData.Rec("ash_1_1", "ash", 1, 1, 100, 64, 100);
+        rec2.layout = d.signature(); rec2.partsDone = d.allParts(); rec2.hallsCleared = 1L << Ash.GUARD_HALL;
+        DungeonData data2 = new DungeonData(); data2.recs.put(rec2.key, rec2);
+        check(data2.migrateBossDead() == 0 && !rec2.bossDead, "зачищенная арена Хранителя барьер не снимает");
         BOX = saveBox;
         System.out.println("святилище ok: " + total + " блоков, залов " + ids.size() + ", мобов " + spawns + ", сундуков " + chests + ", маска " + mk.count());
     }

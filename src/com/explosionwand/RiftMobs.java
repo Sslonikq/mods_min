@@ -64,7 +64,7 @@ final class RiftMobs {
     }
 
     /** Конец сервера: статика не должна перейти в следующий мир. */
-    static void clear() { CityMobs.clear(); CityMobsB.clear(); warned = false; MOBS.clear(); BY_ID.clear(); NOISES.clear(); PREV.clear(); MOVED.clear(); now = 0; }
+    static void clear() { CityMobs.clear(); CityMobsB.clear(); AshMobs.clear(); warned = false; MOBS.clear(); BY_ID.clear(); NOISES.clear(); PREV.clear(); MOVED.clear(); now = 0; }
 
     /** id метки spawn без префикса -> вид, или null (ванильные мобы). */
     static Kind kindOfMark(String a) {
@@ -99,6 +99,15 @@ final class RiftMobs {
             case STATUE_GUARD: return new CityMobsB.Statue();
             case CRADLER: return new CityMobsB.Cradler();
             case FOG_WALKER: return new CityMobsB.FogWalker();
+            case ASH_WALKER: return new AshMobs.Walker();
+            case ASH_SPARK: return new AshMobs.Spark();
+            case ASH_HOUND: return new AshMobs.Hound();
+            case ASH_RINGER: return new AshMobs.Ringer();
+            case ASH_WORM: return new AshMobsB.Worm();
+            case ASH_PRIEST: return new AshMobsB.Priest();
+            case ASH_GUARD: return new AshMobsB.Guard();
+            case ASH_KEEPER: return new AshMobsB.Keeper();
+            case ASH_WISP: return new AshMobsB.Wisp();
             default: return new RiftBeetles.Beetle();
         }
     }
@@ -108,11 +117,18 @@ final class RiftMobs {
     /** Подъём хоста над меткой: лучник стоит прямо на верху колонны (метка на ней), парения нет. */
     static double lift(Kind k) { return 0.0; }
 
-    static Mob spawnKind(ServerLevel sl, Kind k, double x, double y, double z, String hallTag) {
+    static Mob spawnKind(ServerLevel sl, Kind k, double x, double y, double z, String hallTag) { return spawnKind(sl, k, x, y, z, hallTag, null); }
+
+    /**
+     * Как выше, но с дополнительными тегами хоста (через запятую, в кавычках: "ewb5_min","ewbk123"): так появляются приспешники босса. Такой моб помечен
+     * {@link Mob#summoned}: материалов и горящего пепла после него нет, ближе к боссу его держит поводок.
+     */
+    static Mob spawnKind(ServerLevel sl, Kind k, double x, double y, double z, String hallTag, String extraTags) {
         init();
         String id = newId();
         Mob m = make(k);
         m.setup(k, id, sl);
+        if (extraTags != null && !extraTags.isEmpty()) { m.tags = "," + extraTags; m.summoned = true; }
         m.x = x; m.y = y + lift(k); m.z = z;
         m.yaw = RNG.nextDouble() * Math.PI * 2;
         m.initPose();
@@ -132,6 +148,7 @@ final class RiftMobs {
         sb.append("Tags:[\"ewr_h\",\"ewrk_").append(k.id).append("\",\"ewri").append(m.id).append("\"");
         sb.append(",\"ewrh").append(Math.round(m.hx * 2)).append("_").append(Math.round(m.hy * 2)).append("_").append(Math.round(m.hz * 2)).append("\"");
         if (hallTag != null) sb.append(",\"ewd\",\"").append(hallTag).append("\"");
+        sb.append(m.tags);
         sb.append("],NoAI:1b,NoGravity:1b,Silent:1b,PersistenceRequired:1b,CanPickUpLoot:0b,DeathLootTable:\"minecraft:empty\",").append(hostExtra(k));
         sb.append("Attributes:[{Name:\"minecraft:generic.max_health\",Base:").append(k.hp).append("d},{Name:\"minecraft:generic.knockback_resistance\",Base:1d}").append(hostAttrs(k)).append("],Health:").append(k.hp).append("f,");
         sb.append("ActiveEffects:[{Id:14,Amplifier:0b,Duration:-1,ShowParticles:0b}").append(hostEffects(k)).append("],CustomName:'{\"translate\":\"explosionwand.mob.").append(k.id).append("\"}',Passengers:[");
@@ -170,6 +187,8 @@ final class RiftMobs {
         m.x = host.m_20185_(); m.y = host.m_20186_(); m.z = host.m_20189_();
         m.home(m.x, m.y, m.z);
         for (String t : host.m_19880_()) {
+            if (t.endsWith("_min")) m.summoned = true;   // приспешник босса (после перезапуска): материалов нет
+            if (t.equals(AshLogic.TRAP_TAG) && m instanceof AshMobs.AMob am) am.expire = now + AshLogic.TRAP_SPARK_LIFE;   // Искра ловушки огонька: срок жизни заново
             if (t.startsWith("ewd") && t.length() > 3) m.hallTag = t;
             else if (t.startsWith("ewrh")) {   // точка появления (в полублоках): у Тени хост прячется под полом, оттуда её не взять
                 String[] c = t.substring(4).split("_");
@@ -244,6 +263,7 @@ final class RiftMobs {
         CityMobsB.flush();   // копии Сновидца и прочее отложенное: после обхода реестра
         RiftBeetles.tick(sl, data, ps, now);
         CityMobsB.tickWorld(sl, data, ps, now);
+        AshMobs.tick(sl, data, ps, now);
     }
 
     static boolean warned = false;
@@ -342,7 +362,7 @@ final class RiftMobs {
         catch (RuntimeException e) { if (!warned) { warned = true; e.printStackTrace(); } }
         try {   // материалы данжа (4.11): только за убийство игроком (не лава, не падение)
             Entity killer = ev.getSource() == null ? null : ev.getSource().m_7639_();
-            if (killer instanceof ServerPlayer && m.level != null) {
+            if (killer instanceof ServerPlayer && m.level != null && !m.summoned) {
                 LivingEntity h = ev.getEntity();
                 Mats.onMobDeath(m.level, m.kind, h.m_20185_(), h.m_20186_(), h.m_20189_());
             }
@@ -354,6 +374,10 @@ final class RiftMobs {
     abstract static class Mob {
         Kind kind; String id; ServerLevel level; LivingEntity host; String hallTag;
         Entity[] pe; String[] last;
+        /** Дополнительные теги хоста для summon (приспешники босса), "" - нет. */
+        String tags = "";
+        /** Призван боссом: добычи материалов нет. */
+        boolean summoned;
         int t = 0, calib = 0;
         boolean ready = false;
         double rideY = 0, x, y, z, yaw, hx, hy, hz, leash = Dungeons.ALIVE_PAD - 2;

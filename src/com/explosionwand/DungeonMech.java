@@ -277,8 +277,8 @@ final class DungeonMech {
 
     static String fireWaveTag(DungeonData.Rec rec) { return "ewdw" + Integer.toHexString(rec.key.hashCode()); }
 
-    /** Виды мобов волны по номеру точки: ванильные заглушки (хаски, скелеты, блейз). */
-    static String waveMob(int i) { return new String[]{"husk", "husk", "skeleton", "husk", "skeleton", "blaze"}[i % 6]; }
+    /** Виды мобов волны по номеру точки: мобы Святилища (4.9) - Пеплоходы, Искра, гончая и Угольный страж. */
+    static String waveMob(int i) { return new String[]{"ash_walker", "ash_walker", "ash_spark", "ash_walker", "ash_hound", "ash_guard"}[i % 6]; }
 
     // ================================================================ состояние в памяти (кэши, восстанавливаются из мира)
     static final Map<String, Boolean> STEPS = new HashMap<>();
@@ -585,7 +585,8 @@ final class DungeonMech {
                 for (int i = 0; i < 4; i++) if (!lit[i]) fireSet(sl, rec, bs[i], true);
             } else if (!firePrefix(order, lit)) {
                 fireOut(sl, rec, bs);
-                for (ServerPlayer p : in) p.m_5661_(Component.m_237115_("explosionwand.dungeon.fires_wrong"), true);
+                for (ServerPlayer p : in)
+                    if (nearAny(java.util.Collections.singletonList(p), rec.x + bs[0].x, rec.y + bs[0].y, rec.z + bs[0].z, 48, 24)) p.m_5661_(Component.m_237115_("explosionwand.dungeon.fires_wrong"), true);
                 fireWave(sl, rec, d, id);   // зажжено не кликом (стрела, огненный шар): ошибка наказывается так же
             }
         }
@@ -627,7 +628,7 @@ final class DungeonMech {
         }
     }
 
-    /** Ошибка: из тьмы выходят ванильные мобы (хаски, скелеты, блейз) в точках волны; пока прежняя волна жива, новая не зовётся. */
+    /** Ошибка: из тьмы выходят мобы Святилища (waveMob) в точках волны; пока прежняя волна жива, новая не зовётся. */
     private static void fireWave(ServerLevel sl, DungeonData.Rec rec, Dungeons.Def d, String id) {
         if (sl.m_46791_() == Difficulty.valueOf("PEACEFUL")) return;
         Mark[] ws = fireSlots(d, id, "w", 16);
@@ -638,9 +639,7 @@ final class DungeonMech {
             double x = rec.x + w.x + 0.5, y = rec.y + w.y, z = rec.z + w.z + 0.5;
             if (i == 0 && Cmd.tagged(sl, x, y, z, 40, tag).size() >= WAVE_CAP) return;
             String kind = waveMob(i++);
-            String gear = kind.equals("skeleton") ? ",HandItems:[{id:\"minecraft:bow\",Count:1b},{}]" : "";
-            Cmd.run(sl, x, y, z, "summon minecraft:" + kind + " " + Cmd.f(x) + " " + Cmd.f(y) + " " + Cmd.f(z) + " {Tags:[\"ewd\",\"" + tag + "\"],CanPickUpLoot:0b" + gear + "}");
-            Fx.send(sl, Fx.particle("poof"), x, y + 1, z, 8, 0.3, 0.5, 0.3, 0.02);
+            RiftMobs.spawnKind(sl, RiftModels.Kind.byId(kind), x, y, z, tag, "\"ewdw_min\"");   // _min: материалов с волны нет (не ферма), и после перезапуска тоже
         }
     }
 

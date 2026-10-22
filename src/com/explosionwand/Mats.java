@@ -48,15 +48,17 @@ final class Mats {
                 return Dungeon.RIFT;
             case LUNATIC: case DROWSY: case STITCH_GUARD: case NIGHT_MOTH: case DREAMER: case BOOK_GUARD: case STATUE_GUARD: case CRADLER: case FOG_WALKER:
                 return Dungeon.SLEEP;
+            case ASH_WALKER: case ASH_SPARK: case ASH_HOUND: case ASH_RINGER: case ASH_WORM: case ASH_PRIEST: case ASH_GUARD: case ASH_KEEPER:
+                return Dungeon.ASH;
             default:
-                return null;   // SHARDLING_MINI, DREAM_CLONE (и мобы Святилища, пока их нет)
+                return null;   // SHARDLING_MINI, DREAM_CLONE, ASH_WISP
         }
     }
 
     /** Сильный моб (голем, колыбельщик, стражи): дроп щедрее. */
     static boolean strong(RiftModels.Kind k) {
         switch (k) {
-            case EATER: case GOLEM: case STITCH_GUARD: case STATUE_GUARD: case CRADLER: return true;
+            case EATER: case GOLEM: case STITCH_GUARD: case STATUE_GUARD: case CRADLER: case ASH_GUARD: case ASH_KEEPER: return true;
             default: return false;
         }
     }

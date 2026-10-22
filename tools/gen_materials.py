@@ -132,13 +132,44 @@ def phoenix_spark():
     c.outline(0x4a1c04); return c
 
 
+def phoenix_feather():
+    """Перо Феникса (4.10): трофей босса, длинное огненное перо."""
+    c = C(); c.line(2, 14, 13, 2, 0xffe8a0)
+    for i in range(0, 11):
+        x, y = 2 + i, 14 - i
+        col = (0xff8020, 0xff5010, 0xffc040)[i % 3]
+        c.set(x + 1, y, col); c.set(x, y - 1, col)
+        if i > 1: c.set(x - 1, y, 0xffa030); c.set(x, y + 1, 0xff6818)
+        if i > 3: c.set(x + 2, y, 0xe03008)
+    c.set(13, 1, 0xffffff); c.set(12, 2, 0xfff0b0); c.outline(0x4a1204); return c
+
+
+def phoenix_staff():
+    """Посох Феникса (4.10): обугленное древко с тлеющими трещинами, на навершии языки пламени-перьев."""
+    c = C()
+    for i in range(0, 9):                       # древко по диагонали снизу-слева вверх-вправо
+        x, y = 1 + i, 14 - i
+        c.set(x, y, 0x2a2420 if i % 2 == 0 else 0x3a312b)
+        c.set(x + 1, y, 0x1a1614)
+        if i in (2, 5): c.set(x, y, 0xff6a1a)  # тлеющие трещины
+    c.set(1, 15, 0x1a1614)
+    c.line(8, 7, 10, 5, 0x6a3a14)              # оправа навершия
+    flame = [(11, 4, 0xff7a18), (12, 3, 0xffa028), (13, 2, 0xffd060), (13, 1, 0xfff0b0),
+             (11, 3, 0xe03008), (12, 2, 0xff5a10), (12, 1, 0xff8a20), (14, 3, 0xff8a20),
+             (10, 4, 0xc02a08), (11, 2, 0xff9a30), (14, 2, 0xffb040), (11, 5, 0xe03a0c), (12, 4, 0xffc050)]
+    for x, y, col in flame: c.set(x, y, col)
+    c.set(9, 5, 0xe03a0c); c.set(10, 3, 0xa01c06); c.set(13, 3, 0xffe080)
+    c.outline(0x3a0e02); return c
+
+
 ITEMS = {"magic_rod": magic_rod, "simple_core": simple_core, "crystal_core": crystal_core, "wind_core": wind_core, "fire_core": fire_core,
          "rift_dust": rift_dust, "echo_crystal": echo_crystal, "rift_marrow": rift_marrow,
          "sleep_thread": sleep_thread, "teal_stitch": teal_stitch, "sleeper_tear": sleeper_tear,
-         "ash_coal": ash_coal, "smoldering_feather": smoldering_feather, "phoenix_spark": phoenix_spark}
+         "ash_coal": ash_coal, "smoldering_feather": smoldering_feather, "phoenix_spark": phoenix_spark, "phoenix_feather": phoenix_feather}
 
 if __name__ == "__main__":
     for n, f in ITEMS.items():
         (TEX / f"{n}.png").write_bytes(f().png())
         (MODEL / f"{n}.json").write_text('{\n  "parent": "minecraft:item/generated",\n  "textures": {\n    "layer0": "explosionwand:item/%s"\n  }\n}\n' % n, encoding="utf-8")
-    print("ok", len(ITEMS))
+    (TEX / "phoenix_staff.png").write_bytes(phoenix_staff().png())  # модель посоха (handheld) лежит в репозитории
+    print("ok", len(ITEMS) + 1)

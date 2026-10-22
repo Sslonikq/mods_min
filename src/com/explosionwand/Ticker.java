@@ -33,6 +33,7 @@ public final class Ticker {
         if (Boss4.ACTIVE != null && Boss4.ACTIVE.level == sl && Boss4.ACTIVE.tick()) Boss4.ACTIVE = null;
         DreamStaff.tick(sl);
         ArcaneSet.tick(sl);
+        PhoenixStaff.tick(sl);
         Earth.tick(sl);
         WhaleStaff.tick(sl);
         run(Comet.ACTIVE, sl, c -> c.level, Comet::tick);

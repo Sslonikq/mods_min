@@ -51,7 +51,7 @@ public class Boss5 {
     static String id(String n) { return "explosionwand:" + n; }
     /** Цвета полоски по фазам: Полёт, Жар, Пепел (яйцо), Возрождённый. */
     static final String[] BAR_COLOR = {"red", "yellow", "white", "blue"};
-    /** Суффиксы ключей lang (explosionwand.boss.phoenix.*), которые нужны в ru_ru.json и en_us.json; имена мобов-заглушек - explosionwand.ash.spark / explosionwand.ash.walker. */
+    /** Суффиксы ключей lang (explosionwand.boss.phoenix.*), которые нужны в ru_ru.json и en_us.json. */
     static final String[] LANG = {"name", "spawn.sub", "phase1", "phase1.sub", "phase2", "phase2.sub", "phase3", "phase3.sub", "phase4", "phase4.sub.weak", "phase4.sub.full",
             "egg", "egg.hint", "egg.timer", "egg.broken", "egg.hatch", "hint", "dive", "volley", "perch", "heat", "whirl", "sparks", "dead", "dead.sub"};
 
@@ -857,7 +857,7 @@ public class Boss5 {
         return n;
     }
 
-    /** Телеграф 1 с (кольцо на месте появления), затем summon (заглушки Ash.stub). kind 0 - Искры (в воздухе), 1 - Пеплоходы (на полу у помоста). */
+    /** Телеграф 1 с (кольцо на месте появления), затем настоящие Искры и Пеплоходы (Ash.minion). kind 0 - Искры (в воздухе), 1 - Пеплоходы (на полу у помоста). */
     void summon(int kind, int count) {
         int have = aliveMinions() + spawns.size();
         for (int i = 0; i < count && have < MAX_MIN; i++, have++) {
@@ -874,10 +874,7 @@ public class Boss5 {
             double[] s = it.next(); s[3]++;
             if ((int) s[3] % 3 == 0) for (int i = 0; i < 8; i++) { double a = i * Math.PI / 4; Fx.send(level, dust(), s[0] + Math.cos(a) * 1.2, s[1] + 0.2, s[2] + Math.sin(a) * 1.2, 1, 0, 0, 0, 0); }
             if (s[3] >= 20) {
-                String[] stub = Ash.stub(s[4] == 0 ? "spark" : "walker");
-                Cmd.run(level, s[0], s[1], s[2], "summon minecraft:" + stub[0] + " " + Cmd.f(s[0]) + " " + Cmd.f(s[1]) + " " + Cmd.f(s[2])
-                        + " {Tags:[\"ewd\",\"" + hallTag + "\",\"" + ktag + "\",\"" + MIN + "\"],PersistenceRequired:1b,CanPickUpLoot:0b" + stub[1] + "}");
-                Fx.send(level, Fx.particle("poof"), s[0], s[1] + 1, s[2], 10, 0.3, 0.5, 0.3, 0.03);
+                Ash.minion(level, (int) s[4], s[0], s[1], s[2], hallTag, ktag, MIN);
                 it.remove();
             }
         }

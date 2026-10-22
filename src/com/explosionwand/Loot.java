@@ -19,6 +19,26 @@ final class Loot {
         Cmd.run(level, x, y, z, "setblock " + x + " " + y + " " + z + " minecraft:air");
         Cmd.run(level, x, y, z, "setblock " + x + " " + y + " " + z
                 + " minecraft:chest{CustomName:'{\"text\":\"" + name + "\",\"color\":\"gold\",\"bold\":true}'}");
+        fill(level, x, y, z, items);
+        // маяк-луч, чтобы сундук было видно
+        Fx.send(level, Fx.particle("end_rod"), x + 0.5, y + 1, z + 0.5, 30, 0.3, 1.5, 0.3, 0.05);
+        Fx.sound(level, x, y, z, "block.chest.open", 2.0F, 0.8F);
+    }
+
+    /**
+     * Сундук в обычном мире (Блуждающий огонёк): только в пустую клетку на твёрдом основании, ничего вокруг не заменяет (ни светокамня, ни воздуха),
+     * имя - ключ перевода. false - ставить некуда (постройка игрока, вода, неровность): сундука нет.
+     */
+    static boolean wild(ServerLevel level, int x, int y, int z, String nameKey, List<String> items) {
+        if (!level.m_8055_(new BlockPos(x, y, z)).m_60795_() || level.m_8055_(new BlockPos(x, y - 1, z)).m_60795_() || Dungeons.wet(level, x, y - 1, z)) return false;
+        Cmd.run(level, x, y, z, "setblock " + x + " " + y + " " + z + " minecraft:chest{CustomName:'{\"translate\":\"" + nameKey + "\",\"color\":\"gold\",\"bold\":true}'}");
+        fill(level, x, y, z, items);
+        Fx.send(level, Fx.particle("end_rod"), x + 0.5, y + 1, z + 0.5, 30, 0.3, 1.5, 0.3, 0.05);
+        Fx.sound(level, x, y, z, "block.chest.open", 2.0F, 0.8F);
+        return true;
+    }
+
+    private static void fill(ServerLevel level, int x, int y, int z, List<String> items) {
         int slot = 0;
         for (String it : items) {
             if (slot >= 27) break;
@@ -29,9 +49,6 @@ final class Loot {
             Cmd.run(level, x, y, z, "item replace block " + x + " " + y + " " + z + " container." + slot + " with " + id + " " + count);
             slot++;
         }
-        // маяк-луч, чтобы сундук было видно
-        Fx.send(level, Fx.particle("end_rod"), x + 0.5, y + 1, z + 0.5, 30, 0.3, 1.5, 0.3, 0.05);
-        Fx.sound(level, x, y, z, "block.chest.open", 2.0F, 0.8F);
     }
 
     /** Клетка занята сундуком (добыча): перестройка арены не должна её затирать. */

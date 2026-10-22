@@ -14,8 +14,8 @@ import java.util.function.Supplier;
 
 /**
  * Пепельное святилище (фаза 4.8): общие правила данжа `ash` (Dungeons.ASH, tools/gen_ash.py), которых нет в общем конвейере:
- * особая добыча (ключи в сундуках залов-хранилищ), усиление ванильной элиты арены, повторная выдача потерянного ключа.
- * Облик и поведение мобов Святилища - фаза 4.9, Феникс - 4.10.
+ * особая добыча (ключи в сундуках залов-хранилищ), повторная выдача потерянного ключа.
+ * Мобы Святилища - AshMobs/AshMobsB (4.9), у арены Хранитель Углей (метка spawn Хранителя, роняет ключ через зачистку зала); Пепельный Феникс (4.10) - Boss5, его барьер Святилища снимает победа (Dungeons.lairWon -> bossDead).
  */
 final class Ash {
     private Ash() {}
@@ -42,15 +42,13 @@ final class Ash {
     }
 
     /**
-     * Добавка к NBT summon для моба зала: заглушка-элита арены (wither_skeleton зала 20) - 160 здоровья, железо, стойкость к отбрасыванию, имя из lang.
-     * Настоящий Угольный страж - фаза 4.9. Остальные мобы без изменений.
+     * Приспешник Феникса (Boss5): kind 0 - Искра, 1 - Пеплоход. Настоящие мобы Святилища через ту же фабрику, что и мобы залов (RiftMobs.spawnKind):
+     * теги ewd, тег зала, ключ боя и ewb5_min (убираются вместе с боссом, друг друга и босса не бьют), без материалов, поводок не пускает их далеко от точки появления.
      */
-    static String gear(int hall, String mob) {
-        if (hall != GUARD_HALL || !mob.equals("wither_skeleton")) return "";
-        return ",Health:160f,Attributes:[{Name:\"generic.max_health\",Base:160d},{Name:\"generic.attack_damage\",Base:6d},"
-                + "{Name:\"generic.movement_speed\",Base:0.27d},{Name:\"generic.knockback_resistance\",Base:0.8d}],"
-                + "HandItems:[{id:\"minecraft:iron_sword\",Count:1b},{}],ArmorItems:[{},{},{id:\"minecraft:iron_chestplate\",Count:1b},{id:\"minecraft:iron_helmet\",Count:1b}],"
-                + "HandDropChances:[0f,0f],ArmorDropChances:[0f,0f,0f,0f],CustomName:'{\"translate\":\"explosionwand.ash.guard\"}',CustomNameVisible:1b";
+    static void minion(ServerLevel sl, int kind, double x, double y, double z, String hallTag, String ktag, String minTag) {
+        RiftModels.Kind k = RiftModels.Kind.byId(AshLogic.minionKind(kind));
+        RiftMobs.Mob m = RiftMobs.spawnKind(sl, k, x, y, z, hallTag, "\"" + ktag + "\",\"" + minTag + "\"");
+        if (m != null) m.leash = AshLogic.minionLeash(kind);
     }
 
     /** Ключ выдаётся заново: зал зачищен, дверь ещё закрыта, ключа нет ни у игрока, ни в сундуке (иначе его просто возьмут из сундука). */

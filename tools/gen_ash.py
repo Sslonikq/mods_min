@@ -20,10 +20,10 @@
   уровень 3    «Зал Четырёх Жаровен» (y -56): выход с западного уступа уровня 2 (проём в стене зала 12 и 16 ступеней на запад), зал 17 с четырьмя
                жаровнями (метка braziers), фреской на северной стене (порядок показывает только она), заслонкой спуска (secret `fires`),
                боковые залы 18 (рычаг `emberroom`) и 19, секретная каморка 21 за трещиной в зале 19, жаровня-якорь №3
-  уровень 4    арена Хранителя (зал 20, y -64): 8 ступеней вниз от южной стены зала 17, печать seal, помост, ваниль-элита (wither_skeleton) и хаски,
+  уровень 4    арена Хранителя (зал 20, y -64): 8 ступеней вниз от южной стены зала 17, печать seal, помост, Хранитель Углей и 4 Пеплохода,
                сундук с Угольным ключом (Ash.extra), дверь Гнезда `ember_gate` на востоке, тоннель в 64 блока и 10 ступеней вниз, жаровня-якорь №4
-  уровень 5    Гнездо (зал 23, y -74): круглая пещера R=30 с центром (34, 4), яйцо из пепла на помосте, сундук-заглушка; метку boss ставит 4.10;
-               жаровня-якорь №5 у входа
+  уровень 5    Гнездо (зал 23, y -74): круглая пещера R=30 с центром (34, 4), помост в центре, метка boss phoenix (Пепельный Феникс, 4.10; яйцо
+               рисует сам босс из block_display), печать seal на входе (x 3), сундук с добычей; жаровня-якорь №5 у входа
   колодец      башня 7x7 в пещере у (20, 0) и над ней до двора башни; центральный столб 3x3 и винтовая лестница по кольцу шириной 1 (75 ступеней),
                выход вровень со двором в клетках у западной стены (x 18, z -1..2); остальное закрыто вровень с двором. С поверхности внизу глухая
                дверь (secret `wellgate`), её открывает рычаг снаружи, из Гнезда: колодец — выход, а не вход в обход ключей
@@ -36,7 +36,7 @@ import random
 # уровни: на каком y стоит игрок
 S0, S1, S2, S3, S4, S5 = 0, -22, -40, -56, -64, -74
 
-# 4.10 (Феникс): метка boss в центре Гнезда (CX, S5+1, CZ), печать seal для зала 23; свободные номера залов под него: 22, 24..30
+# 4.10 (Феникс): метка boss phoenix стоит в центре Гнезда (34, S5+1, 4, на помосте), печать seal зала 23 - в проёме входа (x 3); свободные номера залов: 22, 24..30
 RESERVED = {
     "nest_boss": (34, S5 + 1, 4),
     "free_halls": (7, 22) + tuple(range(24, 31)),
@@ -68,7 +68,8 @@ def build_ash(gd):
     STAIR = "polished_blackstone_brick_stairs"
     LAMP, LAMPU = bm("lantern[hanging=true]"), bm("lantern[hanging=false]")
     CAMP = bm("campfire[facing=north,lit=true,signal_fire=true]")
-    HUSK, SKEL, BLAZE, CUBE = "husk", "skeleton", "blaze", "magma_cube"
+    # мобы Святилища (4.9): метки explosionwand:<вид>, см. AshMobs/AshMobsB и RIFT_MOBS в gen_dungeons.py
+    W, SP, HD, RG, WM, PR, GD, KP = ("explosionwand:" + n for n in ("ash_walker", "ash_spark", "ash_hound", "ash_ringer", "ash_worm", "ash_priest", "ash_guard", "ash_keeper"))
 
     def tw(*_): return rng.choice([SB, SB, CSB, BLK, CSB, PBB, BLK, COAL])          # башня: закопчённый камень
     def scorch(*_): return rng.choice([BLK, BLK, SB, CSB, BAS, PBB])
@@ -273,10 +274,10 @@ def build_ash(gd):
     hall_raw(2, IX1, 13, IZ1, 29, 13, 29)
     hall_raw(3, IX1, 27, IZ1, 29, 13, 29)
     hall_raw(4, IX1, 41, IZ1, 29, 14, 29)
-    for (x, z, t) in ((-8, -45, HUSK), (8, -45, HUSK), (8, -24, SKEL), (-9, -24, HUSK)): mob(x, 0, z, t)
-    for (x, z, t) in ((-9, -45, HUSK), (9, -45, SKEL), (9, -25, HUSK), (-9, -30, SKEL)): mob(x, 14, z, t)
-    for (x, z, t) in ((-9, -45, HUSK), (9, -45, SKEL), (-9, -24, HUSK), (9, -22, BLAZE)): mob(x, 28, z, t)
-    for (x, z, t) in ((-9, -45, BLAZE), (10, -45, HUSK), (-9, -24, HUSK), (10, -23, BLAZE)): mob(x, 42, z, t)
+    for (x, z, t) in ((-8, -45, W), (8, -45, W), (8, -24, SP), (-9, -24, W)): mob(x, 0, z, t)
+    for (x, z, t) in ((-9, -45, W), (9, -45, RG), (9, -25, W), (-9, -30, SP)): mob(x, 14, z, t)
+    for (x, z, t) in ((-9, -45, W), (9, -45, RG), (-9, -24, W), (9, -22, SP)): mob(x, 28, z, t)
+    for (x, z, t) in ((-9, -45, SP), (10, -45, W), (-9, -24, RG), (10, -23, SP)): mob(x, 42, z, t)
     chest(-9, 42, -30, "Колокольня Пепла", 2)
 
     # --- пристройки башни (боковые комнаты на ярусах): бастионы с сундуком, мобами и рычагом
@@ -299,8 +300,8 @@ def build_ash(gd):
     g.mark("lever", 27, 15, -40, "tower")
     hall(5, 18, -44, 27, -35, 14, 6)
     hall(6, -27, -44, -18, -35, 28, 6)
-    mob(20, 14, -42, HUSK); mob(25, 14, -37, SKEL); chest(26, 14, -43, "Караулка башни", 1)
-    mob(-24, 28, -42, HUSK); mob(-20, 28, -37, SKEL); chest(-26, 28, -40, "Оружейная башни", 1)
+    mob(20, 14, -42, W); mob(25, 14, -37, PR); chest(26, 14, -43, "Караулка башни", 1)
+    mob(-24, 28, -42, W); mob(-20, 28, -37, SP); chest(-26, 28, -40, "Оружейная башни", 1)
 
     # --- тайник 14: каморка в бастионе, за кладкой в восточной стене башни (рычаг в Караулке)
     A.room("тайник 14", 19, -44, 26, -36, 0, 5, tw, lambda x, y, z: PBB if (x + z) % 2 == 0 else PB)
@@ -358,7 +359,7 @@ def build_ash(gd):
         for (x, y, z, d) in ((15, S + 1, -44, "-x"), (15, S + 1, -24, "-x"), (-15, S + 1, -44, "+x"), (-15, S + 1, -24, "+x")):
             jet(x, y, z, d, 6, 120, (x + z) % 60 + (30 if x > 0 else 0))
         hall(8, -14, -48, 14, -20, S, 8)
-        for (x, z, t) in ((-8, -41, HUSK), (8, -41, HUSK), (-8, -27, SKEL), (8, -27, SKEL), (12, -34, HUSK), (-12, -34, CUBE)): mob(x, S, z, t)
+        for (x, z, t) in ((-8, -41, W), (8, -41, W), (-8, -27, HD), (8, -27, HD), (12, -34, HD), (-12, -34, SP)): mob(x, S, z, t)
 
         # восточный коридор «Дыхание»: струи с обеих сторон, дальше дверь `ash_gate`
         A.corr("зал Пепла: восток", 15, -36, 48, -32, S, w1, f1, H=7)
@@ -382,7 +383,7 @@ def build_ash(gd):
             for x in (-3, 3): g.box(x, S, -104, x, S + 2, -104, bm("coal_block"))
         A.add("deco", vault)
         hall(9, -12, -105, 12, -87, S, 8)
-        for (x, z, t) in ((-6, -90, BLAZE), (6, -90, HUSK), (-6, -101, HUSK), (6, -101, SKEL), (0, -95, HUSK)): mob(x, S, z, t)
+        for (x, z, t) in ((-6, -90, SP), (6, -90, W), (-6, -101, W), (6, -101, PR), (0, -95, W)): mob(x, S, z, t)
         chest(0, S, -104, "Кладовая Пепла", 2)
 
         # западный коридор и Угольный склад (зал 10): рычаг тайника 15
@@ -398,7 +399,7 @@ def build_ash(gd):
         A.add("deco", coal)
         g.mark("lever", -68, S + 1, -34, "ashroom")
         hall(10, -68, -46, -48, -22, S, 8)
-        for (x, z, t) in ((-62, -42, HUSK), (-56, -26, HUSK), (-64, -28, SKEL), (-54, -40, HUSK), (-58, -34, SKEL)): mob(x, S, z, t)
+        for (x, z, t) in ((-62, -42, W), (-56, -26, W), (-64, -28, HD), (-54, -40, HD), (-58, -34, HD)): mob(x, S, z, t)
         chest(-66, S, -42, "Угольный склад", 1)
 
         # тайник 15: за трещиной в северной стене западного коридора
@@ -427,7 +428,7 @@ def build_ash(gd):
             for (x, z) in ((-10, 8), (10, 8), (0, 22)): g.set(x, S, z, bm("barrel[facing=up]"))
         A.add("deco", forge)
         hall(11, -12, -3, 12, 24, S, 8)
-        for (x, z, t) in ((-6, 4, HUSK), (6, 4, HUSK), (-8, 14, SKEL), (8, 14, SKEL), (-4, 19, CUBE), (4, 19, CUBE)): mob(x, S, z, t)
+        for (x, z, t) in ((-6, 4, W), (6, 4, W), (-8, 14, SP), (8, 14, SP), (-4, 19, PR), (4, 19, GD)): mob(x, S, z, t)
         chest(0, S, 23, "Кузня Пепла", 2)
 
         # лестница вниз за дверью `ash_gate`: 18 ступеней на восток (стоять -23 .. -40)
@@ -503,12 +504,12 @@ def build_ash(gd):
             if kind == "C": g.mark("crumble", cx - 1, -41, cz - 1, "cracked_nether_bricks", (3, 1, 3))
             if kind == "G": g.mark("geyser", cx, -41, cz, f"{GDIR[nxt]},150")
         hall(12, HX1, HZ1, HX2, HZ2, S, 10, low=12)
-        mob(33, S, -12, SKEL); mob(33, S, -10, SKEL)
+        mob(33, S, -12, SP); mob(33, S, -10, SP)
         for i in (7, 9, 17):
             assert PLATS[i][2] == "S"
-            mob(PLATS[i][0], S, PLATS[i][1], BLAZE)
+            mob(PLATS[i][0], S, PLATS[i][1], SP)
         isl = [p for p in PLATS if p[2] == "I"][0]
-        for (dx, dz) in ((-2, -1), (2, 1), (0, 2)): mob(isl[0] + dx, S, isl[1] + dz, CUBE)
+        for (dx, dz) in ((-2, -1), (2, 1), (0, 2)): mob(isl[0] + dx, S, isl[1] + dz, WM)
         chest(-35, S, -42, "Огненная переправа", 2)
 
         # Грот гейзеров (зал 13)
@@ -525,7 +526,7 @@ def build_ash(gd):
         A.add("deco", grotto)
         g.mark("lever", 54, S + 1, -30, "ashlava")
         hall(13, 46, -30, 62, -18, S, 8)
-        for (x, z, t) in ((50, -20, BLAZE), (58, -20, BLAZE), (47, -23, CUBE), (60, -24, CUBE), (52, -28, SKEL), (56, -28, SKEL)): mob(x, S, z, t)
+        for (x, z, t) in ((50, -20, SP), (58, -20, SP), (47, -23, W), (60, -24, W), (52, -28, HD), (56, -28, HD)): mob(x, S, z, t)
         chest(61, S, -21, "Грот гейзеров", 1)
 
         # тайник 16: под коридором, за кладкой в южной стене
@@ -631,7 +632,7 @@ def build_ash(gd):
         A.add("deco", room18)
         g.mark("lever", -79, S + 1, -71, "emberroom")
         hall(18, -94, -78, -80, -64, S, 7)
-        for (x, z, t) in ((-92, -76, HUSK), (-83, -76, SKEL), (-91, -66, BLAZE)): mob(x, S, z, t)
+        for (x, z, t) in ((-92, -76, W), (-83, -76, PR), (-91, -66, SP)): mob(x, S, z, t)
         chest(-93, S, -67, "Склад жаровен", 1)
 
         # --- юг: зал 19 и секретная каморка 21 (за трещиной в восточной стене, рычаг в зале 18)
@@ -644,7 +645,7 @@ def build_ash(gd):
             for (x, z) in ((-59, -13), (-57, -7)): pillar(x, S, S + 5, z, BLK)
         A.add("deco", room19)
         hall(19, -66, -17, -52, -3, S, 7)
-        for (x, z, t) in ((-64, -14, HUSK), (-54, -14, SKEL), (-55, -5, HUSK)): mob(x, S, z, t)
+        for (x, z, t) in ((-64, -14, W), (-54, -14, PR), (-55, -5, W)): mob(x, S, z, t)
         chest(-65, S, -5, "Угольная кладовая", 1)
         A.room("зал 21", -48, -13, -42, -7, S, 5, W3, F3)
         A.add("carve", lambda: g.air(-51, S, -11, -49, S + 2, -9))
@@ -684,8 +685,8 @@ def build_ash(gd):
         g.mark("seal", -76, S, -15, "20,obsidian", (3, 4, 1))
         g.mark("door", -72, S, 3, "ember_gate", (2, 4, 3))
         hall(20, AX1, AZ1, AX2, AZ2, S, 11)
-        mob(ACX, S + 1, ACZ, "wither_skeleton")                                     # заглушка-элита (Ash.gear): настоящий Угольный страж — 4.9
-        for (x, z) in ((-91, -10), (-77, -10), (-91, 4), (-77, 4)): mob(x, S, z, HUSK)
+        mob(ACX, S + 1, ACZ, KP)                                                    # Хранитель Углей (мини-босс, AshMobsB.Keeper)
+        for (x, z) in ((-91, -10), (-77, -10), (-91, 4), (-77, 4)): mob(x, S, z, W)
         chest(ACX, S, 7, "Хранилище Углей", 2)
 
         # --- тоннель к Гнезду: после двери, дальше 10 ступеней вниз
@@ -729,7 +730,10 @@ def build_ash(gd):
         A.add("floor", lambda: [g.set(x, FL, z, F5(x, FL, z)) for (x, z, r, h) in COLS])
         hall(23, NX - NR, NZ - NR, NX + NR, NZ + NR, S, 15)
         A.rooms.append(("Гнездо", NX - NR - 1, NZ - NR - 1, NX + NR + 1, NZ + NR + 1, S, 15))
-        # метку boss ставит фаза 4.10 в центре (NX, S+1, NZ): зал 23 получит печать seal; сейчас - свободный зал с сундуком-заглушкой
+        # 4.10: босс Пепельный Феникс. Метка в центре на помосте (S+1), печать в проёме входа (x 3, z 3..5, высота коридора 5),
+        # сундук с добычей ставит победа (Dungeons.lairWon). Яйцо из пепла рисует Boss5 (block_display), в шаблоне его нет
+        g.mark("boss", NX, S + 1, NZ, "phoenix")
+        g.mark("seal", 3, S, 3, "23,obsidian", (1, 5, 3))
         chest(NX + 10, S, NZ + 3, "Гнездо Феникса", 2)
 
         LAVA_POOLS = ((NX + 8, NZ + 22), (NX + 22, NZ + 10), (NX - 4, NZ - 22))
@@ -740,7 +744,8 @@ def build_ash(gd):
                     r = math.hypot(x - NX, z - NZ)
                     if r <= 7.5: g.set(x, S, z, PB if r <= 4.8 else (COAL if (x + z) % 3 == 0 else BLK))
             GRAY, LGRAY = bm("gray_concrete"), bm("light_gray_concrete")
-            for dy in range(0, 11):                                                 # яйцо из пепла: y S+1 .. S+11
+            for dy in range(0, 11):                                                 # бывшее яйцо из пепла: блоков не ставим (его рисует Boss5), r2 крутим как раньше,
+                                                                                    # чтобы сталагмиты и стены колодца остались на тех же местах
                 t = (dy - 5) / 5.5
                 rad = 3.6 * math.sqrt(max(0.0, 1 - t * t)) * (1.12 - 0.16 * t)
                 for x in range(NX - 4, NX + 5):
@@ -750,7 +755,6 @@ def build_ash(gd):
                         if d2 < 1.3 and 3 <= dy <= 7: b = SHL
                         elif rad - d2 < 0.9 and r2.random() < 0.22: b = MAG
                         else: b = r2.choice([GRAY, LGRAY, LGRAY, GRAY])
-                        g.set(x, S + 1 + dy, z, b)
             for (lx, lz) in LAVA_POOLS:                                             # лавовые лужки в обсидиановых бортах
                 for x in range(lx - 4, lx + 5):
                     for z in range(lz - 4, lz + 5):

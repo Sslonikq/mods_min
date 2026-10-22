@@ -1061,7 +1061,6 @@ final class Dungeons {
                 continue;
             }
             String gear = m.a.equals("skeleton") ? ",HandItems:[{id:\"minecraft:bow\",Count:1b},{}]" : "";
-            if (rec.def() == ASH) gear += Ash.gear(h.id, m.a);   // заглушка-элита арены Святилища
             Cmd.run(sl, x, y, z, "summon minecraft:" + m.a + " " + Cmd.f(x) + " " + Cmd.f(y) + " " + Cmd.f(z)
                     + " {Tags:[\"ewd\",\"" + tag + "\"],PersistenceRequired:1b,CanPickUpLoot:0b" + gear + "}");
             Fx.send(sl, Fx.particle("poof"), x, y + 1, z, 8, 0.3, 0.5, 0.3, 0.02);

@@ -48,6 +48,8 @@ public class ExplosionWandMod {
     public static final RegistryObject<Item> ARCANE_BOOTS = ITEMS.register("arcane_boots", () -> new ArcaneArmorItem(ArmorItem.Type.valueOf("BOOTS"), new Item.Properties().m_41497_(Rarity.valueOf("EPIC"))));
 
     public static final RegistryObject<Item> RIFT_STAFF = ITEMS.register("rift_staff", () -> new RiftStaffItem(props()));
+    /** Посох Феникса (4.10): добыча Пепельного Феникса (Boss5.LOOT), рецепта нет. */
+    public static final RegistryObject<Item> PHOENIX_STAFF = ITEMS.register("phoenix_staff", () -> new PhoenixStaffItem(props()));
     public static final RegistryObject<Item> SEAL_SHARD_RIFT = ITEMS.register("seal_shard_rift", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "rift"));
     public static final RegistryObject<Item> SLEEP_SEAL_SHARD = ITEMS.register("sleep_seal_shard", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "sleep", "sleep_seal_shard"));
     /** Осколок Печати: Пепел (4.7): трофей Монолита Сна, указывает на Пепельное святилище (4.8), открывает его башню (дверь `ash`). */
@@ -99,6 +101,8 @@ public class ExplosionWandMod {
     public static final RegistryObject<Item> ASH_COAL = ITEMS.register("ash_coal", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("COMMON")), "ash_coal"));
     public static final RegistryObject<Item> SMOLDERING_FEATHER = ITEMS.register("smoldering_feather", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("UNCOMMON")), "smoldering_feather"));
     public static final RegistryObject<Item> PHOENIX_SPARK = ITEMS.register("phoenix_spark", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("RARE")), "phoenix_spark"));
+    /** Перо Феникса (4.10): трофей босса из Гнезда (Boss5.LOOT); Посох Феникса регистрирует mod-engineer. */
+    public static final RegistryObject<Item> PHOENIX_FEATHER = ITEMS.register("phoenix_feather", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("EPIC")), "phoenix_feather"));
 
     /** Отдельная вкладка «Магия» — всё содержимое мода в порядке регистрации. */
     public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.f_279569_, "explosionwand");
@@ -125,6 +129,7 @@ public class ExplosionWandMod {
         MinecraftForge.EVENT_BUS.addListener(Boss2::onHurt);
         MinecraftForge.EVENT_BUS.addListener(TimeStop::onHurt);
         MinecraftForge.EVENT_BUS.addListener(Boss3::onHurt);
+        MinecraftForge.EVENT_BUS.addListener(Boss5::onHurt);
         MinecraftForge.EVENT_BUS.addListener(Comet::onHurt);
         MinecraftForge.EVENT_BUS.addListener(Boss4::onHurt);
         MinecraftForge.EVENT_BUS.addListener(Maze::onBreak);
@@ -148,6 +153,7 @@ public class ExplosionWandMod {
         MinecraftForge.EVENT_BUS.addListener(Dungeons::onDeath);
         MinecraftForge.EVENT_BUS.addListener(Dungeons::onRespawn);
         MinecraftForge.EVENT_BUS.addListener(Dungeons::onStopped);
+        MinecraftForge.EVENT_BUS.addListener(PhoenixStaff::onDamage);
         MinecraftForge.EVENT_BUS.addListener(RiftMobs::onHurt);
         MinecraftForge.EVENT_BUS.addListener(RiftMobs::onDeath);
     }

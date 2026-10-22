@@ -80,8 +80,54 @@ final class RiftModels {
                 new int[]{1, 1, 1, 1, 15, 1, 2, 1, 2, 15, 4, 4, 12, 1, 13, 13, 13, 13, 13, 13}),
         FOG_WALKER("fog_walker", "husk", 14, 1.0,
                 new String[]{Disp.block("gray_concrete"), Disp.block("light_gray_concrete"), Disp.block("sea_lantern"), Disp.block("sea_lantern"), Disp.block("gray_concrete"), Disp.block("gray_concrete"), Disp.block("iron_block"), Disp.block("white_stained_glass"), Disp.block("white_stained_glass"), Disp.block("white_stained_glass"), Disp.block("white_stained_glass"), Disp.block("gray_concrete"), Disp.block("gray_concrete")},
-                new int[]{2, 3, 15, 15, 2, 2, 5, 8, 8, 8, 8, 2, 2});
+                new int[]{2, 3, 15, 15, 2, 2, 5, 8, 8, 8, 8, 2, 2}),
+        // ---- Пепельное святилище (4.9): уголь, пепел и жар; поведение в AshMobs/AshMobsB, облик в AshModels, правила в AshLogic
+        ASH_WALKER("ash_walker", "husk", 40, 1.0,
+                new String[]{Disp.block("blackstone"), Disp.block("blackstone"), Disp.block("polished_blackstone"), Disp.block("magma_block"), Disp.block("black_concrete"),
+                        Disp.block("glowstone"), Disp.block("blackstone"), Disp.block("blackstone"), Disp.block("cobbled_deepslate"), Disp.block("magma_block")},
+                new int[]{3, 3, 4, 15, 3, 15, 3, 3, 4, 13}),
+        ASH_SPARK("ash_spark", "vex", 10, 1.0,
+                new String[]{Disp.block("glowstone"), Disp.block("yellow_stained_glass"), Disp.block("orange_stained_glass"), Disp.block("orange_stained_glass"),
+                        Disp.block("magma_block"), Disp.block("shroomlight"), Disp.block("shroomlight"), Disp.block("shroomlight")},
+                new int[]{15, 13, 12, 12, 14, 14, 14, 14}),
+        ASH_HOUND("ash_hound", "fox", 18, 1.0,
+                new String[]{Disp.block("black_concrete"), Disp.block("polished_blackstone"), Disp.block("blackstone"), Disp.block("glowstone"), Disp.block("blackstone"),
+                        Disp.block("blackstone"), Disp.block("blackstone"), Disp.block("blackstone"), Disp.block("magma_block"), Disp.block("magma_block")},
+                new int[]{3, 3, 3, 15, 3, 3, 3, 3, 14, 13}),
+        ASH_RINGER("ash_ringer", "vindicator", 26, 1.0,
+                new String[]{Disp.block("black_concrete"), Disp.block("black_concrete"), Disp.block("glowstone"), Disp.block("black_concrete"), Disp.block("black_concrete"),
+                        Disp.block("dark_oak_planks"), Disp.block("dark_oak_planks"), Disp.block("gold_block"), Disp.block("shroomlight"),
+                        Disp.block("gray_concrete"), Disp.block("gray_concrete"), Disp.block("gray_concrete"), Disp.block("gray_concrete")},
+                new int[]{3, 3, 15, 3, 3, 4, 4, 11, 14, 8, 8, 8, 8}),
+        ASH_WORM("ash_worm", "strider", 36, 0.75,
+                new String[]{Disp.block("deepslate_bricks"), Disp.block("smooth_basalt"), Disp.block("deepslate_bricks"), Disp.block("smooth_basalt"), Disp.block("blackstone"),
+                        Disp.block("polished_blackstone"), Disp.block("magma_block"), Disp.block("shroomlight"),
+                        Disp.block("magma_block"), Disp.block("magma_block"), Disp.block("magma_block")},
+                new int[]{4, 4, 4, 5, 5, 6, 15, 15, 14, 14, 14}),
+        ASH_PRIEST("ash_priest", "witch", 28, 1.0,
+                new String[]{Disp.block("black_concrete"), Disp.block("polished_blackstone"), Disp.block("gray_concrete"), Disp.block("glowstone"), Disp.block("glowstone"),
+                        Disp.block("black_concrete"), Disp.block("black_concrete"), Disp.block("dark_oak_planks"), Disp.block("magma_block"), Disp.block("lime_stained_glass"),
+                        Disp.block("magma_block"), Disp.block("magma_block"), Disp.block("magma_block"), Disp.block("magma_block"),
+                        Disp.block("magma_block"), Disp.block("magma_block"), Disp.block("magma_block"), Disp.block("magma_block")},
+                new int[]{3, 3, 4, 15, 13, 3, 3, 4, 15, 14, 13, 13, 13, 13, 13, 13, 13, 13}),
+        ASH_GUARD("ash_guard", "iron_golem", 150, 1.0,
+                new String[]{Disp.block("coal_block"), Disp.block("coal_block"), Disp.block("blackstone"), Disp.block("polished_blackstone"), Disp.block("magma_block"),
+                        Disp.block("magma_block"), Disp.block("blackstone"), Disp.block("glowstone"), Disp.block("polished_blackstone"), Disp.block("polished_blackstone"),
+                        Disp.block("dark_oak_planks"), Disp.block("coal_block"), Disp.block("magma_block"), Disp.block("blackstone"), Disp.block("magma_block")},
+                new int[]{3, 3, 3, 4, 15, 15, 3, 15, 3, 3, 4, 4, 15, 3, 15}),
+        ASH_KEEPER("ash_keeper", "iron_golem", 360, 1.45,
+                new String[]{Disp.block("coal_block"), Disp.block("coal_block"), Disp.block("blackstone"), Disp.block("polished_blackstone"), Disp.block("magma_block"),
+                        Disp.block("magma_block"), Disp.block("blackstone"), Disp.block("glowstone"), Disp.block("polished_blackstone"), Disp.block("polished_blackstone"),
+                        Disp.block("dark_oak_planks"), Disp.block("coal_block"), Disp.block("magma_block"), Disp.block("blackstone"), Disp.block("magma_block"),
+                        Disp.block("orange_stained_glass"), Disp.block("orange_stained_glass"), Disp.block("orange_stained_glass"),
+                        Disp.block("magma_block"), Disp.block("magma_block"), Disp.block("magma_block"), Disp.block("magma_block"), Disp.block("magma_block"), Disp.block("magma_block")},
+                new int[]{3, 3, 3, 4, 15, 15, 3, 15, 3, 3, 4, 4, 15, 3, 15, 14, 14, 14, 14, 14, 14, 14, 14, 14}),
+        ASH_WISP("ash_wisp", "bat", 6, 1.0,
+                new String[]{Disp.block("glowstone"), Disp.block("yellow_stained_glass"), Disp.block("shroomlight"), Disp.block("shroomlight"), Disp.block("shroomlight")},
+                new int[]{15, 13, 12, 10, 8});
 
+        /** Моб Пепельного святилища (4.9). */
+        boolean ash() { return id.startsWith("ash_"); }
         final String id, host, hostId; final int hp; final double sc; final String[] blocks; final int[] light;
         Kind(String id, String host, int hp, double sc, String[] blocks, int[] light) {
             this.id = id; this.host = host; this.hostId = "minecraft:" + host; this.hp = hp; this.sc = sc; this.blocks = blocks; this.light = light;
@@ -132,6 +178,7 @@ final class RiftModels {
             case GOLEM -> golem(o, p);
             case BEETLE -> beetle(o, p);
             case LUNATIC, DROWSY, STITCH_GUARD, NIGHT_MOTH, DREAMER, DREAM_CLONE, BOOK_GUARD, STATUE_GUARD, CRADLER, FOG_WALKER -> CityModels.pose(k, o, p);
+            case ASH_WALKER, ASH_SPARK, ASH_HOUND, ASH_RINGER, ASH_WORM, ASH_PRIEST, ASH_GUARD, ASH_KEEPER, ASH_WISP -> AshModels.pose(k, o, p);
         }
         if (p.sc != 1) for (double[] r : o) for (int j = 0; j < 6; j++) r[j] *= p.sc;
         return o;
