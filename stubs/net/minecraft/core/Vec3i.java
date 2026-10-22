@@ -1,1 +1,1 @@
-package net.minecraft.core; public class Vec3i { public Vec3i(int x,int y,int z){} public int m_123341_(){return 0;} public int m_123342_(){return 0;} public int m_123343_(){return 0;} }
+package net.minecraft.core; public class Vec3i { private final int x, y, z; public Vec3i(int x,int y,int z){this.x=x;this.y=y;this.z=z;} public int m_123341_(){return x;} public int m_123342_(){return y;} public int m_123343_(){return z;} }

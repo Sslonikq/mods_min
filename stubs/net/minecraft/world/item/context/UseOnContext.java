@@ -1,0 +1,1 @@
+package net.minecraft.world.item.context; public class UseOnContext { public net.minecraft.world.level.Level m_43725_(){return null;} public net.minecraft.core.BlockPos m_8083_(){return null;} public net.minecraft.world.entity.player.Player m_43723_(){return null;} public net.minecraft.world.item.ItemStack m_43722_(){return null;} }

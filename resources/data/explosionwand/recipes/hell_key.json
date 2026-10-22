@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "explosionwand:rift_core"
+    },
+    {
+      "item": "explosionwand:dreaming_eye"
+    },
+    {
+      "item": "explosionwand:phoenix_feather"
+    }
+  ],
+  "result": {
+    "item": "explosionwand:hell_key",
+    "count": 1
+  }
+}

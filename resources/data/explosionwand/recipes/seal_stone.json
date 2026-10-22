@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "minecraft:stone_bricks"
+    },
+    {
+      "item": "minecraft:stone_bricks"
+    },
+    {
+      "item": "explosionwand:rift_dust"
+    },
+    {
+      "item": "explosionwand:ash_coal"
+    },
+    {
+      "item": "explosionwand:sleep_thread"
+    }
+  ],
+  "result": {
+    "item": "explosionwand:seal_stone",
+    "count": 3
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "explosionwand:ash_coal"
+    },
+    {
+      "item": "explosionwand:ash_coal"
+    },
+    {
+      "item": "explosionwand:ash_coal"
+    },
+    {
+      "item": "explosionwand:phoenix_spark"
+    },
+    {
+      "item": "minecraft:magma_block"
+    }
+  ],
+  "result": {
+    "item": "explosionwand:phoenix_embers",
+    "count": 1
+  }
+}

@@ -24,6 +24,8 @@ final class Dims {
     static final ResourceKey<Level> ECLIPSE = key("eclipse");
     static final ResourceKey<Level> SKY = key("sky");
     static final ResourceKey<Level> MAZE = key("maze");
+    /** Ад (4.13): пока заглушка - площадка с обратным порталом (HellGate). Входят через постоянный портал, не через send. */
+    static final ResourceKey<Level> HELL = key("hell");
     /** Старые измерения арен (миры 2.6.x: арена Сердца Разлома; до 2.15: арена Монолита Сна): больше не используются, игроков оттуда отправляем в обычный мир. JSON измерений оставлены, чтобы старые сейвы открывались. */
     static final ResourceKey<Level> OLD_ARENA = key("arena"), OLD_DREAM = key("dream");
     /** Уровень пола во всех аренах боссов (ECLIPSE, SKY). */
@@ -32,7 +34,7 @@ final class Dims {
 
     static ServerLevel get(ServerLevel any, ResourceKey<Level> k) { return any.m_7654_().m_129880_(k); }
     static boolean is(ServerLevel l, ResourceKey<Level> k) { return get(l, k) == l; }
-    static boolean isOurs(ServerLevel l) { return is(l, VOID) || is(l, HAUNT) || is(l, INVERTED) || is(l, ECLIPSE) || is(l, SKY) || is(l, MAZE); }
+    static boolean isOurs(ServerLevel l) { return is(l, VOID) || is(l, HAUNT) || is(l, INVERTED) || is(l, ECLIPSE) || is(l, SKY) || is(l, MAZE) || is(l, HELL); }
 
     /** Откуда игрок попал в Перевёртыш — чтобы вернуть обратно. */
     static final Map<UUID, Object[]> ORIGIN = new HashMap<>();
