@@ -3,6 +3,8 @@ package com.explosionwand;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -46,6 +48,22 @@ public class ExplosionWandMod {
     public static final RegistryObject<Item> ARCANE_CHESTPLATE = ITEMS.register("arcane_chestplate", () -> new ArcaneArmorItem(ArmorItem.Type.valueOf("CHESTPLATE"), new Item.Properties().m_41497_(Rarity.valueOf("EPIC"))));
     public static final RegistryObject<Item> ARCANE_LEGGINGS = ITEMS.register("arcane_leggings", () -> new ArcaneArmorItem(ArmorItem.Type.valueOf("LEGGINGS"), new Item.Properties().m_41497_(Rarity.valueOf("EPIC"))));
     public static final RegistryObject<Item> ARCANE_BOOTS = ITEMS.register("arcane_boots", () -> new ArcaneArmorItem(ArmorItem.Type.valueOf("BOOTS"), new Item.Properties().m_41497_(Rarity.valueOf("EPIC"))));
+
+    /** Сеты брони данжей Земли (4.12): не крафтятся, части падают с мобов своего данжа (ArmorSets.onMobKilled). Бонусы - ArmorSets. */
+    public static final RegistryObject<Item> CRYSTAL_HELMET = ITEMS.register("crystal_helmet", () -> new SetArmorItem(ArmorSets.Set.CRYSTAL, ArmorItem.Type.valueOf("HELMET"), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> CRYSTAL_CHESTPLATE = ITEMS.register("crystal_chestplate", () -> new SetArmorItem(ArmorSets.Set.CRYSTAL, ArmorItem.Type.valueOf("CHESTPLATE"), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> CRYSTAL_LEGGINGS = ITEMS.register("crystal_leggings", () -> new SetArmorItem(ArmorSets.Set.CRYSTAL, ArmorItem.Type.valueOf("LEGGINGS"), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> CRYSTAL_BOOTS = ITEMS.register("crystal_boots", () -> new SetArmorItem(ArmorSets.Set.CRYSTAL, ArmorItem.Type.valueOf("BOOTS"), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+
+    public static final RegistryObject<Item> DREAMER_HELMET = ITEMS.register("dreamer_helmet", () -> new SetArmorItem(ArmorSets.Set.DREAMER, ArmorItem.Type.valueOf("HELMET"), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> DREAMER_CHESTPLATE = ITEMS.register("dreamer_chestplate", () -> new SetArmorItem(ArmorSets.Set.DREAMER, ArmorItem.Type.valueOf("CHESTPLATE"), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> DREAMER_LEGGINGS = ITEMS.register("dreamer_leggings", () -> new SetArmorItem(ArmorSets.Set.DREAMER, ArmorItem.Type.valueOf("LEGGINGS"), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> DREAMER_BOOTS = ITEMS.register("dreamer_boots", () -> new SetArmorItem(ArmorSets.Set.DREAMER, ArmorItem.Type.valueOf("BOOTS"), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+
+    public static final RegistryObject<Item> ASH_HELMET = ITEMS.register("ash_helmet", () -> new SetArmorItem(ArmorSets.Set.ASH, ArmorItem.Type.valueOf("HELMET"), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> ASH_CHESTPLATE = ITEMS.register("ash_chestplate", () -> new SetArmorItem(ArmorSets.Set.ASH, ArmorItem.Type.valueOf("CHESTPLATE"), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> ASH_LEGGINGS = ITEMS.register("ash_leggings", () -> new SetArmorItem(ArmorSets.Set.ASH, ArmorItem.Type.valueOf("LEGGINGS"), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> ASH_BOOTS = ITEMS.register("ash_boots", () -> new SetArmorItem(ArmorSets.Set.ASH, ArmorItem.Type.valueOf("BOOTS"), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
 
     public static final RegistryObject<Item> RIFT_STAFF = ITEMS.register("rift_staff", () -> new RiftStaffItem(props()));
     /** Посох Феникса (4.10): добыча Пепельного Феникса (Boss5.LOOT), рецепта нет. */
@@ -104,6 +122,19 @@ public class ExplosionWandMod {
     /** Перо Феникса (4.10): трофей босса из Гнезда (Boss5.LOOT); Посох Феникса регистрирует mod-engineer. */
     public static final RegistryObject<Item> PHOENIX_FEATHER = ITEMS.register("phoenix_feather", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("EPIC")), "phoenix_feather"));
 
+    /** Переход в Ад (4.13): блоки алтаря-портала (рамка из Печатного камня, гнездо из Углей Феникса, занятое гнездо, проём) и Ключ Ада. Предметы блоков - в ITEMS (вкладка «Магия»). */
+    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, "explosionwand");
+    public static final RegistryObject<Block> SEAL_STONE = BLOCKS.register("seal_stone", () -> new Block(BlockBehaviour.Properties.m_284310_().m_60913_(3.0F, 6.0F)));
+    public static final RegistryObject<Block> PHOENIX_EMBERS = BLOCKS.register("phoenix_embers", () -> new Block(BlockBehaviour.Properties.m_284310_().m_60913_(3.0F, 6.0F).m_60953_(s -> 8)));
+    public static final RegistryObject<Block> HELL_SOCKET = BLOCKS.register("hell_socket", () -> new Block(BlockBehaviour.Properties.m_284310_().m_60913_(-1.0F, 3600000.0F).m_60953_(s -> 12).m_222994_()));
+    public static final RegistryObject<Block> HELL_PORTAL = BLOCKS.register("hell_portal", () -> new HellPortalBlock(BlockBehaviour.Properties.m_284310_().m_60910_().m_280606_().m_60955_().m_60913_(-1.0F, 3600000.0F).m_60953_(s -> 11).m_222994_()));
+    public static final RegistryObject<Item> SEAL_STONE_ITEM = ITEMS.register("seal_stone", () -> new BlockItem(SEAL_STONE.get(), new Item.Properties().m_41497_(Rarity.valueOf("UNCOMMON"))));
+    public static final RegistryObject<Item> PHOENIX_EMBERS_ITEM = ITEMS.register("phoenix_embers", () -> new BlockItem(PHOENIX_EMBERS.get(), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> HELL_KEY = ITEMS.register("hell_key", () -> new HellKeyItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("EPIC"))));
+
+    /** Дневник Архимага (4.13): выдаётся при первом входе в мир, крафтится из книги и аметиста. */
+    public static final RegistryObject<Item> ARCHMAGE_JOURNAL = ITEMS.register("archmage_journal", () -> new JournalItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE"))));
+
     /** Отдельная вкладка «Магия» — всё содержимое мода в порядке регистрации. */
     public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.f_279569_, "explosionwand");
     public static final RegistryObject<CreativeModeTab> MAGIC_TAB = TABS.register("magic", () -> CreativeModeTab.builder()
@@ -118,6 +149,7 @@ public class ExplosionWandMod {
 
     public ExplosionWandMod() {
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+        BLOCKS.register(bus);
         ITEMS.register(bus);
         TABS.register(bus);
         MinecraftForge.EVENT_BUS.addListener(Ticker::onLevelTick);
@@ -156,5 +188,15 @@ public class ExplosionWandMod {
         MinecraftForge.EVENT_BUS.addListener(PhoenixStaff::onDamage);
         MinecraftForge.EVENT_BUS.addListener(RiftMobs::onHurt);
         MinecraftForge.EVENT_BUS.addListener(RiftMobs::onDeath);
+        MinecraftForge.EVENT_BUS.addListener(ArmorSets::onHurt);
+        MinecraftForge.EVENT_BUS.addListener(ArmorSets::onDamage);
+        MinecraftForge.EVENT_BUS.addListener(ArmorSets::onProjectile);
+        MinecraftForge.EVENT_BUS.addListener(ArmorSets::onKnock);
+        MinecraftForge.EVENT_BUS.addListener(ArmorSets::onVisibility);
+        MinecraftForge.EVENT_BUS.addListener(ArmorSets::onStopping);
+        MinecraftForge.EVENT_BUS.addListener(ArmorSets::onLogout);
+        MinecraftForge.EVENT_BUS.addListener(Journal::onLogin);
+        MinecraftForge.EVENT_BUS.addListener(HellGate::onLogoutEvent);
+        MinecraftForge.EVENT_BUS.addListener(HellGate::onBreak);
     }
 }

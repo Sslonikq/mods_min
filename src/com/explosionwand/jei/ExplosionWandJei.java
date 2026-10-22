@@ -21,6 +21,9 @@ public class ExplosionWandJei implements IModPlugin {
     public void registerRecipes(IRecipeRegistration reg) {
         info(reg, new ItemStack(ExplosionWandMod.RIFT_CORE.get()), "rift_core");
         info(reg, new ItemStack(ExplosionWandMod.ECLIPSE_HEART.get()), "eclipse_heart");
+        info(reg, new ItemStack(ExplosionWandMod.ECLIPSE_STAFF.get()), "eclipse_staff");
+        info(reg, new ItemStack(ExplosionWandMod.ECLIPSE_SEAL.get()), "eclipse_seal");
+        info(reg, new ItemStack(ExplosionWandMod.SKY_SEAL.get()), "sky_seal");
         info(reg, new ItemStack(ExplosionWandMod.DREAM_STAFF.get()), "dream_staff");
         info(reg, new ItemStack(ExplosionWandMod.DREAMING_EYE.get()), "dreaming_eye");
         info(reg, new ItemStack(ExplosionWandMod.WHALE_STAFF.get()), "whale_staff");
@@ -63,6 +66,24 @@ public class ExplosionWandJei implements IModPlugin {
         info(reg, new ItemStack(ExplosionWandMod.DECOY_WAND.get()), "decoy_wand");
         info(reg, new ItemStack(ExplosionWandMod.SPARK_WAND.get()), "spark_wand");
         info(reg, new ItemStack(ExplosionWandMod.HEAT_WAND.get()), "heat_wand");
+        // переход в Ад (4.13)
+        info(reg, new ItemStack(ExplosionWandMod.ARCHMAGE_JOURNAL.get()), "archmage_journal");
+        info(reg, new ItemStack(ExplosionWandMod.HELL_KEY.get()), "hell_key");
+        info(reg, new ItemStack(ExplosionWandMod.SEAL_STONE_ITEM.get()), "seal_stone");
+        info(reg, new ItemStack(ExplosionWandMod.PHOENIX_EMBERS_ITEM.get()), "phoenix_embers");
+        // сеты брони данжей (4.12)
+        info(reg, new ItemStack(ExplosionWandMod.CRYSTAL_HELMET.get()), "set_crystal");
+        info(reg, new ItemStack(ExplosionWandMod.CRYSTAL_CHESTPLATE.get()), "set_crystal");
+        info(reg, new ItemStack(ExplosionWandMod.CRYSTAL_LEGGINGS.get()), "set_crystal");
+        info(reg, new ItemStack(ExplosionWandMod.CRYSTAL_BOOTS.get()), "set_crystal");
+        info(reg, new ItemStack(ExplosionWandMod.DREAMER_HELMET.get()), "set_dreamer");
+        info(reg, new ItemStack(ExplosionWandMod.DREAMER_CHESTPLATE.get()), "set_dreamer");
+        info(reg, new ItemStack(ExplosionWandMod.DREAMER_LEGGINGS.get()), "set_dreamer");
+        info(reg, new ItemStack(ExplosionWandMod.DREAMER_BOOTS.get()), "set_dreamer");
+        info(reg, new ItemStack(ExplosionWandMod.ASH_HELMET.get()), "set_ash");
+        info(reg, new ItemStack(ExplosionWandMod.ASH_CHESTPLATE.get()), "set_ash");
+        info(reg, new ItemStack(ExplosionWandMod.ASH_LEGGINGS.get()), "set_ash");
+        info(reg, new ItemStack(ExplosionWandMod.ASH_BOOTS.get()), "set_ash");
     }
 
     private static void info(IRecipeRegistration reg, ItemStack stack, String key) {

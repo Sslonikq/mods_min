@@ -16,7 +16,11 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -518,6 +522,42 @@ final class Dungeons {
             } catch (IllegalStateException e) { noTemplate(d, e); }
         }
         return l2.isEmpty() ? Shield.NONE : new Shield(l2, ms);
+    }
+
+    /** Номер зала данжа rec в точке (мировые координаты) или -1, если точка не в зале (коридор, лестница, вне данжа). */
+    static int hallIdAt(DungeonData.Rec rec, double x, double y, double z) {
+        Def d = rec == null ? null : rec.def();
+        if (d == null) return -1;
+        try {
+            for (Hall h : d.halls()) if (h.contains(x - rec.x, y - rec.y + 0.5, z - rec.z)) return h.id;
+        } catch (IllegalStateException e) { noTemplate(d, e); }
+        return -1;
+    }
+
+    /** Два зала не совпадают (оба настоящие и разные): шаг/нырок из зала в чужой зал запрещён. */
+    static boolean otherHall(int a, int b) { return a >= 0 && b >= 0 && a != b; }
+
+    /**
+     * Можно ли посоху перенести игрока (шаг Разлома, нырок Кита) в точку (tx,ty,tz). Только в данжах Верхнего мира (игрок или точка внутри данжа):
+     * конечная точка видима (хотя бы один из двух лучей из глаз - к голове или к ногам - не задевает блоков; стены, закрытые печати и двери
+     * ломают оба) и точка в том же зале данжа, что и игрок. Вне данжей и в наших измерениях всегда true (поведение как до 2.19.1).
+     */
+    static boolean canReach(ServerLevel l, net.minecraft.world.entity.player.Player p, double tx, double ty, double tz) {
+        if (!Dims.is(l, Level.f_46428_)) return true;
+        DungeonData data = DungeonData.get(l);
+        DungeonData.Rec a = at(data, p.m_20185_(), p.m_20186_(), p.m_20189_(), 0), b = at(data, tx, ty, tz, 0);
+        if (a == null && b == null) return true;
+        Vec3 eye = p.m_146892_();
+        boolean seen = false;
+        for (double h : new double[]{1.5D, 0.3D}) {
+            Vec3 to = new Vec3(tx, ty + h, tz);
+            BlockHitResult bh = l.m_45547_(new ClipContext(eye, to, ClipContext.Block.valueOf("COLLIDER"), ClipContext.Fluid.valueOf("NONE"), p));
+            if (bh == null || bh.m_6662_() == HitResult.Type.valueOf("MISS")) { seen = true; break; }
+        }
+        if (!seen) return false;
+        if (a == null || b == null) return true;   // вход/выход из данжа: стены уже остановили бы луч
+        if (a != b) return false;                     // из данжа в другой данж нельзя
+        return !otherHall(hallIdAt(a, p.m_20185_(), p.m_20186_(), p.m_20189_()), hallIdAt(b, tx, ty, tz));
     }
 
     /** Позиция внутри данжа: эффекты палочек пропускают её так же, как бедрок. Для циклов лучше один раз взять shield(level). */
@@ -1030,6 +1070,7 @@ final class Dungeons {
     }
 
     private static void onCleared(ServerLevel sl, DungeonData.Rec rec, Hall h, List<ServerPlayer> in) {
+        if (h.boss != null) for (ServerPlayer p : in) Journal.won(p, h.boss.a);   // страницы Дневника Архимага
         if (h.chest == null) return;
         String[] spec = chestSpec(h.chest.a);
         Loot.chest(sl, rec.x + h.chest.x, rec.y + h.chest.y, rec.z + h.chest.z, spec[0], lootFor(rec.def(), h, Integer.parseInt(spec[1])));
