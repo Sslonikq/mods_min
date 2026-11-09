@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "explosionwand:block/smoldering_log_top",
+    "side": "explosionwand:block/smoldering_log"
+  }
+}

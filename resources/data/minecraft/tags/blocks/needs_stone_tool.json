@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "explosionwand:blood_iron_ore",
+    "explosionwand:eclipse_stone",
+    "explosionwand:blazing_stone"
+  ]
+}

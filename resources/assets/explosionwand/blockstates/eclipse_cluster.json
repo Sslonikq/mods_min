@@ -1,0 +1,108 @@
+{
+  "variants": {
+    "age=0,facing=up": {
+      "model": "explosionwand:block/eclipse_cluster_stage0"
+    },
+    "age=0,facing=down": {
+      "model": "explosionwand:block/eclipse_cluster_stage0",
+      "x": 180
+    },
+    "age=0,facing=north": {
+      "model": "explosionwand:block/eclipse_cluster_stage0",
+      "x": 90
+    },
+    "age=0,facing=east": {
+      "model": "explosionwand:block/eclipse_cluster_stage0",
+      "x": 90,
+      "y": 90
+    },
+    "age=0,facing=south": {
+      "model": "explosionwand:block/eclipse_cluster_stage0",
+      "x": 90,
+      "y": 180
+    },
+    "age=0,facing=west": {
+      "model": "explosionwand:block/eclipse_cluster_stage0",
+      "x": 90,
+      "y": 270
+    },
+    "age=1,facing=up": {
+      "model": "explosionwand:block/eclipse_cluster_stage1"
+    },
+    "age=1,facing=down": {
+      "model": "explosionwand:block/eclipse_cluster_stage1",
+      "x": 180
+    },
+    "age=1,facing=north": {
+      "model": "explosionwand:block/eclipse_cluster_stage1",
+      "x": 90
+    },
+    "age=1,facing=east": {
+      "model": "explosionwand:block/eclipse_cluster_stage1",
+      "x": 90,
+      "y": 90
+    },
+    "age=1,facing=south": {
+      "model": "explosionwand:block/eclipse_cluster_stage1",
+      "x": 90,
+      "y": 180
+    },
+    "age=1,facing=west": {
+      "model": "explosionwand:block/eclipse_cluster_stage1",
+      "x": 90,
+      "y": 270
+    },
+    "age=2,facing=up": {
+      "model": "explosionwand:block/eclipse_cluster_stage2"
+    },
+    "age=2,facing=down": {
+      "model": "explosionwand:block/eclipse_cluster_stage2",
+      "x": 180
+    },
+    "age=2,facing=north": {
+      "model": "explosionwand:block/eclipse_cluster_stage2",
+      "x": 90
+    },
+    "age=2,facing=east": {
+      "model": "explosionwand:block/eclipse_cluster_stage2",
+      "x": 90,
+      "y": 90
+    },
+    "age=2,facing=south": {
+      "model": "explosionwand:block/eclipse_cluster_stage2",
+      "x": 90,
+      "y": 180
+    },
+    "age=2,facing=west": {
+      "model": "explosionwand:block/eclipse_cluster_stage2",
+      "x": 90,
+      "y": 270
+    },
+    "age=3,facing=up": {
+      "model": "explosionwand:block/eclipse_cluster_stage3"
+    },
+    "age=3,facing=down": {
+      "model": "explosionwand:block/eclipse_cluster_stage3",
+      "x": 180
+    },
+    "age=3,facing=north": {
+      "model": "explosionwand:block/eclipse_cluster_stage3",
+      "x": 90
+    },
+    "age=3,facing=east": {
+      "model": "explosionwand:block/eclipse_cluster_stage3",
+      "x": 90,
+      "y": 90
+    },
+    "age=3,facing=south": {
+      "model": "explosionwand:block/eclipse_cluster_stage3",
+      "x": 90,
+      "y": 180
+    },
+    "age=3,facing=west": {
+      "model": "explosionwand:block/eclipse_cluster_stage3",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

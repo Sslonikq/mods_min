@@ -2,6 +2,21 @@
   "replace": false,
   "values": [
     "explosionwand:seal_stone",
-    "explosionwand:phoenix_embers"
+    "explosionwand:phoenix_embers",
+    "explosionwand:petrified_bones",
+    "explosionwand:eclipse_stone",
+    "explosionwand:eclipse_cobblestone",
+    "explosionwand:eclipse_bricks",
+    "explosionwand:carved_eclipse_bricks",
+    "explosionwand:blazing_stone",
+    "explosionwand:dark_obsidian",
+    "explosionwand:eclipse_crystal_block",
+    "explosionwand:eclipse_cluster",
+    "explosionwand:slag",
+    "explosionwand:pumice",
+    "explosionwand:geyser",
+    "explosionwand:blood_iron_ore",
+    "explosionwand:crown_gem_ore",
+    "explosionwand:archmage_stone"
   ]
 }

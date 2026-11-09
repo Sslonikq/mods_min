@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "axis=y": {
+      "model": "explosionwand:block/smoldering_log"
+    },
+    "axis=z": {
+      "model": "explosionwand:block/smoldering_log",
+      "x": 90
+    },
+    "axis=x": {
+      "model": "explosionwand:block/smoldering_log",
+      "x": 90,
+      "y": 90
+    }
+  }
+}

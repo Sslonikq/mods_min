@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "explosionwand:charred_log"
+    }
+  ],
+  "result": {
+    "item": "explosionwand:charred_planks",
+    "count": 4
+  }
+}

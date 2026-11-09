@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "explosionwand:charred_log",
+    "explosionwand:charred_planks",
+    "explosionwand:smoldering_log",
+    "explosionwand:smoldering_planks",
+    "explosionwand:coal_mushroom_cap",
+    "explosionwand:coal_mushroom_stem",
+    "explosionwand:coal_berry_bush"
+  ]
+}

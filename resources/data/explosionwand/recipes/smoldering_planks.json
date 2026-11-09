@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "explosionwand:smoldering_log"
+    }
+  ],
+  "result": {
+    "item": "explosionwand:smoldering_planks",
+    "count": 4
+  }
+}
