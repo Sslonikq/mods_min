@@ -457,7 +457,7 @@ def terrace():
     # --- забор плазы (углы 48 и 132): стены с проходами-воротами
     for name, a in (("sun_e", 48), ("sun_w", 132)):
         d = ((XX * math.sin(math.radians(a)) - ZZ * math.cos(math.radians(a))))
-        c = (np.abs(d) < 1.2) & ring(41, 58) & (np.cos(np.radians(TH - a)) > 0)
+        c = (np.abs(d) < 1.2) & ring(40, 58) & (np.cos(np.radians(TH - a)) > 0)      # забор вплотную к башне-ядру (без щели-кармана у стены)
         mset(c, SY + 1, SY + 4, BR)
         mset(c, SY + 5, SY + 5, CH)
         # ворота: r 47..52
@@ -709,7 +709,7 @@ def keep():
     box(-6, CY, -32, 6, CY + 1, -27, PB)
     box(-4, CY + 2, -32, 4, CY + 2, -29, GB)
     box(-2, CY + 3, -32, 2, CY + 3, -30, BR)
-    st(0, CY + 3, -29, "south", "polished_blackstone_stairs")
+    st(0, CY + 3, -29, "north", "polished_blackstone_stairs")             # facing = направление подъёма: ступень перед троном поднимается к нему (на север)
     for x in (-3, 3): box(x, CY + 3, -32, x, CY + 7, -32, CH)
     box(-3, CY + 8, -32, 3, CY + 8, -32, GB)
     box(-2, CY + 4, -32, 2, CY + 7, -32, BR)
@@ -747,12 +747,14 @@ def keep():
     air(-4, CY + 1, -39, 4, CY + 4, -36)
     box(-4, CY, -39, 4, CY, -36, PB)
     box(-1, CY + 1, -35, 1, CY + 2, -34, BL)                                   # скрытая дверь (secret)
-    put(5, CY + 3, -29, "lever[face=floor,facing=north,powered=false]")        # на подлокотнике
-    mark("lever", "treasury", 5, CY + 3, -29)
-    mark("secret", "treasury", -1, CY + 1, -35, 3, 2, 2)
+    put(4, CY + 3, -29, "lever[face=floor,facing=north,powered=false]")        # на подлокотнике (на золочёном блоке трона)
+    mark("lever", "treasury", 4, CY + 3, -29)
+    # секрет - ход ПОД троном: от стены комнаты (z -35) сквозь контрфорс и основание помоста (z -29), потом в нижнем ряду основания до переднего края (z -28..-27)
+    mark("secret", "treasury", -1, CY + 1, -35, 3, 2, 7)
+    mark("secret", "treasury", -1, CY + 1, -28, 3, 1, 2)
     mark("chest", "Сокровищница|3", 0, CY + 1, -38)
     mark("hall", "24", -4, CY + 1, -39, 9, 4, 4)
-    INFO["treasury"] = {"lever": (5, CY + 3, -29), "secret": (-1, CY + 1, -35, 3, 2, 2), "chest": (0, CY + 1, -38)}
+    INFO["treasury"] = {"lever": (4, CY + 3, -29), "secret": (-1, CY + 1, -35, 3, 2, 7), "secret2": (-1, CY + 1, -28, 3, 1, 2), "chest": (0, CY + 1, -38)}
     # свет в сокровищнице не нужен; лампа-заглушка для «подарка»
     lamp(-3, CY + 1, -38, "treasury")
     # --- уголок: мобы двора не ставим (босс сам)
@@ -781,6 +783,7 @@ def observatory():
     # провал: r 58..66, углы 304..326, y 35..38 (остаётся y=34 - в 4 блока ниже)
     m = ring(58, 66) & ang(304, 326)
     mset(m, 35, W2, "air")
+    mset(m, W2 + 1, W2 + 2, "air")                         # зубцы-парапет над провалом убираем (иначе висят в воздухе)
     # дорожка от лестницы до провала: чистая плита (зубцы убраны у верха лестницы)
     # столбики через клетку: r 60..61 каждые 2 блока по дуге
     k = 0
@@ -793,7 +796,7 @@ def observatory():
     cx, cz = pol(62, 335)
     box(cx - 4, W2 + 1, cz - 4, cx + 4, W2 + 6, cz + 4, BR)
     air(cx - 3, W2 + 1, cz - 3, cx + 3, W2 + 4, cz + 3)
-    air(cx - 4, W2 + 1, cz, cx - 4, W2 + 2, cz)            # проём в сторону столбиков (запад-юго-запад по грубой оценке)
+    air(cx - 1, W2 + 1, cz - 4, cx + 1, W2 + 3, cz - 4)    # проём в северной стенке - со стороны дорожки, где кончается провал (идём по стене на юг-восток)
     put(cx, W2 + 1, cz, "lectern[facing=north]")
     mark("chest", "Обсерватория|2", cx + 2, W2 + 1, cz + 2)
     mark("hall", "25", cx - 4, W2 + 1, cz - 4, 9, 5, 9)
@@ -802,17 +805,17 @@ def observatory():
 
 
 def dungeon():
-    # лестница из казармы (-55,-55) вниз: 14 ступеней на запад вдоль z -60..-58, начало x=-51 (пол казармы y=21)
-    for i in range(1, 15):
+    # лестница из казармы (-55,-55) вниз: 13 ступеней на запад вдоль z -60..-58, начало x=-51 (пол казармы y=21), потом площадка x -65..-64 (стоять y=8)
+    for i in range(1, 14):
         x = -50 - i
         s = 22 - i
         for z in (-60, -59, -58):
             box(x, s, z, x, s + 4, z, "air")
-            st(x, s - 1, z, "west")
-    # коридор: x -65..-63, z -58..-21, стоять y=8
-    air(-65, 8, -58, -63, 11, -21)
-    box(-65, 7, -58, -63, 7, -21, BR)
-    for x in range(-65, -62): air(x, 8, -60, x, 11, -58)
+            st(x, s - 1, z, "east")        # facing = направление ПОДЪЁМА: идём вниз на запад, значит ступень поднимается на восток
+    # площадка внизу и коридор: x -65..-63, z -57..-21, стоять y=8 (коридор начинается за рядом ступеней z=-58, чтобы не срезать ступень x=-63)
+    for x in range(-65, -63): air(x, 8, -60, x, 11, -58)
+    air(-65, 8, -57, -63, 11, -21)
+    box(-65, 7, -57, -63, 7, -21, BR)
     # камеры: запад x -71..-67, восток x -61..-57
     cells = []
     for j in range(5):
@@ -980,133 +983,199 @@ def validate():
         if t == "lamp" and not get(*p).startswith("minecraft:amethyst_cluster"): bad.append(f"lamp {a} {p}: нет заглушки")
     ids = [a for (t, a, p, s) in MARKS if t == "lamp"]
     if len(ids) != len(set(ids)): bad.append("повтор id ламп")
+    bad += attached_check()
     bad += check_walk()
     return bad
 
 
+REPORT = []                  # строки аудита проходимости (печатаются по --audit)
+TRAPS = []                   # (x, y, z, есть_выход_падением) - узлы, достижимые вперёд, но не назад строгим спуском до 3 блоков
+
+
+def _vol(p, sz): return [(p[0] + x, p[1] + y, p[2] + z) for x in range(sz[0]) for y in range(sz[1]) for z in range(sz[2])]
+
+
+def _diag_regions():
+    t2 = next(t for t in INFO["towers"] if t[0] == 2)
+    xs = [pol(r, th)[0] for r in (56, 68) for th in (304, 326)]
+    zs = [pol(r, th)[1] for r in (56, 68) for th in (304, 326)]
+    return [(t2[1] - 5, t2[2] - 5, t2[1] + 5, t2[2] + 5), (min(xs) - 2, min(zs) - 2, max(xs) + 2, max(zs) + 2)]   # паркур башни 2 и провал обсерватории: диагональные прыжки
+
+
+def _walk_graph(open_doors, shut_seals=False, drop=6, secrets=True):
+    import citadel_walk as cw
+    ed = []
+    for (t, a, p, s_) in MARKS:
+        if (t == "door" and a in open_doors) or (t == "secret" and secrets): ed.append((p[0], p[1], p[2], p[0] + s_[0] - 1, p[1] + s_[1] - 1, p[2] + s_[2] - 1, "open"))
+        if t == "seal" and shut_seals: ed.append((p[0], p[1], p[2], p[0] + s_[0] - 1, p[1] + s_[1] - 1, p[2] + s_[2] - 1, "shut"))
+    return cw.build(A, PAL, (O, O, YO), ed, drop=drop, diag_regions=_diag_regions())
+
+
+DOORS = ["gate1", "gate2", "sun_e", "sun_w", "prethrone", "throne_seal"]
+STAGES = [("S0 (всё закрыто)", []), ("S1 (открыты ворота 1)", ["gate1"]), ("S2 (+ ворота 2)", ["gate1", "gate2"]),
+          ("S3 (+ решётки часов)", ["gate1", "gate2", "sun_e", "sun_w"]), ("S4 (+ Лунные врата)", ["gate1", "gate2", "sun_e", "sun_w", "prethrone"]),
+          ("S5 (+ Печать Трона)", DOORS)]
+
+
+def _tower_gate(t):
+    idx, cx, cz, kind, ds = t
+    return (cx + {"E": 6, "W": -6, "S": 0, "N": 0}[ds], SY + 1, cz + {"S": 6, "N": -6, "E": 0, "W": 0}[ds])
+
+
 def check_walk():
-    """Проходимость: шагом (подъём до 1, спуск до 3) от старта, двери и печати открыты; к ключевым точкам. Парящие платформы Башни 2 - прыжками."""
-    import collections
+    """Физическая проходимость (tools/citadel_walk.py): четверти блока, полублоки, ступени с facing, потолок 2 блока, прыжки, ладдеры, спуск до 3 блоков.
+    По этапам прохождения: на каждом этапе нужное достижимо и до него можно дотянуться рукой (луч), а закрытое - нет; обратный BFS: ловушек без выхода нет."""
+    import citadel_walk as cw
     bad = []
-    openc = set()
-    for (t, a, p, s) in MARKS:
-        if t in ("door",):
-            for x in range(s[0]):
-                for y in range(s[1]):
-                    for z in range(s[2]): openc.add((p[0] + x, p[1] + y, p[2] + z))
-    sealc = set()
-    use_seals = [False]
-    def free(x, y, z):
-        if use_seals[0] and (x, y, z) in sealc: return False
-        return (x, y, z) in openc or not solid_at(x, y, z)
-    def stand(x, y, z): return free(x, y, z) and free(x, y + 1, z) and (solid_at(x, y - 1, z) or (x, y - 1, z) in openc and False)
-    def ladder(x, y, z): return get(x, y, z).startswith("minecraft:ladder")
-    start = INFO["start"]
-    def bfs(src, jumps=False, blocked_doors=None):
-        seen = {src}; dq = collections.deque([src])
-        while dq:
-            x, y, z = dq.popleft()
-            if ladder(x, y, z):
-                for dy in (-1, 1):
-                    q = (x, y + dy, z)
-                    if q not in seen and (ladder(*q) or stand(*q)): seen.add(q); dq.append(q)
-            for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                nx, nz = x + dx, z + dz
-                if ladder(nx, y, nz) and free(nx, y, nz):
-                    q = (nx, y, nz)
-                    if q not in seen: seen.add(q); dq.append(q)
-                for ny in (y + 1, y, y - 1, y - 2, y - 3):
-                    if ny == y + 1 and not free(x, y + 2, z): continue
-                    if stand(nx, ny, nz) or (ladder(nx, ny, nz) and free(nx, ny + 1, nz)):
-                        q = (nx, ny, nz)
-                        if q not in seen: seen.add(q); dq.append(q)
-                        break
-                if jumps:
-                    for k in (2,):
-                        jx, jz = x + dx * k, z + dz * k
-                        for ny in (y + 1, y, y - 1):
-                            if stand(jx, ny, jz) and free(x, y + 2, z):
-                                q = (jx, ny, jz)
-                                if q not in seen: seen.add(q); dq.append(q)
-                                break
-        return seen
-    sx, sy, sz = start
-    sealc = set()
-    for (t, a, p, s) in MARKS:
-        if t == "seal":
-            for x in range(s[0]):
-                for y in range(s[1]):
-                    for z in range(s[2]): sealc.add((p[0] + x, p[1] + y, p[2] + z))
-    reach = bfs((sx, sy, sz))
-    globals()['_SEALS'] = sealc
-    global REACH; REACH = reach
-    def reached(p, label, near=2):
-        x, y, z = p
-        if any((x + dx, y + dy, z + dz) in reach for dx in range(-near, near + 1) for dz in range(-near, near + 1) for dy in range(-1, 2)): return
-        bad.append(f"недостижимо: {label} {p}")
-    reached((0, 22, 98), "ворота 1 (снаружи)")
-    reached((0, 22, 86), "двор у ворот 1")
-    for (i, bx, top, bz, ex, ey, ez) in INFO["beacons"]: reached((ex, ey, ez), f"вход в маяк {i}")
-    reached((0, 22, -62), "галерея у ворот 2")
-    reached((0, 22, -63), "галерея у ворот 2")
-    reached(INFO["gallery_exit"], "выход из галереи")
-    reached((0, SY + 1, 50), "плаза часов")
-    reached((-30, SY + 1, 50), "западная часть плазы")
-    reached(INFO["dungeon"]["bottom"], "темница")
-    reached(INFO["dungeon"]["note"], "записка темницы")
-    reached(INFO["dungeon"]["chest"], "сундук темницы")
-    for (a, cx, cz, cp) in INFO["bastions"]: reached(cp, f"сундук бастиона {a}")
-    for (i, px, py, pz, side) in INFO["sun_plates"]: reached((px, py + 1, pz), f"печать {i}")
-    reached(INFO["observatory_gap"][0], "начало провала обсерватории")
-    # после ворот плазы (открыты): башни
-    for (idx, cx, cz, kind, ds) in INFO["towers"]:
-        reached((cx + {"E": 6, "W": -6, "S": 0, "N": 0}[ds], SY + 1, cz + {"S": 6, "N": -6, "E": 0, "W": 0}[ds]), f"подход к башне {idx}")
+    REPORT.clear()
+    st0 = INFO["start"]
+
+    def note(ok, label, why=""):
+        REPORT.append(("OK  " if ok else "FAIL") + " " + label + (" - " + why if why else ""))
+        if not ok: bad.append(label + (" - " + why if why else ""))
+
+    def reach_pt(G, F, p, label, near=2, dy=1.0, want=True):
+        ids = cw.near_ids(G, YMIN, p[0], p[1], p[2], near=near, dy=dy)
+        got = bool(len(ids) and F[ids].any())
+        note(got == want, ("достижимо: " if want else "закрыто (недостижимо): ") + label + f" {tuple(p)}", "" if got == want else ("нет пути" if want else "обход двери"))
+
+    def touch(G, F, cells, label, reach=4.0):
+        ids = np.flatnonzero(F)
+        ok = False
+        for c in cells:
+            m = (np.abs(G.X[ids] - c[0]) <= 5) & (np.abs(G.Z[ids] - c[2]) <= 5)
+            if cw.can_touch(G, YMIN, ids[m], c, reach): ok = True; break
+        note(ok, "достаёт рукой: " + label, "" if ok else "нет места, откуда видно и достать (4 блока)")
+
+    def seeds(G): return cw.near_ids(G, YMIN, st0[0], st0[1], st0[2], near=1, dy=1)
+
+    Gs = []
+    for name, op in STAGES:
+        G = _walk_graph(op)
+        Gs.append((G, cw.bfs(G, seeds(G))))
+    (G0, F0), (G1, F1), (G2, F2), (G3, F3), (G4, F4), (G5, F5) = Gs
+    gate = {}
+    for (t, a, p, s_) in MARKS:
+        if t == "door": gate[a] = _vol(p, s_)
+    # --- S0: ворота 1
+    touch(G0, F0, gate["gate1"], "ворота 1 (Осколок) снаружи")
+    reach_pt(G0, F0, (0, 22, 98), "перед воротами 1")
+    for q, lab in (((0, 22, 86), "двор у ворот 1"), ((0, 22, -63), "галерея"), ((0, SY + 1, 50), "плаза часов"), ((0, CY + 1, 0), "центр Тронного двора")):
+        reach_pt(G0, F0, q, lab + " при закрытых воротах 1", want=False)
+    # --- S1: двор, маяки, казармы, бастионы, темница, оружейная
+    reach_pt(G1, F1, (0, 22, 86), "двор у ворот 1")
+    reach_pt(G1, F1, INFO["brazier1"], "жаровня 1")
+    for (i, bx, top, bz, ex, ey, ez) in INFO["beacons"]:
+        reach_pt(G1, F1, (ex, ey, ez), f"вход в маяк {i}")
+        touch(G1, F1, [(bx, top, bz)], f"маяк {i} (чаша на вершине, по ладдеру)")
+    for q, lab in (((0, 22, -63), "галерея"), (INFO["gallery_exit"], "выход галереи"), ((0, SY + 1, 50), "плаза часов")):
+        reach_pt(G1, F1, q, lab + " при закрытых воротах 2", want=False)
+    for (a, cx, cz, cp) in INFO["bastions"]: reach_pt(G1, F1, cp, f"сундук бастиона {a}", near=1, dy=0.6)
+    for (bx, bz) in INFO["barracks"]: reach_pt(G1, F1, (bx, 22, bz), f"казарма ({bx},{bz})")
+    d = INFO["dungeon"]
+    reach_pt(G1, F1, d["bottom"], "темница (низ лестницы)")
+    reach_pt(G1, F1, d["note"], "записка темницы")
+    reach_pt(G1, F1, d["chest"], "сундук темницы", near=1, dy=0.6)
+    sa = INFO["armory"]["secret"]
+    touch(G1, F1, _vol(sa[:3], sa[3:]), "трещина оружейной (кирка/взрыв) со двора")
+    reach_pt(G1, F1, INFO["armory"]["chest"], "сундук оружейной (когда трещина открыта)", near=1, dy=0.6)
+    for (t, a, p, s_) in MARKS:
+        if t == "lamp" and (a.startswith("barracks") or a.startswith("dungeon") or a == "armory_hint"): touch(G1, F1, [p], f"лампа {a}")
+    # --- S2: галерея, плаза часов
+    reach_pt(G2, F2, (0, 22, -63), "галерея у ворот 2")
+    reach_pt(G2, F2, INFO["gallery_exit"], "выход из галереи")
+    reach_pt(G2, F2, (0, SY + 1, 50), "плаза часов")
+    reach_pt(G2, F2, INFO["brazier2"], "жаровня 2")
+    reach_pt(G2, F2, INFO["brazier3"], "жаровня 3")
+    for (t, a, p, s_) in MARKS:
+        if t == "lamp" and a.startswith("gallery"): touch(G2, F2, [p], f"лампа {a}")
+    for (i, mx, my, mz) in INFO["sun_mirrors"]: touch(G2, F2, [(mx, my, mz)], f"зеркало часов {i}")
+    for (i, px, py, pz, side) in INFO["sun_plates"]: reach_pt(G2, F2, (px, py + 1, pz), f"печать часов {i}", near=0, dy=0.6)
+    for (i, x, y, z) in INFO["sockets"]: touch(G2, F2, [(x, y, z)], f"сокет Лунного камня {i}")
+    touch(G2, F2, gate["prethrone"], "Лунные врата (закрыты)")
+    for t in INFO["towers"]: reach_pt(G2, F2, _tower_gate(t), f"подход к башне {t[0]} при закрытых решётках часов", want=False)
+    reach_pt(G2, F2, (0, SY + 2, 0), "Предтронный зал при закрытых Лунных вратах", want=False)
+    # --- S3: башни, обсерватория
+    for t in INFO["towers"]: reach_pt(G3, F3, _tower_gate(t), f"подход к башне {t[0]}")
     for (idx, cx, py, cz) in INFO["moonstones"]:
-        if idx != 2: reached((cx, 51, cz), f"крыша башни {idx}", near=3)
-    reached((0, SY + 1, 41), "вход в Предтронный зал")
-    reached((0, SY + 1, 30), "коридор в Предтронный зал")
-    reached((0, SY + 2, 0), "центр Предтронного зала")
-    reached((0, SY + 1, -26), "начало спирали")
-    reached((0, CY + 1, 0), "центр Тронного двора")
-    reached(INFO["treasury"]["chest"], "сундук сокровищницы (в обход секрета не проверяем)") if False else None
-    # печати закрыты: в Тронный двор не пройти (обхода нет)
-    use_seals[0] = True
-    sealc.update(globals()["_SEALS"])
-    shut = bfs((sx, sy, sz))
-    use_seals[0] = False
-    if any((0 + dx, 64, 0 + dz) in shut for dx in (-1, 0, 1) for dz in (-1, 0, 1)): bad.append("при закрытых печатях в Тронный двор можно пройти в обход люка")
-    # закрытая дверь отсекает следующий ярус (обхода шагом нет); остальные двери открыты, печати не мешают
-    door_cells = {}
-    for (t, a, p, s) in MARKS:
-        if t == "door":
-            door_cells.setdefault(a, set()).update((p[0] + x, p[1] + y, p[2] + z) for x in range(s[0]) for y in range(s[1]) for z in range(s[2]))
-    def shut_with(ids, cut, label):
-        gone = set()
-        for i in ids:
-            if i not in door_cells: bad.append(f"нет двери {i}"); continue
-            gone |= door_cells[i]
-        openc.difference_update(gone)
-        r = bfs((sx, sy, sz))
-        openc.update(gone)
-        for q in cut:
-            if any((q[0] + dx, q[1] + dy, q[2] + dz) in r for dx in (0,) for dz in (0,) for dy in (-1, 0, 1)):
-                bad.append(f"при закрытой двери {label} достижимо {q}")
-    shut_with(["gate1"], [(0, 22, 86), (0, 22, -63), (0, SY + 1, 50), (0, CY + 1, 0)], "gate1")
-    shut_with(["gate2"], [(0, 22, -63), INFO["gallery_exit"], (0, SY + 1, 50), (0, CY + 1, 0)], "gate2")
-    shut_with(["sun_e", "sun_w"], [(cx + {"E": 6, "W": -6, "S": 0, "N": 0}[ds], SY + 1, cz + {"S": 6, "N": -6, "E": 0, "W": 0}[ds]) for (idx, cx, cz, kind, ds) in INFO["towers"]], "sun_e+sun_w")
-    shut_with(["prethrone"], [(0, SY + 2, 0), (0, SY + 1, -26), (0, CY + 1, 0)], "prethrone")
-    shut_with(["throne_seal"], [(0, SY + 1, -26), (0, CY + 1, 0)], "throne_seal")
+        reach_pt(G3, F3, (cx, 51, cz), f"крыша башни {idx}", near=3, dy=0.6)
+        touch(G3, F3, [(cx, py, cz)], f"Лунный камень {idx}")
+    for (t, a, p, s_) in MARKS:
+        if t == "lamp" and a == "tower3": touch(G3, F3, [p], "лампа башни 3")
+    reach_pt(G3, F3, INFO["observatory_gap"][0], "начало провала обсерватории", near=1, dy=0.6)
+    reach_pt(G3, F3, INFO["observatory_gap"][1], "конец провала обсерватории", near=1, dy=0.6)
+    for (t, a, p, s_) in MARKS:
+        if t == "chest" and a.startswith("Обсерватория"): reach_pt(G3, F3, p, "сундук обсерватории", near=1, dy=0.6)
+    reach_pt(G3, F3, (0, SY + 2, 0), "Предтронный зал при закрытых Лунных вратах", want=False)
+    reach_pt(G3, F3, (0, CY + 1, 0), "Тронный двор при закрытых Лунных вратах", want=False)
+    # --- S4: Предтронный зал
+    for q, lab in (((0, SY + 1, 41), "вход в Предтронный зал"), ((0, SY + 1, 30), "коридор в зал"), ((0, SY + 2, 0), "центр зала (колосс)")):
+        reach_pt(G4, F4, q, lab)
+    reach_pt(G4, F4, (0, SY + 1, -26), "лестница за дверью Печати Трона при закрытой двери", want=False)
+    for (t, a, p, s_) in MARKS:
+        if t == "lamp" and a.startswith("hall"): touch(G4, F4, [p], f"лампа {a}")
+    touch(G4, F4, gate["throne_seal"], "дверь Печати Трона (закрыта)")
+    reach_pt(G4, F4, (0, CY + 1, 0), "Тронный двор при закрытой двери Печати Трона", want=False)
+    # --- S5: лестница и двор
+    reach_pt(G5, F5, (0, SY + 1, -26), "начало винтовой лестницы")
+    reach_pt(G5, F5, (0, CY + 1, 0), "центр Тронного двора")
+    tr = INFO["treasury"]
+    touch(G5, F5, [tr["lever"]], "рычаг сокровищницы на подлокотнике трона")
+    reach_pt(G5, F5, tr["chest"], "сундук сокровищницы (когда рычаг дёрнут)", near=1, dy=0.6)
+    # --- одна дверь закрыта, остальные открыты: обхода нет
+    cuts = {"gate1": [(0, 22, 86), (0, 22, -63), (0, SY + 1, 50), (0, CY + 1, 0)], "gate2": [(0, 22, -63), INFO["gallery_exit"], (0, SY + 1, 50), (0, CY + 1, 0)],
+            "prethrone": [(0, SY + 2, 0), (0, SY + 1, -26), (0, CY + 1, 0)], "throne_seal": [(0, SY + 1, -26), (0, CY + 1, 0)],
+            "sun": [_tower_gate(t) for t in INFO["towers"]]}
+    for key, qs in cuts.items():
+        op = [x for x in DOORS if x != key and not (key == "sun" and x in ("sun_e", "sun_w"))]
+        G = _walk_graph(op)
+        F = cw.bfs(G, seeds(G))
+        for q in qs: reach_pt(G, F, q, f"при одной закрытой двери {key} (остальные открыты)", want=False)
+    # --- печати закрыты: Тронный двор не доступен в обход люка
+    G = _walk_graph(DOORS, shut_seals=True)
+    F = cw.bfs(G, seeds(G))
+    reach_pt(G, F, (0, CY + 1, 0), "Тронный двор при закрытых печатях", near=1, want=False)
+    # --- ловушки: достижимо вперёд, но не вернуть к старту (строго: спуск до 3 блоков; мягко: падение до 12 блоков)
+    Bs = cw.bfs(G5, seeds(G5), backward=True)
+    GL = _walk_graph(DOORS, drop=24)
+    BL = cw.bfs(GL, seeds(GL), backward=True)
+    keyBL = set(zip(GL.X[BL].tolist(), GL.Z[BL].tolist(), GL.K[BL].tolist()))
+    rr = np.hypot(G5.X, G5.Z)
+    TRAPS.clear()
+    inner = []
+    for i in np.flatnonzero(F5 & ~Bs):
+        k = (int(G5.X[i]), int(G5.Z[i]), int(G5.K[i]))
+        fall = k in keyBL
+        TRAPS.append((k[0], YMIN + k[2] / 2.0, k[1], fall))
+        if not fall and rr[i] < 96.5: inner.append(TRAPS[-1])
+    note(not inner, "нет ловушек без выхода внутри стен (спуск или падение до 12 блоков)", "" if not inner else f"{len(inner)} узлов, например {inner[:6]}")
+    # то же для упавших: куда можно упасть (до 12 блоков), оттуда должен быть путь назад (хотя бы падением)
+    FL = cw.bfs(GL, seeds(GL))
+    rl = np.hypot(GL.X, GL.Z)
+    # внешние уступы башни-ядра (y 46 и 57, r 36..41) достижимы только нарочным прыжком с парапета Тронного двора вниз на 10-16 блоков - отдельная заметка в отчёте, не ловушка маршрута
+    fallen = [i for i in np.flatnonzero(FL & ~BL) if rl[i] < 96.5 and not (rl[i] < 41.5 and YMIN + GL.K[i] / 2.0 >= 40)]
+    note(not fallen, "упавшему (до 12 блоков) есть выход к старту", "" if not fallen else f"{len(fallen)} узлов, например {[(int(GL.X[i]), YMIN + int(GL.K[i]) / 2.0, int(GL.Z[i])) for i in fallen[:6]]}")
     # лава не вытекает: бока и дно - твёрдое или лава
     for xi, zi, yi in zip(*np.nonzero(A == pid("lava"))):
         x, z, y = int(xi) - O, int(zi) - O, int(yi) - YO
-        for d in ((1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1), (0, -1, 0)):
-            q = get(x + d[0], y + d[1], z + d[2])
-            if q in ("", "minecraft:air"): bad.append(f"лава ({x},{y},{z}) открыта к {d}"); break
-    # парящие платформы башни 2: прыжки (шаг по горизонтали до 2)
-    t2 = next(t for t in INFO["towers"] if t[0] == 2)
-    reach2 = bfs((t2[1] - 5 + 1, SY + 1, t2[2]), jumps=True)
-    px, py, pz = INFO["parkour_platforms"][-1]
-    if not any((px + dx, py + 1, pz + dz) in reach2 for dx in (0, 1) for dz in (0, 1)): bad.append("парящие платформы башни 2: последняя недостижима прыжками")
+        for d_ in ((1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1), (0, -1, 0)):
+            q = get(x + d_[0], y + d_[1], z + d_[2])
+            if q in ("", "minecraft:air"): bad.append(f"лава ({x},{y},{z}) открыта к {d_}"); break
+    return bad
+
+
+def attached_check():
+    """Лестницы, рычаги, костры, друзы: на месте ли опора (иначе блок отвалится при обновлении соседей)."""
+    bad = []
+    off = {"north": (0, 0, 1), "south": (0, 0, -1), "east": (-1, 0, 0), "west": (1, 0, 0)}
+    lad = [i for i, b in enumerate(PAL) if b.startswith("minecraft:ladder")]
+    for xi, zi, yi in zip(*np.nonzero(np.isin(A, lad))):
+        x, z, y = int(xi) - O, int(zi) - O, int(yi) - YO
+        f = PAL[A[xi, zi, yi]].split("facing=")[1].rstrip("]").split(",")[0]
+        dx, dy, dz = off[f]
+        if not solid_at(x + dx, y + dy, z + dz): bad.append(f"ладдер ({x},{y},{z}) facing={f}: нет опоры за спиной")
+    for (t, a, p, s_) in MARKS:
+        if t in ("lever", "lamp", "beacon", "brazier") and not solid_at(p[0], p[1] - 1, p[2]): bad.append(f"{t} {a} {p}: нет опоры снизу ({get(p[0], p[1] - 1, p[2])})")
     return bad
 
 
@@ -1274,13 +1343,13 @@ def doc_text(files):
     a = I["armory"]
     w(f"1. **Оружейная** (зал 23): трещина `cracked_stone_bricks` в стене двора кольца 1, север. `secret` a=`armory` - {b(a['secret'][:3], a['secret'][3:])}; сундук (тир 2) {c(a['chest'])}; открывает любой взрыв/кирка (решает код, как «трещины» Святилища); подсказка - метка `lamp` a=`armory_hint`.")
     t = I["treasury"]
-    w(f"2. **Сокровищница за троном** (зал 24): рычаг-маскировка `lever` a=`treasury` на подлокотнике трона {c(t['lever'])}; `secret` a=`treasury` - {b(t['secret'][:3], t['secret'][3:])}; сундук (тир 3) {c(t['chest'])}.")
+    w(f"2. **Сокровищница за троном** (зал 24): рычаг-маскировка `lever` a=`treasury` на подлокотнике трона (золочёный блок) {c(t['lever'])}; две метки `secret` a=`treasury` - ход ПОД троном: {b(t['secret'][:3], t['secret'][3:])} (от стены комнаты сквозь контрфорс и основание помоста) и {b(t['secret2'][:3], t['secret2'][3:])} (передний край основания); открываются вместе одним id; сундук (тир 3) {c(t['chest'])}. Добраться до рычага можно только из Тронного двора.")
     ob = I["observatory"]
-    w(f"3. **Обсерватория** (зал 25) на стене кольца 2: лестница от террасы {c(I['observatory_stair'][:3] if False else (I['observatory_stair'][0], 30, I['observatory_stair'][1]))} к {c((I['observatory_stair'][2], 38, I['observatory_stair'][3]))} на дорожку стены; дальше провал с зубцами-столбиками (прыжки), дальше комната, сундук (тир 2) около {c(ob)}.")
+    w(f"3. **Обсерватория** (зал 25) на стене кольца 2: лестница от террасы {c(I['observatory_stair'][:3] if False else (I['observatory_stair'][0], 30, I['observatory_stair'][1]))} к {c((I['observatory_stair'][2], 38, I['observatory_stair'][3]))} на дорожку стены; дальше провал с зубцами-столбиками (10 столбиков, прыжки через 1 блок разрыва; упавшему падение 4 блока на дно провала, оттуда можно спрыгнуть на террасу), дальше комната (вход в её северной стенке со стороны дорожки), сундук (тир 2) около {c(ob)}.")
     w("")
     w("## Темница (побочная, зал 22)")
     d = I["dungeon"]
-    w(f"- Вход: лестница из северо-западной казармы {c(d['stair_top'])}, 14 ступеней на запад вниз, до {c(d['bottom'])}; коридор на юг до {c(d['note'])} (записка Архимага, метка `note` a=`archmage`, лекторий).")
+    w(f"- Вход: лестница из северо-западной казармы {c(d['stair_top'])}, 13 ступеней на запад вниз, площадка до {c(d['bottom'])}; коридор на юг до {c(d['note'])} (записка Архимага, метка `note` a=`archmage`, лекторий).")
     w(f"- 10 камер (по 5 с каждой стороны), в каждой метка `mob prisoner`; сундук (тир 1) {c(d['chest'])}; 3 метки `lamp` (a=`dungeon1..3`).")
     w("")
     w("## Метки (что ставит шаблон, что делает код)")
@@ -1313,8 +1382,10 @@ def doc_text(files):
     w("")
     w("## Проверки (tools/gen_citadel.py --check)")
     w("- все ID блоков есть в реестре 1.20.1; метки `chest`/`boss` по одной в зале, на воздухе, с полом;")
-    w("- проходимость шагом (подъём 1, спуск до 3, двери открыты, лестницы-ладдеры) от `start` до: ворот, маяков, галереи, плазы, тёмницы, бастионов, печатей, подхода к башням, крыш башен 1 и 3, Лунных врат, зала, спирали, центра арены; парящие платформы башни 2 - прыжком через 1 блок;")
-    w("- двери и тайники в шаблоне заполнены, печати - пустые.")
+    w("- физическая проходимость (`tools/citadel_walk.py`): четверти блока и полублоки; подъём без прыжка только на ступень/плиту (0,5), на блок - прыжок; ступень проходима снизу вверх только со стороны низкой части (`facing` = направление подъёма); потолок над головой не меньше 2 блоков; спуск до 3 блоков; прыжок через разрыв до 3 блоков по ровной, до 2 вверх на блок (диагональные прыжки - только в паркуре башни 2 и в провале обсерватории); ладдеры; на слизь можно падать с любой высоты;")
+    w("- по этапам прохождения (S0 всё закрыто, S1 +ворота 1, S2 +ворота 2, S3 +решётки часов, S4 +Лунные врата, S5 +Печать Трона): нужное достижимо и до него можно дотянуться рукой (луч, 4 блока): ворота, маяки (по ладдеру), лампы, зеркала, печати, сокеты, Лунные камни, трещина оружейной, рычаг сокровищницы, сундуки; закрытое недостижимо, обхода двери нет (и когда закрыта только одна дверь, и когда закрыты печати);")
+    w("- обратный BFS: из каждого достижимого места есть путь к старту (спуском до 3 блоков), а для упавшего (до 12 блоков) - хотя бы падением; ловушек без выхода внутри стен нет;")
+    w("- опора для ладдеров, рычагов, ламп, костров; двери и тайники в шаблоне заполнены, печати - пустые; лава не вытекает. Подробный разбор: `python tools/gen_citadel.py --check --audit`.")
     w("")
     w("## Не сделано (следующий шаг)")
     w("- Орнамент и мелкий декор (знамёна, цепи, треснувшие участки стен) - по вкусу пользователя после игры; светящихся блоков в шаблоне мало намеренно: внутри должно быть темно.")
@@ -1329,6 +1400,12 @@ def main():
     out = {}
     for name, f in files.items(): out[name] = f
     doc = doc_text(files)
+    if "--audit" in sys.argv:
+        print(chr(10).join(REPORT))
+        by = {}
+        for (x, y, z, fall) in TRAPS: by.setdefault((x // 8 * 8, int(y) // 4 * 4, z // 8 * 8, fall), 0); by[(x // 8 * 8, int(y) // 4 * 4, z // 8 * 8, fall)] += 1
+        print("односторонние места (достижимы, но спуском не вернуться; fall=True - выход падением):")
+        for k, v in sorted(by.items()): print("  x", k[0], "y", k[1], "z", k[2], "fall" if k[3] else "ЛОВУШКА", v, "узлов")
     if "--preview" in sys.argv: preview()
     if check:
         for name, f in files.items():
