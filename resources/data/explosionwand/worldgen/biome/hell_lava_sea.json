@@ -1,5 +1,10 @@
 {
-  "carvers": {},
+  "carvers": {
+    "air": [
+      "explosionwand:hell_cave",
+      "explosionwand:hell_canyon"
+    ]
+  },
   "downfall": 0.0,
   "has_precipitation": false,
   "temperature": 2.0,

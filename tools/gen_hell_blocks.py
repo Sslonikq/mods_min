@@ -298,13 +298,13 @@ B = [
     ("blazing_stone", "Раскалённый камень", "Blazing Stone", "cube", 12, 1.5, "self"),
     ("dark_obsidian", "Тёмный обсидиан", "Dark Obsidian", "cube", 0, 50.0, "self"),
     ("eclipse_crystal_block", "Кристалл затмения", "Eclipse Crystal", "cube", 12, 1.5, "self"),
-    ("eclipse_cluster", "Друза затмения", "Eclipse Cluster", "cluster", 4, 1.5, "self"),
+    ("eclipse_cluster", "Друза затмения", "Eclipse Cluster", "cluster", 4, 1.5, "shards"),
     ("slag", "Шлак", "Slag", "cube", 0, 1.0, "self"),
     ("pumice", "Пемза", "Pumice", "cube", 0, 0.6, "self"),
     ("geyser", "Гейзер", "Geyser", "geyser", 0, 2.0, "self"),
     ("fire_coral", "Огненный коралл", "Fire Coral", "cross", 8, 0.0, "self"),
-    ("blood_iron_ore", "Руда кровавого железа", "Blood Iron Ore", "cube", 0, 3.0, "iron"),
-    ("crown_gem_ore", "Самоцвет короны", "Crown Gem Ore", "cube", 9, 3.0, "self"),
+    ("blood_iron_ore", "Руда кровавого железа", "Blood Iron Ore", "cube", 0, 3.0, "bloodiron"),
+    ("crown_gem_ore", "Руда самоцвета короны", "Crown Gem Ore", "cube", 9, 3.0, "gem"),
     ("ghost_moss", "Призрачный мох", "Ghost Moss", "carpet", 0, 0.1, "self"),
     ("ghost_flower", "Призрачный цветок", "Ghost Flower", "cross", 7, 0.0, "self"),
     ("ghost_vine", "Призрачная лоза", "Ghost Vine", "cross", 0, 0.0, "self"),
@@ -326,6 +326,7 @@ def one_loot(name, entries, conds=None):
 SILK = {"condition": "minecraft:match_tool", "predicate": {"enchantments": [{"enchantment": "minecraft:silk_touch", "levels": {"min": 1}}]}}
 SHEARS = {"condition": "minecraft:match_tool", "predicate": {"items": ["minecraft:shears"]}}
 BOOM = {"condition": "minecraft:survives_explosion"}
+ORE_BONUS = {"function": "minecraft:apply_bonus", "enchantment": "minecraft:fortune", "formula": "minecraft:ore_drops"}
 
 
 def item(name, **extra): return {"type": "minecraft:item", "name": name, **extra}
@@ -345,7 +346,14 @@ def loot(bid, kind):
     elif kind == "cobble": p = [{"rolls": 1, "entries": [{"type": "minecraft:alternatives", "children": [item(me, conditions=[SILK]), item(f"{ID}:eclipse_cobblestone")]}], "conditions": [BOOM]}]
     elif kind == "bones": p = [{"rolls": 1, "entries": [{"type": "minecraft:alternatives", "children": [item(me, conditions=[SILK]), item("minecraft:bone_meal", functions=[count(2, 4)])]}], "conditions": [BOOM]}]
     elif kind == "cap": p = [{"rolls": 1, "entries": [{"type": "minecraft:alternatives", "children": [item(me, conditions=[SILK]), item("minecraft:charcoal", functions=[count(1, 2)])]}], "conditions": [BOOM]}]
-    elif kind == "iron": p = [{"rolls": 1, "entries": [{"type": "minecraft:alternatives", "children": [item(me, conditions=[SILK]), item("minecraft:raw_iron", functions=[count(1, 2), {"function": "minecraft:apply_bonus", "enchantment": "minecraft:fortune", "formula": "minecraft:ore_drops"}])]}], "conditions": [BOOM]}]
+    elif kind == "bloodiron": p = [{"rolls": 1, "entries": [{"type": "minecraft:alternatives", "children": [item(me, conditions=[SILK]), item(f"{ID}:raw_blood_iron", functions=[count(1, 2), ORE_BONUS])]}], "conditions": [BOOM]}]
+    elif kind == "gem": p = [{"rolls": 1, "entries": [{"type": "minecraft:alternatives", "children": [item(me, conditions=[SILK]), item(f"{ID}:crown_gem", functions=[ORE_BONUS])]}], "conditions": [BOOM]}]
+    elif kind == "shards":  # взрослая друза (age=3) - 2-4 осколка с удачей; молодая - сама друза (можно посадить заново)
+        adult = {"condition": "minecraft:block_state_property", "block": me, "properties": {"age": "3"}}
+        p = [{"rolls": 1, "entries": [{"type": "minecraft:alternatives", "children": [
+            item(me, conditions=[SILK]),
+            item(f"{ID}:eclipse_shard", conditions=[adult], functions=[count(2, 4), ORE_BONUS]),
+            item(me)]}], "conditions": [BOOM]}]
     elif kind == "leaves": p = [{"rolls": 1, "entries": [item(me)], "conditions": [{"condition": "minecraft:any_of", "terms": [SHEARS, SILK]}]},
                                 {"rolls": 1, "entries": [item("minecraft:stick", functions=[count(1, 2)])], "conditions": [{"condition": "minecraft:inverted", "term": {"condition": "minecraft:any_of", "terms": [SHEARS, SILK]}}, {"condition": "minecraft:random_chance", "chance": 0.1}]}]
     elif kind == "berries":
@@ -436,7 +444,7 @@ def main():
             for s in range(4):
                 v[f"age={s}"] = {"model": f"{tx}_stage{s}"}
                 model(f"{bid}_stage{s}", {"parent": "minecraft:block/cross", "render_type": "minecraft:cutout", "textures": {"cross": f"{tx}_{s}"}})
-            put(bs, {"variants": v}); item_model = {"parent": "minecraft:item/generated", "textures": {"layer0": f"{tx}_3"}}
+            put(bs, {"variants": v}); item_model = None  # у куста нет предмета-блока (семя - coal_berries)
         elif kind == "cluster":
             rot = {"up": {}, "down": {"x": 180}, "north": {"x": 90}, "east": {"x": 90, "y": 90}, "south": {"x": 90, "y": 180}, "west": {"x": 90, "y": 270}}
             v = {}
@@ -444,7 +452,7 @@ def main():
                 model(f"{bid}_stage{s}", {"parent": "minecraft:block/cross", "render_type": "minecraft:cutout", "textures": {"cross": f"{tx}_{s}"}})
                 for face, r in rot.items(): v[f"age={s},facing={face}"] = {"model": f"{tx}_stage{s}", **r}
             put(bs, {"variants": v}); item_model = {"parent": "minecraft:item/generated", "textures": {"layer0": f"{tx}_3"}}
-        put(A / "models" / "item" / f"{bid}.json", item_model)
+        if item_model is not None: put(A / "models" / "item" / f"{bid}.json", item_model)
         put(D / ID / "loot_tables" / "blocks" / f"{bid}.json", loot(bid, lt))
 
     # --- рецепты досок ---

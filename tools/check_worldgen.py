@@ -16,11 +16,11 @@ mod_blocks = set(re.findall(r"^\| `([a-z0-9_]+)` \|", (ROOT / "docs" / "hell_blo
 mod_blocks |= {"seal_stone", "phoenix_embers"}
 TYPE_REGS = ["worldgen/density_function_type", "worldgen/feature", "worldgen/placement_modifier_type", "worldgen/trunk_placer_type", "worldgen/foliage_placer_type",
              "worldgen/tree_decorator_type", "worldgen/block_state_provider_type", "worldgen/feature_size_type", "block_predicate_type", "int_provider_type",
-             "height_provider_type", "worldgen/material_condition", "worldgen/material_rule", "worldgen/biome_source", "worldgen/chunk_generator", "rule_test"]
+             "height_provider_type", "worldgen/material_condition", "worldgen/material_rule", "worldgen/biome_source", "worldgen/chunk_generator", "rule_test", "worldgen/carver"]
 types = set().union(*[reg[r] for r in TYPE_REGS]) | {"minecraft:" + x for x in ()}
 
 files = {}
-for sub in ("dimension", "dimension_type", "worldgen/biome", "worldgen/configured_feature", "worldgen/placed_feature", "worldgen/noise_settings", "worldgen/density_function"):
+for sub in ("dimension", "dimension_type", "worldgen/biome", "worldgen/configured_carver", "worldgen/configured_feature", "worldgen/placed_feature", "worldgen/noise_settings", "worldgen/density_function"):
     for f in (DATA / sub).rglob("*.json"):
         files.setdefault(sub, set()).add(str(f.relative_to(DATA / sub).with_suffix("")).replace("\\", "/"))
 
@@ -69,7 +69,7 @@ def walk(f, o, key=""):
 n = 0
 for f in sorted(DATA.rglob("*.json")):
     rel = f.relative_to(DATA).as_posix()
-    if not (rel.startswith(("dimension/hell", "dimension_type/hell")) or "hell" in rel and rel.startswith("worldgen/")): continue
+    if not (rel.startswith(("dimension/hell", "dimension_type/hell", "tags/blocks/hell")) or "hell" in rel and rel.startswith("worldgen/")): continue
     n += 1
     try: o = json.loads(f.read_text(encoding="utf-8"))
     except Exception as e: err(f, f"невалидный JSON: {e}"); continue
@@ -80,10 +80,25 @@ for f in sorted(DATA.rglob("*.json")):
         for step in fe:
             for p in step:
                 if not ref_ok(p, "worldgen/placed_feature"): err(f, f"placed_feature '{p}' нет файла")
+        for st, lst in o["carvers"].items():
+            if st not in ("air", "liquid"): err(f, f"carvers: шаг '{st}'")
+            for c in lst:
+                if not ref_ok(c, "worldgen/configured_carver"): err(f, f"configured_carver '{c}' нет файла")
+        if not o["carvers"].get("air"): err(f, "в биоме Ада нет карверов (air)")
         for k in ("effects", "temperature", "downfall", "has_precipitation", "spawners", "spawn_costs"):
             if k not in o: err(f, f"нет поля {k}")
         pt = o["effects"]["particle"]["options"]["type"].partition(":")[2]
         if pt not in reg["particle_type"]: err(f, f"частица {pt}")
+    if rel.startswith("worldgen/configured_carver/"):
+        c = o["config"]
+        if o["type"] not in ("minecraft:cave", "minecraft:canyon", "minecraft:nether_cave"): err(f, f"тип карвера {o['type']}")
+        for k in ("probability", "y", "lava_level", "replaceable"):
+            if k not in c: err(f, f"config без {k}")
+        t = c["replaceable"]
+        if not t.startswith("#explosionwand:") or not (DATA / "tags" / "blocks" / (t.partition(":")[2] + ".json")).exists(): err(f, f"тег замещаемых блоков '{t}' не найден")
+    if rel == "tags/blocks/hell_carver_replaceables.json":
+        for b in o["values"]:
+            if not block_ok(b): err(f, f"блок '{b}' не найден")
     if rel.startswith("worldgen/placed_feature/"):
         if not ref_ok(o["feature"], "worldgen/configured_feature"): err(f, "нет configured_feature")
     if rel.startswith("worldgen/noise_settings/"):

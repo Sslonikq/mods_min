@@ -152,8 +152,6 @@ if __name__ == "__main__":
     for b in ("seal_stone", "phoenix_embers"):
         put(A / "models" / "item" / f"{b}.json", {"parent": f"explosionwand:block/{b}"})
         put(D / "explosionwand" / "loot_tables" / "blocks" / f"{b}.json", {"type": "minecraft:block", "pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": f"explosionwand:{b}"}], "conditions": [{"condition": "minecraft:survives_explosion"}]}]})
-    # занятое гнездо при разрушении возвращает Угли Феникса
-    put(D / "explosionwand" / "loot_tables" / "blocks" / "hell_socket.json", {"type": "minecraft:block", "pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": "explosionwand:phoenix_embers"}]}]})
     put(A / "models" / "item" / "hell_key.json", {"parent": "minecraft:item/generated", "textures": {"layer0": "explosionwand:item/hell_key"}})
     _pk = D / "minecraft" / "tags" / "blocks" / "mineable" / "pickaxe.json"
     _cur = json.loads(_pk.read_text(encoding="utf-8"))["values"] if _pk.exists() else []

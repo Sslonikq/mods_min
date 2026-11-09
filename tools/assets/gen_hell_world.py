@@ -269,7 +269,7 @@ def build_biomes():
         for n in sorted(b["feats"], key=lambda n: pos[n]):
             feats[step_of[n]].append(NS + n)
         put(f"worldgen/biome/{bid}.json", {
-            "carvers": {}, "downfall": 0.0, "has_precipitation": False, "temperature": 2.0,
+            "carvers": {"air": ["explosionwand:hell_cave", "explosionwand:hell_canyon"]}, "downfall": 0.0, "has_precipitation": False, "temperature": 2.0,
             "effects": {"fog_color": b["fog"], "sky_color": b["sky"], "water_color": b["water"], "water_fog_color": b["wfog"],
                         "particle": {"options": {"type": "minecraft:" + b["particle"][0]}, "probability": b["particle"][1]},
                         "mood_sound": {"block_search_extent": 8, "offset": 2.0, "sound": f"minecraft:ambient.{b['mood']}.mood", "tick_delay": 6000},

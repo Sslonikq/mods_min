@@ -1,0 +1,20 @@
+{
+  "replace": false,
+  "values": [
+    "explosionwand:eclipse_stone",
+    "explosionwand:eclipse_cobblestone",
+    "explosionwand:ash_soil",
+    "explosionwand:slag",
+    "explosionwand:pumice",
+    "explosionwand:blazing_stone",
+    "explosionwand:petrified_bones",
+    "minecraft:soul_soil",
+    "minecraft:soul_sand",
+    "minecraft:magma_block",
+    "minecraft:basalt",
+    "minecraft:smooth_basalt",
+    "minecraft:blackstone",
+    "minecraft:netherrack",
+    "minecraft:gravel"
+  ]
+}
