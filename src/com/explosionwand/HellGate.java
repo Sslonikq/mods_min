@@ -207,7 +207,7 @@ final class HellGate {
         return new int[]{pos.m_123341_(), pos.m_123342_(), pos.m_123343_()};
     }
 
-    // ---- Ад-заглушка (4.13)
+    // ---- Площадка и обратный портал
 
     static boolean isGateBlock(BlockState s) { return is(s, ExplosionWandMod.HELL_PORTAL.get()) || is(s, ExplosionWandMod.HELL_SOCKET.get()); }
 
@@ -242,7 +242,9 @@ final class HellGate {
     /** Пол площадки Ада без построения: из HellData; если не определён, но стоит гнездо мира 3.0.x на (0, 68, -6) - пол 63 (запоминается). 0 - площадки нет. */
     static int floorOf(ServerLevel hell) {
         HellData d = HellData.get(hell);
-        if (d.floorY <= 0 && is(hell.m_8055_(socketAt(LEGACY_FLOOR)), ExplosionWandMod.HELL_SOCKET.get())) d.set(LEGACY_FLOOR);
+        BlockPos legacy = socketAt(LEGACY_FLOOR);
+        // чанк не загружен (Ад без портала: /execute in, другой мод) - блок не читаем, чтобы не грузить чанк синхронно на каждый взрыв
+        if (d.floorY <= 0 && hell.m_46805_(legacy) && is(hell.m_8055_(legacy), ExplosionWandMod.HELL_SOCKET.get())) d.set(LEGACY_FLOOR);
         return d.floorY;
     }
 
@@ -277,23 +279,36 @@ final class HellGate {
     }
 
     /**
-     * Первая поверхность сверху вниз от FLOOR_MAX до FLOOR_MIN: твёрдый блок, над которым две свободные клетки (не лава, не вода);
-     * так дно сырной пещеры под землёй не выбирается, только верхняя поверхность.
-     * cls(y): 0 - свободно (воздух, растения), 1 - твёрдо, 2 - жидкость. Нет поверхности - FLOOR_FALLBACK. Чистая логика, для теста.
+     * Первая непустая клетка сверху вниз от FLOOR_MAX до FLOOR_MIN решает всё: твёрдый рельеф - пол на его высоте; жидкость (лава, натёкшая поверх суши) -
+     * пол на высоте жидкости (площадка заменит её, три слоя камня под ней закроют остальное), сквозь жидкость вниз не идём.
+     * Так дно сырной пещеры под землёй не выбирается, только верхняя поверхность.
+     * cls(y): 0 - свободно (воздух, растения, деревья), 1 - твёрдый рельеф, 2 - жидкость. Нет поверхности - FLOOR_FALLBACK. Чистая логика, для теста.
      */
     static int pickFloor(java.util.function.IntUnaryOperator cls) {
         for (int y = FLOOR_MAX; y >= FLOOR_MIN; y--)
-            if (cls.applyAsInt(y) == 1 && cls.applyAsInt(y + 1) == 0 && cls.applyAsInt(y + 2) == 0) return y;
+            if (cls.applyAsInt(y) != 0) return y;
         return FLOOR_FALLBACK;
     }
 
-    /** Вид клетки колонны (0, y, 0): 0 - свободно, 1 - твёрдо, 2 - жидкость. */
+    /** Блоки рельефа Ада (из surface_rule и камня): только они бывают полом площадки; ствол, шляпка гриба, кости, шпиль и колонны - нет. */
+    static final java.util.Set<String> RELIEF = new java.util.HashSet<>();
+    static {
+        for (String id : new String[]{"eclipse_stone", "eclipse_cobblestone", "ash_soil", "slag", "pumice", "blazing_stone", "blood_iron_ore", "crown_gem_ore"}) RELIEF.add("explosionwand" + ":" + id);
+        for (String id : new String[]{"soul_sand", "soul_soil", "magma_block", "bedrock", "basalt", "smooth_basalt", "blackstone"}) RELIEF.add("minecraft" + ":" + id);
+    }
+
+    /** Вид клетки по блоку: 2 - жидкость; 1 - блок рельефа с формой; иначе 0 (воздух, растения, листва, стволы, грибы, шпили - не пол). Чистая логика, для теста. */
+    static int classifyId(String blockId, boolean liquid, boolean emptyShape) {
+        if (liquid) return 2;
+        return !emptyShape && RELIEF.contains(blockId) ? 1 : 0;
+    }
+
+    /** Вид клетки колонны (0, y, 0): 0 - свободно, 1 - твёрдый рельеф, 2 - жидкость. */
     static int classify(ServerLevel l, int y) {
         BlockPos p = new BlockPos(0, y, 0);
         BlockState s = l.m_8055_(p);
-        if (!s.m_60819_().m_76178_()) return 2;
-        if (s.m_60734_() instanceof HellBlock hb && hb.kind == HellBlock.Kind.valueOf("LEAVES")) return 0;     // крона - не пол
-        return s.m_60812_(l, p).m_83281_() ? 0 : 1;
+        ResourceLocation k = net.minecraftforge.registries.ForgeRegistries.BLOCKS.getKey(s.m_60734_());
+        return classifyId(k == null ? "" : k.m_135827_() + ":" + k.m_135815_(), !s.m_60819_().m_76178_(), s.m_60812_(l, p).m_83281_());
     }
 
     /**

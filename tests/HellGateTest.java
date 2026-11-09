@@ -55,12 +55,27 @@ public class HellGateTest {
         check(HellGate.pickFloor(col.apply(new int[]{0, 47, 2, 48, 60, 1})) == 60, "lava lake up to 47 is skipped");
         check(HellGate.pickFloor(col.apply(new int[]{0, 70, 2, 71, 71, 1})) == 71, "single block above a lava lake is a floor");
         check(HellGate.pickFloor(col.apply(new int[]{0, 40, 2})) == HellGate.FLOOR_FALLBACK && HellGate.FLOOR_FALLBACK == 42, "all lava: fallback 42 (just above the lava)");
-        check(HellGate.pickFloor(col.apply(new int[]{0, 100, 1, 101, 101, 0, 102, 102, 2})) == HellGate.FLOOR_FALLBACK, "lava two blocks above the ground: not a floor");
+        check(HellGate.pickFloor(col.apply(new int[]{0, 100, 1, 101, 101, 0, 102, 102, 2})) == 102, "lava lying on top of the land: the floor is the lava surface (102), not a walk through it");
+        check(HellGate.pickFloor(col.apply(new int[]{0, 90, 1, 91, 99, 2})) == 99, "lava pool over the land: floor at its surface");
         check(HellGate.pickFloor(col.apply(new int[]{0, 40, 2, 41, 41, 1})) == 41, "solid at 41 right above the lava: floor 41, not lower");
         check(HellGate.pickFloor(col.apply(new int[]{0, 39, 1, 40, 40, 2})) == HellGate.FLOOR_FALLBACK, "rock under the lava does not count (below 41)");
         check(HellGate.pickFloor(col.apply(new int[]{0, 45, 1, 46, 50, 0, 51, 70, 1})) == 70, "cave 46-50 under rock: top surface 70, not the cave floor 45");
         check(HellGate.pickFloor(col.apply(new int[]{0, 40, 2, 41, 44, 1, 45, 52, 0, 53, 70, 1, 71, 80, 0})) == 70, "cave floor 44 below, surface 70 chosen");
         check(HellGate.pickFloor(col.apply(new int[]{0, 100, 1, 101, 101, 0, 102, 110, 1, 111, 200, 0})) == 110, "overhang: first from top is the roof of the rock (110)");
         check(HellGate.FLOOR_MIN == 41, "never below 41");
+        // классификация по блокам: полом только рельеф
+        java.util.function.BiFunction<String, Boolean, Integer> cl = (id, empty) -> HellGate.classifyId(id, false, empty);
+        check(cl.apply("explosionwand:ash_soil", false) == 1 && cl.apply("minecraft:soul_sand", false) == 1 && cl.apply("explosionwand:eclipse_stone", false) == 1, "relief is solid");
+        check(cl.apply("explosionwand:smoldering_log", false) == 0 && cl.apply("explosionwand:charred_log", false) == 0 && cl.apply("explosionwand:coal_mushroom_cap", false) == 0 && cl.apply("explosionwand:coal_mushroom_stem", false) == 0, "trunk and mushroom are not a floor");
+        check(cl.apply("explosionwand:bone_block", false) == 0 && cl.apply("minecraft:bone_block", false) == 0 && cl.apply("explosionwand:dark_obsidian", false) == 0 && cl.apply("explosionwand:eclipse_crystal_block", false) == 0 && cl.apply("explosionwand:archmage_stone", false) == 0, "bone tree, spire and pillar are not a floor");
+        check(cl.apply("explosionwand:smoldering_leaves", false) == 0 && cl.apply("explosionwand:dry_grass", true) == 0 && cl.apply("minecraft:air", true) == 0, "leaves, plants and air are free");
+        check(HellGate.classifyId("minecraft:lava", true, true) == 2 && HellGate.classifyId("explosionwand:ash_soil", true, false) == 2, "liquid is 2");
+        // колонна: земля 68, ствол 69-74, листва 75-78 -> 68
+        java.util.function.IntUnaryOperator tree = y -> y <= 68 ? HellGate.classifyId("explosionwand:ash_soil", false, false)
+                : y <= 74 ? HellGate.classifyId("explosionwand:smoldering_log", false, false)
+                : y <= 78 ? HellGate.classifyId("explosionwand:smoldering_leaves", false, false) : 0;
+        check(HellGate.pickFloor(tree) == 68, "ground 68, trunk 69-74, leaves 75-78 -> floor 68");
+        java.util.function.IntUnaryOperator spire = y -> y <= 60 ? HellGate.classifyId("explosionwand:eclipse_stone", false, false) : y <= 90 ? HellGate.classifyId("explosionwand:dark_obsidian", false, false) : 0;
+        check(HellGate.pickFloor(spire) == 60, "spire on the ground does not lift the platform");
     }
 }
