@@ -17,7 +17,7 @@ final class Nbt {
         }
     }
 
-    private static Map<String, Object> compound(DataInputStream in) throws IOException {
+    static Map<String, Object> compound(DataInputStream in) throws IOException {
         Map<String, Object> m = new LinkedHashMap<>();
         while (true) {
             int t = in.readByte();
@@ -27,7 +27,7 @@ final class Nbt {
         }
     }
 
-    private static Object value(DataInputStream in, int type) throws IOException {
+    static Object value(DataInputStream in, int type) throws IOException {
         switch (type) {
             case 1: return in.readByte();
             case 2: return in.readShort();

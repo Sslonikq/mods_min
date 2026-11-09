@@ -130,9 +130,21 @@ final class Dungeons {
         int roof = 0, tries = 8;
         /** Данж, с которым этот не должен пересекаться (по рамкам с запасом): Город Спящих обходит Разломы. */
         Def avoid;
+        /** Данж Ада (5.3, Цитадель Затмения): живёт в измерении hell, его записи - в хранилище Ада (DungeonData.get), место - Citadel.site. */
+        boolean hell = false;
+        /**
+         * Огромный данж (Цитадель, ~1,5 млн блоков): перед вставкой расчищается цилиндр радиуса clearR и высоты clearH над y данжа (бит CLEAR_BIT),
+         * части ставятся с ограничением по времени тика, шаблоны подгружаются в фоне.
+         */
+        int clearR = 0, clearH = 0;
+        /** Мобов и босса в данже ещё нет (Цитадель до 5.4/5.5): метка boss не привязывается к залу, залы с печатью не будятся. */
+        boolean passive = false;
+        private volatile boolean preloading = false, preloadFailed = false;
         /** Все обходимые данжи (avoid — первый из них): Святилище обходит и Разломы, и Города. */
         final List<Def> avoidAll = new ArrayList<>();
-        private List<DungeonTemplate> tpl;
+        private volatile List<DungeonTemplate> tpl;
+        /** Сколько блоков цилиндра огромного данжа лежит под его началом (y данжа): подошва и фундамент. */
+        int clearBelow = 7;
         private int[] bounds;
         private final List<Hall> halls = new ArrayList<>();
         private final List<Mark> doors = new ArrayList<>(), braziers = new ArrayList<>();
@@ -154,8 +166,47 @@ final class Dungeons {
         Def avoiding(Def... others) { for (Def o : others) { if (avoid == null) avoid = o; avoidAll.add(o); } return this; }
         /** Подземный данж: крыша на roof (отрицательное) должна быть под землёй по всей рамке (DungeonSite), maxCover - предел, больше которого точка отвергается; пробуем tries точек. */
         Def underground(int roof, int maxCover, int tries) { this.roof = roof; this.maxVar = maxCover; this.tries = tries; return this; }
+        /** Данж Ада: огромный, с расчисткой цилиндра (см. clearR) и пока без мобов (passive). */
+        Def inHell(int clearR, int clearH) { this.hell = true; this.clearR = clearR; this.clearH = clearH; this.passive = true; return this; }
 
-        synchronized List<DungeonTemplate> templates() {
+        /** Шаблоны читаются в фоновом потоке (огромный данж): к приходу игрока они обычно готовы, а пока нет - templates() в главном потоке бросает NotReady, не ждёт. */
+        void preload() {
+            if (tpl != null || preloading || preloadFailed) return;
+            preloading = true;
+            Thread t = new Thread(() -> {
+                try { load(); }
+                catch (RuntimeException e) { preloadFailed = true; System.err.println("[explosionwand] данж " + id + ": " + e.getMessage()); }
+                finally { preloading = false; }   // сбой: дальше читаем обычным путём (синхронно) и ошибка видна там
+            }, PRELOAD_PREFIX + id);
+            t.setDaemon(true);
+            t.start();
+        }
+
+        static final String PRELOAD_PREFIX = "explosionwand-preload-";
+
+        /** Шаблоны ещё читаются в фоне: главный поток не ждёт, а пропускает работу с шаблонами (защита по цилиндру работает и без них). */
+        static final class NotReady extends IllegalStateException {
+            NotReady(String id) { super("данж " + id + ": шаблоны ещё читаются"); }
+        }
+
+        /** Можно ли без ожидания обращаться к шаблонам (у обычных данжей всегда да: читаются при первом обращении). */
+        boolean ready() { return clearR <= 0 || tpl != null || preloadFailed; }
+
+        /** Точка (относительно начала данжа) в цилиндре огромного данжа: r до clearR+pad, от -clearBelow до clearH. Шаблоны не нужны. */
+        boolean inCylinder(double rx, double ry, double rz, int pad) {
+            if (clearR <= 0) return false;
+            double r = clearR + pad;
+            return rx * rx + rz * rz <= r * r && ry >= -clearBelow - pad && ry < clearH + pad;
+        }
+
+        List<DungeonTemplate> templates() {
+            List<DungeonTemplate> t = tpl;
+            if (t != null) return t;
+            if (clearR > 0 && preloading && !Thread.currentThread().getName().startsWith(PRELOAD_PREFIX)) throw new NotReady(id);
+            return load();
+        }
+
+        private synchronized List<DungeonTemplate> load() {
             if (tpl == null) {
                 List<DungeonTemplate> l = new ArrayList<>();
                 try { for (String p : parts) l.add(DungeonTemplate.load(p)); }
@@ -195,7 +246,7 @@ final class Dungeons {
                     if (h.contains(m.x, m.y, m.z)) {
                         if (m.t.equals("spawn")) h.spawns.add(m);
                         else if (m.t.equals("chest")) h.chest = m;
-                        else if (m.t.equals("boss")) h.boss = m;
+                        else if (m.t.equals("boss") && !passive) h.boss = m;
                     }
                 }
             }
@@ -209,7 +260,10 @@ final class Dungeons {
         }
 
         /** Подпись раскладки "части:vN" (хранится в DungeonData.Rec.layout), меняется только при ручном повышении номера или смене набора частей. */
-        String signature() { templates(); return sig; }
+        String signature() {
+            if (clearR > 0) return String.join("+", parts) + ":v" + layout;   // огромный данж: подпись без чтения 4 МБ шаблонов
+            templates(); return sig;
+        }
         /** Маска клеток данжа (координаты относительно начала данжа). */
         Mask mask() { templates(); return mask; }
         Hall hall(int id) { for (Hall h : halls()) if (h.id == id) return h; return null; }
@@ -228,7 +282,7 @@ final class Dungeons {
         /** Метки типа t (координаты данжа): steps, beams, mirror, platform, lever, secret, seal — см. DungeonMech. */
         List<Mark> marks(String t) { templates(); return byType.getOrDefault(t, List.of()); }
         boolean hasMech() { templates(); for (String t : DungeonMech.TYPES) if (byType.containsKey(t)) return true; return false; }
-        long allParts() { return (1L << parts.length) - 1; }
+        long allParts() { return ((1L << parts.length) - 1) | (clearR > 0 ? CLEAR_BIT : 0L); }
     }
 
     /**
@@ -247,9 +301,19 @@ final class Dungeons {
      * Клетка 896, отступ 144: святилища не ближе 288 блоков друг от друга; Разломы и Города обходит (Def.avoiding). Раскладка 2 (4.10): в Гнезде метка boss phoenix и печать, яйцо из пепла убрано из шаблона.
      */
     static final Def ASH = new Def("ash", 896, 144, 2, "ash_north", "ash_mid", "ash_south").underground(-14, DungeonSite.COVER_MAX, 16).avoiding(RIFT, SLEEP);
-    static final Def[] DEFS = {RIFT, SLEEP, ASH};
+    /**
+     * Цитадель Затмения (5.3, Ад): гора ~233x233 в Базальтовых пиках, 6 частей по z (tools/gen_citadel.py, контракт docs/citadel_layout.md), одна на мир,
+     * в 500-1500 блоках от портала (Citadel.site). Перед вставкой расчищается цилиндр r 116, 125 блоков вверх. Пока без мобов и босса (passive).
+     */
+    static final Def CITADEL = new Def("citadel", 1 << 20, 0, 1, "citadel_p1", "citadel_p2", "citadel_p3", "citadel_p4", "citadel_p5", "citadel_p6").inHell(Citadel.CLEAR_R, Citadel.CLEAR_H);
+    static final Def[] DEFS = {RIFT, SLEEP, ASH, CITADEL};
+    /** Бит partsDone «площадка расчищена» (части шаблона занимают младшие биты). */
+    static final long CLEAR_BIT = 1L << 40;
     /** Стенд механик для теста (все метки DungeonMech на малой площади). В мире не ставится: в DEFS его нет. */
     static final Def MECH_TEST = new Def("mechtest", 768, 128, 1, "mech_test");
+
+    /** Измерение, где бывают данжи: обычный мир и Ад (Цитадель). У каждого свои записи (DungeonData.get). */
+    static boolean hosts(ServerLevel l) { return Dims.is(l, Level.f_46428_) || Dims.is(l, Dims.HELL); }
 
     static Def def(String id) { for (Def d : DEFS) if (d.id.equals(id)) return d; return null; }
 
@@ -356,7 +420,7 @@ final class Dungeons {
 
     // ================================================================ состояние в памяти
     static long tk = 0;
-    static boolean warned = false, warnedMech = false, warnedMobs = false, warnedBoss = false;
+    static boolean warned = false, warnedMech = false, warnedMobs = false, warnedBoss = false, warnedCitadel = false;
     static final int PREPARE_RANGE = 80, PART_RANGE = 96, BUDGET = 1500, EMPTY_TICKS = 600;
     static final Map<String, Long> SPAWNED_AT = new HashMap<>(), LAST_INSIDE = new HashMap<>(), LAST_HALL = new HashMap<>();
     static final Map<UUID, String> PENDING = new HashMap<>();
@@ -381,6 +445,7 @@ final class Dungeons {
             }
             int n = 0;
             while (idx < t.count() && n < budget) {
+                if ((n & 63) == 63 && System.nanoTime() > DEADLINE) break;
                 int x = ox + t.bx[idx], z = oz + t.bz[idx];
                 long ck = ((long) (x >> 4) << 32) ^ (z >> 4);
                 if (ck != lastChunk) { level.m_6325_(x >> 4, z >> 4); lastChunk = ck; }
@@ -415,6 +480,7 @@ final class Dungeons {
             while (sidx < t.count() && n < budget) {
                 int i = sidx++;
                 if ((++scanned & 3) == 0) n++;
+                if ((scanned & 127) == 0 && System.nanoTime() > DEADLINE) break;
                 BlockState st = states[t.bs[i]];
                 if (st == null) continue;
                 boolean edge = false;
@@ -492,9 +558,17 @@ final class Dungeons {
         static final Shield NONE = new Shield(List.of());
         private final List<int[]> boxes;
         private final List<Mask> masks;   // null — только рамки
+        /** Цилиндры огромных данжей: {x, y, z данжа, радиус, снизу, сверху (относительно y)}: весь открытый воздух внутри под защитой. */
+        private final List<int[]> cyls;
         Shield(List<int[]> boxes) { this(boxes, null); }
-        Shield(List<int[]> boxes, List<Mask> masks) { this.boxes = boxes; this.masks = masks; }
+        Shield(List<int[]> boxes, List<Mask> masks) { this(boxes, masks, List.of()); }
+        Shield(List<int[]> boxes, List<Mask> masks, List<int[]> cyls) { this.boxes = boxes; this.masks = masks; this.cyls = cyls; }
         boolean at(int x, int y, int z) {
+            for (int i = 0; i < cyls.size(); i++) {
+                int[] c = cyls.get(i);
+                int dx = x - c[0], dz = z - c[2], dy = y - c[1];
+                if ((long) dx * dx + (long) dz * dz <= (long) c[3] * c[3] && dy >= -c[4] && dy < c[5]) return true;
+            }
             for (int i = 0; i < boxes.size(); i++) {
                 int[] b = boxes.get(i);
                 if (x < b[0] || x >= b[3] || y < b[1] || y >= b[4] || z < b[2] || z >= b[5]) continue;
@@ -503,25 +577,27 @@ final class Dungeons {
             }
             return false;
         }
-        boolean at(BlockPos p) { return !boxes.isEmpty() && at(p.m_123341_(), p.m_123342_(), p.m_123343_()); }
+        boolean at(BlockPos p) { return (!boxes.isEmpty() || !cyls.isEmpty()) && at(p.m_123341_(), p.m_123342_(), p.m_123343_()); }
     }
 
     static Shield shield(Level l) {
-        if (!(l instanceof ServerLevel sl) || !Dims.is(sl, Level.f_46428_)) return Shield.NONE;
+        if (!(l instanceof ServerLevel sl) || !hosts(sl)) return Shield.NONE;
         DungeonData data = DungeonData.get(sl);
         if (data.recs.isEmpty()) return Shield.NONE;
         List<int[]> l2 = new ArrayList<>();
         List<Mask> ms = new ArrayList<>();
+        List<int[]> cyls = new ArrayList<>();
         for (DungeonData.Rec r : data.recs.values()) {
             Def d = r.def();
             if (d == null || r.bossDead) continue;   // босс убит: блоки данжа больше не защищены
+            if (d.clearR > 0) cyls.add(new int[]{r.x, r.y, r.z, d.clearR, d.clearBelow, d.clearH});   // огромный данж: весь цилиндр, шаблоны не ждём
             try {
                 int[] b = d.bounds();
                 l2.add(new int[]{r.x + b[0], r.y + b[1], r.z + b[2], r.x + b[3], r.y + b[4], r.z + b[5], r.x, r.y, r.z});
                 ms.add(d.mask());
             } catch (IllegalStateException e) { noTemplate(d, e); }
         }
-        return l2.isEmpty() ? Shield.NONE : new Shield(l2, ms);
+        return l2.isEmpty() && cyls.isEmpty() ? Shield.NONE : new Shield(l2, ms, cyls);
     }
 
     /** Номер зала данжа rec в точке (мировые координаты) или -1, если точка не в зале (коридор, лестница, вне данжа). */
@@ -543,7 +619,7 @@ final class Dungeons {
      * ломают оба) и точка в том же зале данжа, что и игрок. Вне данжей и в наших измерениях всегда true (поведение как до 2.19.1).
      */
     static boolean canReach(ServerLevel l, net.minecraft.world.entity.player.Player p, double tx, double ty, double tz) {
-        if (!Dims.is(l, Level.f_46428_)) return true;
+        if (!hosts(l)) return true;
         DungeonData data = DungeonData.get(l);
         DungeonData.Rec a = at(data, p.m_20185_(), p.m_20186_(), p.m_20189_(), 0), b = at(data, tx, ty, tz, 0);
         if (a == null && b == null) return true;
@@ -565,6 +641,7 @@ final class Dungeons {
 
     /** Нет шаблона данжа: защита выключена. Строка в лог — один раз на тип данжа. */
     static void noTemplate(Def d, Exception e) {
+        if (e instanceof Def.NotReady) return;   // шаблоны читаются в фоне: не сбой
         if (NO_TEMPLATE.add(d.id)) System.err.println("[explosionwand] данж " + d.id + ": нет шаблона, защита выключена (" + e.getMessage() + ")");
     }
 
@@ -584,13 +661,13 @@ final class Dungeons {
     static boolean guarded(Level l, BlockPos p) { return guarded(l, p.m_123341_() + 0.5, p.m_123342_() + 0.5, p.m_123343_() + 0.5, 0); }
 
     static boolean guarded(Level l, double x, double y, double z, int pad) {
-        if (!(l instanceof ServerLevel sl) || !Dims.is(sl, Level.f_46428_)) return false;
+        if (!(l instanceof ServerLevel sl) || !hosts(sl)) return false;
         return guardedAt(DungeonData.get(sl), x, y, z, pad) != null;
     }
 
     /** Данж, в границах которого лежит позиция (только обычный мир). */
     static DungeonData.Rec at(Level l, double x, double y, double z) {
-        if (!(l instanceof ServerLevel sl) || !Dims.is(sl, Level.f_46428_)) return null;
+        if (!(l instanceof ServerLevel sl) || !hosts(sl)) return null;
         return at(DungeonData.get(sl), x, y, z, 0);
     }
 
@@ -598,18 +675,25 @@ final class Dungeons {
     static boolean near(Level l, Entity e, int pad) { return near(l, e.m_20185_(), e.m_20186_(), e.m_20189_(), pad); }
 
     static boolean near(Level l, double x, double y, double z, int pad) {
-        if (!(l instanceof ServerLevel sl) || !Dims.is(sl, Level.f_46428_)) return false;
+        if (!(l instanceof ServerLevel sl) || !hosts(sl)) return false;
         return at(DungeonData.get(sl), x, y, z, pad) != null;
     }
 
     static boolean inside(Level l, BlockPos p) { return at(l, p.m_123341_(), p.m_123342_(), p.m_123343_()) != null; }
 
     // ================================================================ тик
+    /** Счётчик тиков Ада (у обычного мира свой tk): оба мира зовут tick каждый тик, общий счётчик шёл бы вдвое быстрее. */
+    static long tkHell = 0;
+
     static void tick(ServerLevel sl) {
-        if (!Dims.is(sl, Level.f_46428_)) return;
+        boolean hell = Dims.is(sl, Dims.HELL);
+        if (!hell && !Dims.is(sl, Level.f_46428_)) return;
+        long saved = tk;
+        if (hell) tk = tkHell;
         tk++;
-        try { tick0(sl); }
+        try { tick0(sl, hell); }
         catch (Exception e) { if (!warned) { warned = true; e.printStackTrace(); } }   // данжи не должны ронять игру
+        finally { if (hell) { tkHell = tk; tk = saved; } }
     }
 
     /** Конец сервера (в одиночке — выход в меню): статическое состояние не должно перейти в следующий мир. */
@@ -617,18 +701,20 @@ final class Dungeons {
         PLACING.clear(); SITES.clear(); SPAWNED_AT.clear(); LAST_INSIDE.clear(); PENDING.clear(); NO_TEMPLATE.clear();
         DungeonMech.clear();
         City.clear();
+        Citadel.clear();
+        CLEARING.clear(); tkHell = 0;
         RiftMobs.clear();
         Boss.clear();
         Later.TASKS.clear();
         Earth.clear();
         PhoenixStaff.clear();
-        warned = false; warnedMech = false; warnedMobs = false; warnedBoss = false;
+        warned = false; warnedMech = false; warnedMobs = false; warnedBoss = false; warnedCitadel = false;
         LAST_HALL.clear();
     }
 
     static void onStopped(ServerStoppedEvent ev) { clearState(); }
 
-    private static void tick0(ServerLevel sl) {
+    private static void tick0(ServerLevel sl, boolean hell) {
         List<ServerPlayer> ps = sl.m_6907_();
         if (ps.isEmpty()) return;
         DungeonData data = DungeonData.get(sl);
@@ -636,20 +722,31 @@ final class Dungeons {
             for (ServerPlayer p : ps)   // элитры в данже не работают
                 if (p.m_6084_() && p.m_21255_() && at(data, p.m_20185_(), p.m_20186_(), p.m_20189_(), 1) != null) p.m_36321_();
         }
+        if (hell) {   // шаблоны огромного данжа ещё читаются в фоне: главный поток не ждёт, достройка и механики начнутся позже
+            boolean wait = false;
+            for (DungeonData.Rec r : data.recs.values()) { Def d = r.def(); if (d != null && !d.ready()) { d.preload(); wait = true; } }
+            if (wait) return;
+        }
         stepPlacing(sl, data);
         try { DungeonMech.tick(sl, data, ps, tk); }
         catch (Exception e) { if (!warnedMech) { warnedMech = true; e.printStackTrace(); } }   // сбой механики не обрывает залы и достройку
-        try { RiftMobs.tick(sl, data, ps, tk); }
-        catch (Exception e) { if (!warnedMobs) { warnedMobs = true; e.printStackTrace(); } }   // сбой мобов Разлома не обрывает залы
-        try { Boss.tickAll(sl, data, ps, tk); }
-        catch (Exception e) { if (!warnedBoss) { warnedBoss = true; e.printStackTrace(); } }   // сбой босса не обрывает залы
+        if (!hell) {   // мобы и боссы Земли тикают раз за тик в обычном мире (RiftMobs.now - свой счётчик); в Аду мобов Цитадели пока нет
+            try { RiftMobs.tick(sl, data, ps, tk); }
+            catch (Exception e) { if (!warnedMobs) { warnedMobs = true; e.printStackTrace(); } }   // сбой мобов Разлома не обрывает залы
+            try { Boss.tickAll(sl, data, ps, tk); }
+            catch (Exception e) { if (!warnedBoss) { warnedBoss = true; e.printStackTrace(); } }   // сбой босса не обрывает залы
+        }
         if (tk % 10 != 0) return;
         purgeFalling(sl, data, ps);
-        City.tick(sl, data, ps);
+        if (!hell) City.tick(sl, data, ps);
         discover(sl, data, ps);
         schedule(sl, data, ps);
         if (tk % 100 == 0) purgeUnbuilt(sl, data, ps);
         for (DungeonData.Rec rec : new ArrayList<>(data.recs.values())) inDungeon(sl, data, rec, ps);
+        if (hell) {
+            try { Citadel.tick(sl, data, ps, tk); }
+            catch (Exception e) { if (!warnedCitadel) { warnedCitadel = true; e.printStackTrace(); } }   // сбой механик Цитадели не обрывает залы
+        }
         if (tk % 200 == 0 && !data.recs.isEmpty()) removeStrays(sl, data);
     }
 
@@ -711,7 +808,10 @@ final class Dungeons {
 
     private static void discover(ServerLevel sl, DungeonData data, List<ServerPlayer> ps) {
         long seed = sl.m_7328_();
+        boolean hell = Dims.is(sl, Dims.HELL);
         for (Def d : DEFS) {
+            if (d.hell != hell) continue;   // в Аду - только данжи Ада, на Земле - только земные
+            if (hell) { Citadel.discover(sl, data, d, ps); continue; }
             for (ServerPlayer p : ps) {
                 int cx0 = Math.floorDiv((int) Math.floor(p.m_20185_()), d.cell), cz0 = Math.floorDiv((int) Math.floor(p.m_20189_()), d.cell);
                 for (int dx = -1; dx <= 1; dx++) {
@@ -892,6 +992,13 @@ final class Dungeons {
         for (DungeonData.Rec r : data.recs.values()) {
             Def d = r.def();
             if (d == null || r.partsDone == d.allParts()) continue;
+            if (d.clearR > 0 && (r.partsDone & CLEAR_BIT) == 0) {   // огромный данж: сначала расчистка площадки, части - после неё
+                if (!clearing(sl, r)) {
+                    for (ServerPlayer p : ps)
+                        if (distToRect(p.m_20185_(), p.m_20189_(), r.x - d.clearR, r.z - d.clearR, 2 * d.clearR, 2 * d.clearR) <= PART_RANGE) { CLEARING.add(new Clearing(sl, r, d)); break; }
+                }
+                continue;
+            }
             List<DungeonTemplate> tp = d.templates();
             for (int i = 0; i < tp.size(); i++) {
                 if (((r.partsDone >> i) & 1L) != 0 || placing(sl, r, i)) continue;
@@ -913,10 +1020,107 @@ final class Dungeons {
         return false;
     }
 
+    /** Огромные данжи (Ад): блоков за тик и предел времени на тик, нс (потом работа переходит на следующий тик). Земные данжи: только BUDGET, без таймера. */
+    static final int HELL_BUDGET = 20000;
+    static final long HELL_NANOS = 9_000_000L;
+    /** Крайний срок текущего прохода stepPlacing (System.nanoTime). */
+    static long DEADLINE = Long.MAX_VALUE;
+    static final List<Clearing> CLEARING = new ArrayList<>();
+
+    private static boolean clearing(ServerLevel sl, DungeonData.Rec r) {
+        for (Clearing c : CLEARING) if (c.level == sl && c.rec.key.equals(r.key)) return true;
+        return false;
+    }
+
+    /**
+     * Расчистка площадки огромного данжа (Цитадель): по колонкам круга радиуса Def.clearR убирается всё над y данжа (до clearH), а под подошвой
+     * пустоты и жидкость до земли заполняются чёрным камнем (гора не парит над ямой). Идёт чанк за чанком, в рамках времени тика; повтор после сбоя безопасен.
+     */
+    static final class Clearing {
+        final ServerLevel level; final DungeonData.Rec rec; final int r, h, cx0, cz0, cx1, cz1;
+        /** Обход чанков: (cx, cz) - следующий в основном проходе, (ccx, ccz, col) - текущий; незагруженные откладываются в skipped (чанки не генерируются в тике). */
+        int cx, cz, ccx, ccz, col = 0;
+        boolean has = false;
+        final java.util.ArrayDeque<int[]> skipped = new java.util.ArrayDeque<>();
+        final BlockState air = Fx.state("air"), fill = state("blackstone");
+        Clearing(ServerLevel level, DungeonData.Rec rec, Def d) {
+            this.level = level; this.rec = rec; this.r = d.clearR; this.h = d.clearH;
+            cx0 = (rec.x - r) >> 4; cx1 = (rec.x + r) >> 4; cz0 = (rec.z - r) >> 4; cz1 = (rec.z + r) >> 4;
+            cx = cx0; cz = cz0;
+        }
+        private boolean sweeping() { return cx <= cx1; }
+        boolean done() { return !sweeping() && skipped.isEmpty() && !has; }
+
+        private boolean loaded(int qx, int qz) { return level.m_46805_(new BlockPos(qx << 4, rec.y, qz << 4)); }
+
+        /** Чанк целиком вне круга расчистки: делать нечего. */
+        private boolean outside(int qx, int qz) {
+            double nx = Math.max(Math.max((qx << 4) - rec.x, rec.x - ((qx << 4) + 15)), 0), nz = Math.max(Math.max((qz << 4) - rec.z, rec.z - ((qz << 4) + 15)), 0);
+            return nx * nx + nz * nz > (double) r * r;
+        }
+
+        /** Выбирает следующий загруженный чанк; false - все оставшиеся ещё не загружены (ждём подхода игрока). */
+        private boolean pick() {
+            while (sweeping()) {
+                int qx = cx, qz = cz;
+                if (++cz > cz1) { cz = cz0; cx++; }
+                if (outside(qx, qz)) continue;
+                if (loaded(qx, qz)) { ccx = qx; ccz = qz; col = 0; return has = true; }
+                skipped.add(new int[]{qx, qz});
+            }
+            for (int i = skipped.size(); i > 0; i--) {
+                int[] s = skipped.poll();
+                if (loaded(s[0], s[1])) { ccx = s[0]; ccz = s[1]; col = 0; return has = true; }
+                skipped.add(s);
+            }
+            return false;
+        }
+
+        int step(int budget, long deadline) {
+            int n = 0;
+            while (!done() && n < budget && System.nanoTime() < deadline) {
+                if (!has && !pick()) break;
+                n += column((ccx << 4) + (col & 15), (ccz << 4) + (col >> 4));
+                if (++col == 256) { col = 0; has = false; }
+            }
+            return n;
+        }
+
+        private int column(int x, int z) {
+            int dx = x - rec.x, dz = z - rec.z, d2 = dx * dx + dz * dz;
+            if (d2 > r * r) return 1;
+            int n = 1, y0 = rec.y;
+            int yMax = Math.min(level.m_6924_(Heightmap.Types.valueOf("WORLD_SURFACE"), x, z), y0 + h);
+            for (int y = y0; y < yMax; y++) {
+                BlockPos pos = new BlockPos(x, y, z);
+                if (!level.m_8055_(pos).m_60795_()) { level.m_7731_(pos, air, 18); n++; }
+            }
+            if (d2 <= Citadel.FOOT_R * Citadel.FOOT_R && fill != null) {
+                int floor = Math.max(level.m_141937_() + 1, y0 - 70);
+                for (int y = y0 - 8; y > floor; y--) {
+                    BlockPos pos = new BlockPos(x, y, z);
+                    BlockState st = level.m_8055_(pos);
+                    if (!st.m_60795_() && st.m_60819_().m_76178_()) break;   // твёрдая земля
+                    level.m_7731_(pos, fill, 18); n++;
+                }
+            }
+            return n;
+        }
+    }
+
     private static void stepPlacing(ServerLevel sl, DungeonData data) {
-        int budget = BUDGET;
+        boolean hell = Dims.is(sl, Dims.HELL);
+        int budget = hell ? HELL_BUDGET : BUDGET;
+        DEADLINE = hell ? System.nanoTime() + HELL_NANOS : Long.MAX_VALUE;
+        Iterator<Clearing> ci = CLEARING.iterator();
+        while (ci.hasNext() && budget > 0 && System.nanoTime() < DEADLINE) {
+            Clearing c = ci.next();
+            if (c.level != sl) continue;
+            budget -= Math.max(1, c.step(budget, DEADLINE));
+            if (c.done()) { ci.remove(); c.rec.partsDone |= CLEAR_BIT; data.m_77762_(); }
+        }
         Iterator<Placing> it = PLACING.iterator();
-        while (it.hasNext() && budget > 0) {
+        while (it.hasNext() && budget > 0 && System.nanoTime() < DEADLINE) {
             Placing p = it.next();
             if (p.level != sl) continue;
             budget -= Math.max(1, p.step(budget));
@@ -931,7 +1135,7 @@ final class Dungeons {
         Def d = rec.def();
         if (d == null) return;
         if (rec.partsDone != d.allParts()) {   // достройка ещё идёт: залы спят, игроку об этом говорим
-            if (tk % 100 == 0 && rec.partsDone != 0)
+            if (tk % 100 == 0 && (rec.partsDone != 0 || d.clearR > 0))
                 for (ServerPlayer p : ps)
                     if (p.m_6084_() && rec.contains(p.m_20185_(), p.m_20186_(), p.m_20189_(), 1)) p.m_5661_(Component.m_237115_("explosionwand.dungeon.building"), true);
             return;
@@ -948,6 +1152,7 @@ final class Dungeons {
             if (cleared) continue;
             String tag = tagOf(rec, h.id);
             boolean sealed = d.sealed(h.id);
+            if (d.passive && sealed) continue;   // Цитадель до 5.4/5.5: залы с печатью (башни, Тронный двор) без мобов не будим, печати остаются открытыми
             // залы с печатью сбрасываются по залу с запасом ALIVE_PAD (там же ищутся его мобы), а не по данжу; сама печать — по коробке без запаса.
             // Логово босса — без запаса: погибшие стоят у жаровни в ALIVE_PAD от зала, но босс не должен ждать их вечно (30 с, и он восстановится)
             if (sealed && hallOccupied(rec, h, in, h.boss != null ? 0 : ALIVE_PAD)) LAST_HALL.put(tag, tk);
@@ -1113,18 +1318,19 @@ final class Dungeons {
     // ================================================================ события: дверь, жаровни, возрождение
     static boolean holdsShard(net.minecraft.world.entity.player.Player p, String dungeon) {
         for (ItemStack s : new ItemStack[]{p.m_21205_(), p.m_21206_()})
-            if (s != null && s.m_41720_() instanceof SealShardItem ss && ss.dungeon.equals(dungeon)) return true;
+            if (s != null && s.m_41720_() instanceof SealShardItem ss && ss.door.equals(dungeon)) return true;
         return false;
     }
 
     static void onRightClick(PlayerInteractEvent.RightClickBlock ev) {
-        if (ev.getLevel().f_46443_ || !(ev.getLevel() instanceof ServerLevel sl) || !Dims.is(sl, Level.f_46428_)) return;
+        if (ev.getLevel().f_46443_ || !(ev.getLevel() instanceof ServerLevel sl) || !hosts(sl)) return;
         if (!(ev.getEntity() instanceof ServerPlayer p)) return;
         DungeonData data = DungeonData.get(sl);
         BlockPos pos = ev.getPos();
         DungeonData.Rec rec = at(data, pos.m_123341_() + 0.5, pos.m_123342_() + 0.5, pos.m_123343_() + 0.5, 0);
         if (rec == null) return;
         Def d = rec.def();
+        if (!d.ready()) return;   // шаблоны огромного данжа ещё читаются в фоне
         boolean main = ev.getHand() == InteractionHand.valueOf("MAIN_HAND");
         int rx = pos.m_123341_() - rec.x, ry = pos.m_123342_() - rec.y, rz = pos.m_123343_() - rec.z;
         for (Mark m : d.doors()) {
@@ -1146,6 +1352,7 @@ final class Dungeons {
         }
         if (main && d == SLEEP && reissueSeal(sl, rec, p, rx, ry, rz)) { ev.setCanceled(true); return; }   // отмена: Печать не уйдёт в сундук
         if (main && d == ASH && Ash.reissue(sl, rec, p, rx, ry, rz)) { ev.setCanceled(true); return; }     // потерянный Пепельный или Угольный ключ
+        if (d == CITADEL && Citadel.onClick(sl, data, rec, p, rx, ry, rz, main)) { ev.setCanceled(true); return; }   // лампы, маяки, часы, лунные камни
         if (DungeonMech.onClick(sl, data, rec, d, p, rx, ry, rz, main)) ev.setCanceled(true);
     }
 
@@ -1166,7 +1373,7 @@ final class Dungeons {
         return true;
     }
 
-    private static void openDoor(ServerLevel sl, DungeonData.Rec rec, Mark m) {
+    static void openDoor(ServerLevel sl, DungeonData.Rec rec, Mark m) {
         BlockState air = Fx.state("air");
         for (int x = 0; x < m.sx; x++)
             for (int y = 0; y < m.sy; y++)
@@ -1194,20 +1401,20 @@ final class Dungeons {
 
     /** Смерть внутри данжа: запоминаем, что возрождать у жаровни (если она зажжена). */
     static void onDeath(LivingDeathEvent ev) {
-        if (!(ev.getEntity() instanceof ServerPlayer p) || !(p.m_9236_() instanceof ServerLevel sl) || !Dims.is(sl, Level.f_46428_)) return;
+        if (!(ev.getEntity() instanceof ServerPlayer p) || !(p.m_9236_() instanceof ServerLevel sl) || !hosts(sl)) return;
         DungeonData data = DungeonData.get(sl);
         DungeonData.Rec rec = at(data, p.m_20185_(), p.m_20186_(), p.m_20189_(), 1);
         if (rec == null) return;
         String spot = data.respawn.get(p.m_20148_() + "|" + rec.key);
-        if (spot != null) PENDING.put(p.m_20148_(), spot);
+        if (spot != null) PENDING.put(p.m_20148_(), Dims.is(sl, Dims.HELL) ? spot + "|hell" : spot);
     }
 
     static void onRespawn(PlayerEvent.PlayerRespawnEvent ev) {
         if (!(ev.getEntity() instanceof ServerPlayer p) || !(p.m_9236_() instanceof ServerLevel sl0)) return;
         String spot = PENDING.remove(p.m_20148_());
         if (spot == null) return;
-        ServerLevel ow = Dims.get(sl0, Level.f_46428_);
         String[] s = spot.split("\\|");
+        ServerLevel ow = Dims.get(sl0, s.length > 3 ? Dims.HELL : Level.f_46428_);   // жаровня Цитадели - в Аду
         double x = Integer.parseInt(s[0]) + 0.5, y = Integer.parseInt(s[1]), z = Integer.parseInt(s[2]) + 0.5;
         Later.run(ow, 2, () -> {
             if (!p.m_6084_()) return;
@@ -1224,15 +1431,22 @@ final class Dungeons {
         if (t % 5 != 0) return;
         Def d = def(defId);
         if (d == null) return;
-        if (!Dims.is(sl, Level.f_46428_)) {
-            if (t % 20 == 0) p.m_5661_(Component.m_237115_("explosionwand.shard.silent"), true);
+        if (!(d.hell ? Dims.is(sl, Dims.HELL) : Dims.is(sl, Level.f_46428_))) {
+            if (t % 20 == 0) p.m_5661_(Component.m_237115_(d.hell ? "explosionwand.shard.silent_hell" : "explosionwand.shard.silent"), true);
             return;
         }
         DungeonData data = DungeonData.get(sl);
-        Hit h = nearest(sl.m_7328_(), d, p.m_20185_(), p.m_20189_(), key -> {
-            DungeonData.Rec r = data.recs.get(key);
-            return r == null ? null : new int[]{r.x, r.z};
-        }, data.dead::containsKey);
+        Hit h;
+        if (d.hell) {   // данж Ада один на мир: место считается отдельно (Citadel.siteOf), пока ищется - осколок «думает»
+            int[] s = Citadel.siteOf(sl, data);
+            if (s == null) { if (t % 20 == 0) p.m_5661_(Component.m_237115_("explosionwand.shard.searching"), true); return; }
+            h = new Hit(s[0], s[1], data.recs.containsKey(d.key(0, 0)), Math.hypot(s[0] - p.m_20185_(), s[1] - p.m_20189_()));
+        } else {
+            h = nearest(sl.m_7328_(), d, p.m_20185_(), p.m_20189_(), key -> {
+                DungeonData.Rec r = data.recs.get(key);
+                return r == null ? null : new int[]{r.x, r.z};
+            }, data.dead::containsKey);
+        }
         double dx = h.x + 0.5 - p.m_20185_(), dz = h.z + 0.5 - p.m_20189_(), len = Math.max(1.0E-3, h.dist);
         double ux = dx / len, uz = dz / len;
         boolean near = h.dist < 40;
@@ -1256,12 +1470,19 @@ final class Dungeons {
     /** Отладка для творческого режима: координаты ближайшего данжа в чат. */
     static void locate(ServerLevel sl, ServerPlayer p, String defId) {
         Def d = def(defId);
-        if (d == null || !Dims.is(sl, Level.f_46428_)) return;
+        if (d == null || !(d.hell ? Dims.is(sl, Dims.HELL) : Dims.is(sl, Level.f_46428_))) return;
         DungeonData data = DungeonData.get(sl);
-        Hit h = nearest(sl.m_7328_(), d, p.m_20185_(), p.m_20189_(), key -> {
-            DungeonData.Rec r = data.recs.get(key);
-            return r == null ? null : new int[]{r.x, r.z};
-        }, data.dead::containsKey);
+        Hit h;
+        if (d.hell) {
+            int[] s = Citadel.siteOf(sl, data);
+            if (s == null) { p.m_5661_(Component.m_237115_("explosionwand.shard.searching"), false); return; }
+            h = new Hit(s[0], s[1], data.recs.containsKey(d.key(0, 0)), Math.hypot(s[0] - p.m_20185_(), s[1] - p.m_20189_()));
+        } else {
+            h = nearest(sl.m_7328_(), d, p.m_20185_(), p.m_20189_(), key -> {
+                DungeonData.Rec r = data.recs.get(key);
+                return r == null ? null : new int[]{r.x, r.z};
+            }, data.dead::containsKey);
+        }
         p.m_5661_(Component.m_237110_("explosionwand.shard.locate", Component.m_237115_("explosionwand.dungeon." + d.id), h.x, h.z, (int) h.dist), false);
     }
 }

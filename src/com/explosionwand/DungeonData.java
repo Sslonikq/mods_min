@@ -42,6 +42,10 @@ final class DungeonData extends SavedData {
         boolean contains(double px, double py, double pz, int pad) {
             Dungeons.Def d = def();
             if (d == null) return false;
+            if (d.clearR > 0) {   // огромный данж (Цитадель): внутри весь цилиндр, а не только маска (открытый воздух над склоном, двором, стенами)
+                if (d.inCylinder(px - x, py - y, pz - z, pad)) return true;
+                if (!d.ready()) return false;   // шаблоны ещё читаются: ждать главный поток не должен
+            }
             int[] b; Dungeons.Mask m;
             try { b = d.bounds(); m = d.mask(); } catch (IllegalStateException e) { Dungeons.noTemplate(d, e); return false; }   // нет шаблона: защита выключена, но игра не падает
             if (!(px >= x + b[0] - pad && px < x + b[3] + pad && py >= y + b[1] - pad && py < y + b[4] + pad && pz >= z + b[2] - pad && pz < z + b[5] + pad)) return false;
@@ -54,6 +58,10 @@ final class DungeonData extends SavedData {
         boolean inBox(double px, double py, double pz, int pad) {
             Dungeons.Def d = def();
             if (d == null) return false;
+            if (d.clearR > 0) {
+                if (d.inCylinder(px - x, py - y, pz - z, pad)) return true;
+                if (!d.ready()) return false;
+            }
             int[] b;
             try { b = d.bounds(); } catch (IllegalStateException e) { Dungeons.noTemplate(d, e); return false; }
             return px >= x + b[0] - pad && px < x + b[3] + pad && py >= y + b[1] - pad && py < y + b[4] + pad && pz >= z + b[2] - pad && pz < z + b[5] + pad;
@@ -110,6 +118,8 @@ final class DungeonData extends SavedData {
             CompoundTag mr = t.m_128469_("mirrors");
             for (String mk : mr.m_128431_()) r.mirrors.put(mk, mr.m_128451_(mk) & 3);
             d.recs.put(k, r);
+            Dungeons.Def pd = r.def();
+            if (pd != null && pd.clearR > 0) pd.preload();   // огромный данж: шаблоны читаются в фоне, а не в первом тике
         }
         CompoundTag rp = tag.m_128469_("respawn");
         for (String k : rp.m_128431_()) d.respawn.put(k, rp.m_128461_(k));
@@ -148,7 +158,7 @@ final class DungeonData extends SavedData {
         for (Rec r : recs.values()) {
             if (r.bossDead) continue;
             Dungeons.Def def = r.def();
-            if (def == null) continue;
+            if (def == null || def.passive) continue;   // данж без боссов (Цитадель): шаблоны не читаем здесь
             try {
                 for (Dungeons.Hall h : def.halls())
                     if (h.boss != null && (r.hallsCleared & (1L << h.id)) != 0) { r.bossDead = true; n++; break; }
@@ -167,9 +177,9 @@ final class DungeonData extends SavedData {
         m_77762_();
     }
 
-    /** Данные хранятся в обычном мире, откуда бы ни спросили. */
+    /** Записи обычного мира хранятся в нём, откуда бы ни спросили; данжи Ада (Цитадель) - в хранилище самого Ада (координаты двух миров не смешиваются). */
     static DungeonData get(ServerLevel any) {
-        ServerLevel ow = Dims.get(any, Level.f_46428_);
-        return ow.m_8895_().m_164861_(DungeonData::load, DungeonData::new, NAME);
+        ServerLevel host = Dims.is(any, Dims.HELL) ? any : Dims.get(any, Level.f_46428_);
+        return host.m_8895_().m_164861_(DungeonData::load, DungeonData::new, NAME);
     }
 }

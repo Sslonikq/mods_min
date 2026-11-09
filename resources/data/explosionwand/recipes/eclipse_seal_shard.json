@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IEI",
+    "EGE",
+    "IEI"
+  ],
+  "key": {
+    "G": {
+      "item": "explosionwand:crown_gem"
+    },
+    "E": {
+      "item": "explosionwand:eclipse_shard"
+    },
+    "I": {
+      "item": "explosionwand:blood_iron_ingot"
+    }
+  },
+  "result": {
+    "item": "explosionwand:eclipse_seal_shard",
+    "count": 1
+  }
+}

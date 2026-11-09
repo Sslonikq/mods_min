@@ -29,12 +29,22 @@ final class DungeonGuard {
         if (!(ev.getPlayer() instanceof ServerPlayer p) || p.m_7500_()) return;
         // ядро столба щита Сердца Разлома ломается (иначе щит не снять); остальное в данже неприкосновенно
         if (!Dungeons.guarded(p.m_9236_(), ev.getPos())) return;   // босс этого данжа убит: ломать можно
+        if (p.m_9236_() instanceof ServerLevel hl && Dims.is(hl, Dims.HELL) && usesPickaxe(p)) {   // оружейная Цитадели открывается ударом кирки по трещине
+            DungeonData hd = DungeonData.get(hl);
+            DungeonData.Rec hr = Dungeons.at(hd, ev.getPos().m_123341_() + 0.5, ev.getPos().m_123342_() + 0.5, ev.getPos().m_123343_() + 0.5, 0);
+            if (hr != null) Citadel.secretHit(hl, hd, hr, java.util.List.of(ev.getPos()), java.util.List.of(p));
+        }
         if (p.m_9236_() instanceof ServerLevel sl && Boss.isPylonCore(sl, ev.getPos())) {
             // ядро убираем сами, без дропа: аметист со столбов не фармится (бой можно сбросить и начать заново)
             sl.m_7731_(ev.getPos(), Fx.state("air"), 3);
             Fx.sound(sl, ev.getPos().m_123341_() + 0.5, ev.getPos().m_123342_() + 0.5, ev.getPos().m_123343_() + 0.5, "block.amethyst_block.break", 1.0F, 1.0F);
         }
         ev.setCanceled(true);
+    }
+
+    private static boolean usesPickaxe(ServerPlayer p) {
+        net.minecraft.resources.ResourceLocation k = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(p.m_21205_().m_41720_());
+        return k != null && k.m_135815_().endsWith("pickaxe");
     }
 
     static void onPlace(BlockEvent.EntityPlaceEvent ev) {
@@ -70,9 +80,10 @@ final class DungeonGuard {
     private static boolean spawnWarned = false;
 
     static void onDetonate(ExplosionEvent.Detonate ev) {
-        if (ev.getLevel() instanceof ServerLevel sl && Dims.is(sl, net.minecraft.world.level.Level.f_46428_)) {
+        if (ev.getLevel() instanceof ServerLevel sl && Dungeons.hosts(sl)) {
             DungeonData data = DungeonData.get(sl);
             if (data.recs.isEmpty()) return;
+            if (Dims.is(sl, Dims.HELL)) Citadel.onDetonate(sl, data, ev.getAffectedBlocks());
             java.util.List<BlockPos> cores = new java.util.ArrayList<>();
             ev.getAffectedBlocks().removeIf(pos -> {
                 if (Dungeons.guardedAt(data, pos.m_123341_(), pos.m_123342_(), pos.m_123343_(), 0) == null) return false;
@@ -145,7 +156,7 @@ final class DungeonGuard {
         Item item = ev.getItemStack().m_41720_();
         if (!forbidden(item)) return;
         net.minecraft.server.level.ServerLevel sl = p.m_9236_() instanceof net.minecraft.server.level.ServerLevel s0 ? s0 : null;
-        if (sl == null || !Dims.is(sl, net.minecraft.world.level.Level.f_46428_)) return;
+        if (sl == null || !Dungeons.hosts(sl)) return;
         DungeonData.Rec rec = Dungeons.at(DungeonData.get(sl), p.m_20185_(), p.m_20186_(), p.m_20189_(), 0);
         if (rec == null) return;
         if (rec.bossDead && !teleports(item)) return;   // босс побеждён: местность можно переделывать

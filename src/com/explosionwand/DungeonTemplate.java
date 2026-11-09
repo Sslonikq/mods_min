@@ -1,12 +1,16 @@
 package com.explosionwand;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Часть данжа: шаблон блоков в формате структур Minecraft (.nbt) плюс свои теги ew_origin и ew_marks.
@@ -45,7 +49,62 @@ final class DungeonTemplate {
         return out;
     }
 
+    /**
+     * Потоковый разбор (Цитадель: ~250 тыс. блоков в части): список blocks читается прямо в массивы, без Map на блок (иначе сотни МБ мусора).
+     * Остальные теги (size, ew_origin, palette, ew_marks) мелкие и читаются обычным Nbt.
+     */
+    static DungeonTemplate parseStream(String name, InputStream raw) throws IOException {
+        try (DataInputStream in = new DataInputStream(new BufferedInputStream(new GZIPInputStream(raw), 1 << 16))) {
+            if (in.readByte() != 10) throw new IOException("корень NBT не compound");
+            in.readUTF();
+            Map<String, Object> root = new LinkedHashMap<>();
+            int[][] blocks = null;
+            while (true) {
+                int t = in.readByte();
+                if (t == 0) break;
+                String key = in.readUTF();
+                if (key.equals("blocks") && t == 9) blocks = readBlocks(in);
+                else root.put(key, Nbt.value(in, t));
+            }
+            if (blocks == null) blocks = new int[][]{new int[0], new int[0], new int[0], new int[0]};
+            return build(name, root, blocks[0], blocks[1], blocks[2], blocks[3]);
+        }
+    }
+
+    /** Список blocks: каждый элемент compound {pos: [x,y,z], state: int, ...}. Возвращает {bx, by, bz, bs}. */
+    private static int[][] readBlocks(DataInputStream in) throws IOException {
+        int et = in.readByte(), n = in.readInt();
+        if (n > 0 && et != 10) throw new IOException("blocks: ожидался список compound");
+        int[] bx = new int[Math.max(0, n)], by = new int[bx.length], bz = new int[bx.length], bs = new int[bx.length];
+        for (int i = 0; i < n; i++) {
+            while (true) {
+                int t = in.readByte();
+                if (t == 0) break;
+                String key = in.readUTF();
+                if (key.equals("pos") && t == 9) {
+                    int pt = in.readByte(), pn = in.readInt();
+                    if (pt != 3 || pn != 3) throw new IOException("blocks: pos должен быть списком из трёх int");
+                    bx[i] = in.readInt(); by[i] = in.readInt(); bz[i] = in.readInt();
+                } else if (key.equals("state") && t == 3) bs[i] = in.readInt();
+                else Nbt.value(in, t);   // nbt блока и прочее: пропускаем
+            }
+        }
+        return new int[][]{bx, by, bz, bs};
+    }
+
     static DungeonTemplate parse(String name, Map<String, Object> root) {
+        List<Object> bl = Nbt.list(root.get("blocks"));
+        int n = bl.size();
+        int[] bx = new int[n], by = new int[n], bz = new int[n], bs = new int[n];
+        for (int i = 0; i < n; i++) {
+            Map<String, Object> b = Nbt.map(bl.get(i));
+            int[] p = Nbt.ints(b.get("pos"));
+            bx[i] = p[0]; by[i] = p[1]; bz[i] = p[2]; bs[i] = ((Number) b.get("state")).intValue();
+        }
+        return build(name, root, bx, by, bz, bs);
+    }
+
+    private static DungeonTemplate build(String name, Map<String, Object> root, int[] bx, int[] by, int[] bz, int[] bs) {
         int[] size = Nbt.ints(root.get("size")), org = Nbt.ints(root.get("ew_origin"));
         List<Object> pal = Nbt.list(root.get("palette"));
         String[] palette = new String[pal.size()];
@@ -63,14 +122,6 @@ final class DungeonTemplate {
                 sb.append(']');
             }
             palette[i] = sb.toString();
-        }
-        List<Object> bl = Nbt.list(root.get("blocks"));
-        int n = bl.size();
-        int[] bx = new int[n], by = new int[n], bz = new int[n], bs = new int[n];
-        for (int i = 0; i < n; i++) {
-            Map<String, Object> b = Nbt.map(bl.get(i));
-            int[] p = Nbt.ints(b.get("pos"));
-            bx[i] = p[0]; by[i] = p[1]; bz[i] = p[2]; bs[i] = ((Number) b.get("state")).intValue();
         }
         List<Mark> marks = new ArrayList<>();
         for (Object o : Nbt.list(root.get("ew_marks"))) {
@@ -93,6 +144,6 @@ final class DungeonTemplate {
     }
 
     static DungeonTemplate load(String name) throws IOException {
-        try (InputStream in = open(name)) { return parse(name, Nbt.readGz(in)); }
+        try (InputStream in = open(name)) { return parseStream(name, in); }
     }
 }

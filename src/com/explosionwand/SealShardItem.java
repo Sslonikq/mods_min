@@ -17,12 +17,15 @@ import java.util.List;
  */
 public class SealShardItem extends Item {
     final String dungeon, key;
+    /** Метка door a=..., которую отпирает этот предмет (обычно совпадает с dungeon; у Осколка Печати: Затмение - gate1 при dungeon citadel). */
+    final String door;
     /** Только ключ от двери (Печать Храма): не указывает дорогу, отпирает дверь с меткой door a=dungeon. */
     final boolean doorOnly;
     public SealShardItem(Properties p, String dungeon) { this(p, dungeon, "seal_shard_" + dungeon); }
     /** key — id предмета (по нему ищется описание в lang). */
     public SealShardItem(Properties p, String dungeon, String key) { this(p, dungeon, key, false); }
-    public SealShardItem(Properties p, String dungeon, String key, boolean doorOnly) { super(p); this.dungeon = dungeon; this.key = key; this.doorOnly = doorOnly; }
+    public SealShardItem(Properties p, String dungeon, String key, boolean doorOnly) { this(p, dungeon, key, doorOnly, dungeon); }
+    public SealShardItem(Properties p, String dungeon, String key, boolean doorOnly, String door) { super(p); this.dungeon = dungeon; this.key = key; this.doorOnly = doorOnly; this.door = door; }
 
     /** Данжа этого типа нет в игре: осколок только сообщает, что дорога не открыта. Ключ-печать (doorOnly) дорогу не указывает и не «заперт». */
     boolean locked() { return !doorOnly && Dungeons.def(dungeon) == null; }

@@ -147,6 +147,11 @@ public class ExplosionWandMod {
     public static final RegistryObject<Item> BLOOD_IRON_HOE = ITEMS.register("blood_iron_hoe", () -> new BloodIron.Hoe(new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
     public static final RegistryObject<Item> BLOOD_IRON_SWORD = ITEMS.register("blood_iron_sword", () -> new BloodIron.Sword(new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
 
+    /** Осколок Печати: Затмение (5.3): первый осколок Ада. Указывает на Цитадель Затмения (Dungeons.CITADEL, поиск в Аду), открывает Внешние ворота (дверь gate1). Крафт - в data/recipes. */
+    public static final RegistryObject<Item> ECLIPSE_SEAL_SHARD = ITEMS.register("eclipse_seal_shard", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE")), "citadel", "eclipse_seal_shard", false, "gate1"));
+    /** Печать Трона (5.3): отпирает дверь в Тронный двор (метка door a=throne_seal). Падает с Затмённого колосса (5.5); пока выдаётся командой. */
+    public static final RegistryObject<Item> THRONE_SEAL = ITEMS.register("throne_seal", () -> new SealShardItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("EPIC")), "throne_seal", "throne_seal", true));
+
     /** Тестовые админ-палочки (3.2.0): без рецептов, выдаются командой или в креативе; регистрируются последними (конец вкладки «Магия»). */
     public static final RegistryObject<Item> LIGHTNING_WAND = ITEMS.register("lightning_wand", () -> new LightningWandItem(props()));
     public static final RegistryObject<Item> DEATH_WAND = ITEMS.register("death_wand", () -> new DeathWandItem(props()));

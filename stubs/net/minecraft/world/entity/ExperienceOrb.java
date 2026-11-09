@@ -1,1 +1,1 @@
-package net.minecraft.world.entity; public class ExperienceOrb extends Entity { }
+package net.minecraft.world.entity; public class ExperienceOrb extends Entity { public static void m_147082_(net.minecraft.server.level.ServerLevel l, net.minecraft.world.phys.Vec3 pos, int amount){} }

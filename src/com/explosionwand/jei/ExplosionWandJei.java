@@ -81,6 +81,9 @@ public class ExplosionWandJei implements IModPlugin {
         info(reg, new ItemStack(ExplosionWandMod.BLOOD_IRON_SHOVEL.get()), "blood_iron_shovel");
         info(reg, new ItemStack(ExplosionWandMod.BLOOD_IRON_HOE.get()), "blood_iron_hoe");
         info(reg, new ItemStack(ExplosionWandMod.BLOOD_IRON_SWORD.get()), "blood_iron_sword");
+        // Цитадель Затмения (5.3)
+        info(reg, new ItemStack(ExplosionWandMod.ECLIPSE_SEAL_SHARD.get()), "eclipse_seal_shard");
+        info(reg, new ItemStack(ExplosionWandMod.THRONE_SEAL.get()), "throne_seal");
         // тестовые админ-палочки (3.2.0)
         info(reg, new ItemStack(ExplosionWandMod.LIGHTNING_WAND.get()), "lightning_wand");
         info(reg, new ItemStack(ExplosionWandMod.DEATH_WAND.get()), "death_wand");

@@ -438,7 +438,7 @@ final class Earth {
      * Добыча как алмазной киркой: список выпадения считаем сами (Block.getDrops), предметы кладём прямо в инвентарь игрока,
      * что не влезло - бросаем под ноги блоку. Раньше шёл Block.dropResources: предметы падали в глубине тоннеля 3x3x8,
      * в темноте их не видно и они лежали в 8 блоках от игрока, а сбой внутри Later.run глотался молча - выглядело как «блоки не выпадают».
-     * Опыт руды (spawnAfterBreak) сохранён. Сбой одного блока больше не обрывает срез.
+     * Опыт руды - через getExpDrop (0.5.1 ошибочно считал, что его выпускает spawnAfterBreak). Сбой одного блока больше не обрывает срез.
      */
     static void giveDrops(ServerLevel sl, ServerPlayer p, BlockPos pos, BlockState st) {
         try {
@@ -448,7 +448,9 @@ final class Earth {
                 p.m_150109_().m_36054_(it);
                 if (!it.m_41619_()) Block.m_49840_(sl, pos, it);
             }
-            st.m_222967_(sl, pos, tool(), true);
+            st.m_222967_(sl, pos, tool(), false);   // spawnAfterBreak без опыта: в Forge 1.20.1 DropExperienceBlock опыт тут не выпускает
+            int xp = st.getExpDrop(sl, sl.f_46441_, pos, 0, 0);   // опыт руд (Forge: IForgeBlockState.getExpDrop; руды Ада - DropExperienceBlock)
+            if (xp > 0) ExperienceOrb.m_147082_(sl, new Vec3(pos.m_123341_() + 0.5D, pos.m_123342_() + 0.5D, pos.m_123343_() + 0.5D), xp);
         } catch (RuntimeException ex) {
             dropFails++;
             if (EarthLogic.warnDue(dropFails)) { System.err.println("[explosionwand] Копатель: сбой выпадения №" + dropFails + " (" + path(st) + "): " + ex); ex.printStackTrace(); }

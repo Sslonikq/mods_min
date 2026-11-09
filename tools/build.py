@@ -73,7 +73,9 @@ def find_tool(name):
 def run(cmd, **kw):
     if cmd and cmd[0] in ("javac", "javap", "java"): cmd = [find_tool(cmd[0])] + list(cmd[1:])
     env = dict(os.environ); env.pop("JAVA_TOOL_OPTIONS", None)
-    r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, **kw)
+    env["PYTHONIOENCODING"] = "utf-8"  # дочерние python-скрипты пишут в UTF-8 независимо от консоли
+    # вывод javap/java в кодировке консоли Windows не должен ронять сборку: читаем UTF-8, мусор заменяем
+    r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", **kw)
     out = "\n".join(l for l in (r.stdout + r.stderr).splitlines() if not l.startswith("Picked up"))
     return r.returncode, out
 
@@ -146,6 +148,13 @@ def check_dungeons():
     if code != 0: sys.exit(out)
 
 
+def check_citadel():
+    code, out = run([sys.executable, str(ROOT / "tools" / "gen_citadel.py"), "--check"])
+    lines = [l for l in out.strip().splitlines() if l.strip()]
+    print("[3c] " + (lines[-1] if lines else "gen_citadel"))
+    if code != 0: sys.exit(out)
+
+
 def tests():
     tests = sorted((ROOT / "tests").glob("*.java"))
     if not tests: print("[4] тестов нет"); return
@@ -184,13 +193,16 @@ def package():
 
 
 if __name__ == "__main__":
+    for s in (sys.stdout, sys.stderr):  # консоль cp1251 не должна ронять печать (символы вне кодовой страницы -> ?)
+        try: s.reconfigure(errors="replace")
+        except Exception: pass
     ap = argparse.ArgumentParser()
     ap.add_argument("--install", action="store_true", help="скопировать jar в ~/Downloads")
     ap.add_argument("--fast", action="store_true", help="без проверок и тестов")
     a = ap.parse_args()
     compile_all()
     if not a.fast:
-        check_srg(); check_classes(); check_link(); check_ids(); check_dungeons(); tests()
+        check_srg(); check_classes(); check_link(); check_ids(); check_dungeons(); check_citadel(); tests()
     jar = package()
     if a.install:
         dst = Path.home() / "Downloads" / jar.name
