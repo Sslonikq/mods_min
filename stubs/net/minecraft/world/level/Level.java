@@ -8,6 +8,7 @@ public abstract class Level implements LevelAccessor { public boolean f_46443_; 
  public Explosion m_255391_(Entity e,double x,double y,double z,float pow,boolean fire,ExplosionInteraction i){return null;}
  public List<Entity> m_6249_(Entity e, AABB b, Predicate<? super Entity> p){return null;}
  public BlockState m_8055_(BlockPos p){return null;}
+ public <T extends Entity> List<T> m_6443_(Class<T> c, AABB b, Predicate<? super T> p){return null;}
  public net.minecraft.world.damagesource.DamageSources m_269111_(){return null;}
  public boolean m_7731_(BlockPos p, BlockState s, int f){return false;}
  public boolean m_46597_(BlockPos p, BlockState s){return false;}

@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
 public class HellPortalBlock extends Block {
     public HellPortalBlock(Properties p) { super(p); }
 
-    /** Без коллизии, но "твёрдый" (forceSolidOn): иначе вода и лава могут заменить блок портала. */
+    /** Не рисовать грань рядом с таким же блоком. */
     @Override
     public boolean m_6104_(BlockState st, BlockState adj, net.minecraft.core.Direction d) { return adj.m_60734_() == this; }
 

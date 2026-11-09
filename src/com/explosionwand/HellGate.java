@@ -45,10 +45,20 @@ final class HellGate {
     /** Ключ игрока: тик последнего входа в проём (чтобы не гонять туда-сюда) и начало текущего стояния. */
     static final Map<UUID, long[]> STAND = new HashMap<>();
     static final int DWELL = 30, COOLDOWN = 100;
-    /** Где стоит обратный портал в Аду (гнездо) и где появляется игрок. */
-    static final int HELL_SOCKET_Y = 68;
-    static final BlockPos HELL_SOCKET = new BlockPos(0, HELL_SOCKET_Y, -6);
-    static final double HELL_X = 0.5D, HELL_Y = 64.0D, HELL_Z = -2.5D;
+    /**
+     * Где стоит обратный портал в Аду (гнездо) и где появляется игрок. Ад - настоящий generated-мир (5.1), высота пола площадки не константа:
+     * вычисляется при первом входе (pickFloor) и хранится в HellData.floorY. Гнездо - на SOCKET_DY выше пола (рамка стоит на полу), z = SOCKET_Z;
+     * игрок появляется на полу в (HELL_X, floorY + 1, HELL_Z).
+     */
+    static final int SOCKET_DY = 5, SOCKET_Z = -6;
+    static final double HELL_X = 0.5D, HELL_Z = -2.5D;
+    /** Пол площадки в мирах 3.0.x, где Ад был плоской пустотой: узнаём по занятому гнезду на (0, 68, -6). */
+    static final int LEGACY_FLOOR = 63;
+    /** Поиск пола: сверху вниз от 200 (горы Ада до ~170) до 41 (лава Лавового моря на y=40); нет поверхности - площадка над лавой на y=42. */
+    static final int FLOOR_MIN = 41, FLOOR_MAX = 200, FLOOR_FALLBACK = 42;
+
+    static BlockPos socketAt(int floorY) { return new BlockPos(0, floorY + SOCKET_DY, SOCKET_Z); }
+    static double spawnY(int floorY) { return floorY + 1.0D; }
 
     // ---- блоки
 
@@ -147,20 +157,20 @@ final class HellGate {
         ResourceLocation dim = sl.m_46472_().m_135782_();
         d.m_128359_("ewHellDim", dim.m_135827_() + ":" + dim.m_135815_());
         d.m_128405_("ewHellX", spot[0]); d.m_128405_("ewHellY", spot[1]); d.m_128405_("ewHellZ", spot[2]);
-        ensureHell(hell);
+        double hy = spawnY(ensureHell(hell));
         Fx.sound(sl, p.m_20185_(), p.m_20186_(), p.m_20189_(), "block.portal.travel", 0.6F, 0.7F);
-        Entity moved = Dims.teleport(p, hell, HELL_X, HELL_Y, HELL_Z);
+        Entity moved = Dims.teleport(p, hell, HELL_X, hy, HELL_Z);
         if (moved instanceof ServerPlayer q) {
-            Fx.sound(hell, HELL_X, HELL_Y, HELL_Z, "block.portal.travel", 0.6F, 0.7F);
-            title(hell, q);
+            Fx.sound(hell, HELL_X, hy, HELL_Z, "block.portal.travel", 0.6F, 0.7F);
+            title(hell, q, hy);
         }
     }
 
-    static void title(ServerLevel hell, ServerPlayer q) {
+    static void title(ServerLevel hell, ServerPlayer q, double hy) {
         String id = q.m_20148_().toString();
-        Cmd.run(hell, HELL_X, HELL_Y, HELL_Z, "title " + id + " times 10 70 20");
-        Cmd.run(hell, HELL_X, HELL_Y, HELL_Z, "title " + id + " subtitle {\"translate\":\"explosionwand.hell.building.sub\",\"color\":\"gray\",\"italic\":true}");
-        Cmd.run(hell, HELL_X, HELL_Y, HELL_Z, "title " + id + " title {\"translate\":\"explosionwand.hell.building\",\"color\":\"red\",\"bold\":true}");
+        Cmd.run(hell, HELL_X, hy, HELL_Z, "title " + id + " times 10 70 20");
+        Cmd.run(hell, HELL_X, hy, HELL_Z, "title " + id + " subtitle {\"translate\":\"explosionwand.hell.building.sub\",\"color\":\"gray\",\"italic\":true}");
+        Cmd.run(hell, HELL_X, hy, HELL_Z, "title " + id + " title {\"translate\":\"explosionwand.hell.building\",\"color\":\"red\",\"bold\":true}");
     }
 
     /** Из Ада - к тому порталу, откуда игрок пришёл (или на мировой спавн, если записи нет). */
@@ -199,9 +209,6 @@ final class HellGate {
 
     // ---- Ад-заглушка (4.13)
 
-    /** Маркер "площадка построена": бедрок под центром пола (добраться можно только копая вниз). Раньше маркером был блок пола (0,63,0). */
-    static final BlockPos MARKER = new BlockPos(0, 62, 0);
-
     static boolean isGateBlock(BlockState s) { return is(s, ExplosionWandMod.HELL_PORTAL.get()) || is(s, ExplosionWandMod.HELL_SOCKET.get()); }
 
     /** Вид клетки раскладки для проверки целостности: "frame" / "portal" / "socket" / "" (прочее). */
@@ -220,14 +227,31 @@ final class HellGate {
         return true;
     }
 
-    /** Клетка принадлежит обратному порталу в Аду (рамка, гнездо, проём): ломать нельзя. */
-    static boolean inReturnGate(BlockPos p) {
-        if (p.m_123341_() == HELL_SOCKET.m_123341_() && p.m_123342_() == HELL_SOCKET.m_123342_() && p.m_123343_() == HELL_SOCKET.m_123343_()) return true;
+    /** Клетка принадлежит обратному порталу в Аду (рамка, гнездо, проём) на площадке с полом floorY: ломать нельзя. floorY <= 0 - площадка ещё не построена. */
+    static boolean inReturnGate(int floorY, BlockPos p) {
+        if (floorY <= 0) return false;
+        BlockPos sock = socketAt(floorY);
+        if (p.m_123341_() == sock.m_123341_() && p.m_123342_() == sock.m_123342_() && p.m_123343_() == sock.m_123343_()) return true;
         for (int[][] cells : new int[][][]{FRAME, INNER}) for (int[] o : cells) {
-            BlockPos c = at(HELL_SOCKET, 0, o[0], o[1]);
+            BlockPos c = at(sock, 0, o[0], o[1]);
             if (c.m_123341_() == p.m_123341_() && c.m_123342_() == p.m_123342_() && c.m_123343_() == p.m_123343_()) return true;
         }
         return false;
+    }
+
+    /** Пол площадки Ада без построения: из HellData; если не определён, но стоит гнездо мира 3.0.x на (0, 68, -6) - пол 63 (запоминается). 0 - площадки нет. */
+    static int floorOf(ServerLevel hell) {
+        HellData d = HellData.get(hell);
+        if (d.floorY <= 0 && is(hell.m_8055_(socketAt(LEGACY_FLOOR)), ExplosionWandMod.HELL_SOCKET.get())) d.set(LEGACY_FLOOR);
+        return d.floorY;
+    }
+
+    /** Из списка взрыва убираются клетки обратного портала (чистая логика, для теста). */
+    static void stripReturnGate(int floorY, java.util.List<BlockPos> blocks) { blocks.removeIf(b -> inReturnGate(floorY, b)); }
+
+    /** Взрывы (TNT и др.) в Аду не трогают обратный портал: иначе рамку из Печатного камня можно фармить. */
+    static void onDetonate(net.minecraftforge.event.level.ExplosionEvent.Detonate ev) {
+        if (ev.getLevel() instanceof ServerLevel sl && Dims.is(sl, Dims.HELL)) stripReturnGate(floorOf(sl), ev.getAffectedBlocks());
     }
 
     /** Сломана рамка: в Аду - нельзя (обратный портал вечный); на Земле - зажжённый проём гаснет, гнездо снова Угли (ключ нужен новый). */
@@ -235,7 +259,7 @@ final class HellGate {
         if (!(ev.getLevel() instanceof ServerLevel sl)) return;
         BlockPos pos = ev.getPos();
         if (!is(sl.m_8055_(pos), ExplosionWandMod.SEAL_STONE.get())) return;
-        if (Dims.is(sl, Dims.HELL)) { if (inReturnGate(pos)) ev.setCanceled(true); return; }
+        if (Dims.is(sl, Dims.HELL)) { if (inReturnGate(floorOf(sl), pos)) ev.setCanceled(true); return; }
         for (int dx = -2; dx <= 2; dx++) for (int dy = 0; dy <= 4; dy++) for (int dz = -2; dz <= 2; dz++) {
             BlockPos socket = new BlockPos(pos.m_123341_() + dx, pos.m_123342_() + dy, pos.m_123343_() + dz);
             if (!is(sl.m_8055_(socket), ExplosionWandMod.HELL_SOCKET.get())) continue;
@@ -252,32 +276,57 @@ final class HellGate {
         }
     }
 
-    /** Площадка (строится один раз, маркер - бедрок MARKER) и обратный портал (проверяется при каждом входе и восстанавливается, если смыт/сломан). */
-    static void ensureHell(ServerLevel hell) {
-        for (int cx = -1; cx <= 0; cx++) for (int cz = -1; cz <= 0; cz++) hell.m_6325_(cx, cz);
-        if (hell.m_8055_(MARKER).m_60734_() != Fx.state("bedrock").m_60734_()) {
-            if (hell.m_8055_(new BlockPos(0, 63, 0)).m_60795_()) buildPlatform(hell);
-            else hell.m_7731_(MARKER, Fx.state("bedrock"), 3);     // площадка 3.0.0 уже стоит: только поставить маркер
-        }
-        if (!intact(HELL_SOCKET, 0, b -> kind(hell.m_8055_(b)))) buildLit(hell, HELL_SOCKET, 0);
+    /**
+     * Первая поверхность сверху вниз от FLOOR_MAX до FLOOR_MIN: твёрдый блок, над которым две свободные клетки (не лава, не вода);
+     * так дно сырной пещеры под землёй не выбирается, только верхняя поверхность.
+     * cls(y): 0 - свободно (воздух, растения), 1 - твёрдо, 2 - жидкость. Нет поверхности - FLOOR_FALLBACK. Чистая логика, для теста.
+     */
+    static int pickFloor(java.util.function.IntUnaryOperator cls) {
+        for (int y = FLOOR_MAX; y >= FLOOR_MIN; y--)
+            if (cls.applyAsInt(y) == 1 && cls.applyAsInt(y + 1) == 0 && cls.applyAsInt(y + 2) == 0) return y;
+        return FLOOR_FALLBACK;
     }
 
-    /** Круг радиуса 9 из адских блоков с оградой по краю. */
-    static void buildPlatform(ServerLevel hell) {
-        BlockState rock = Fx.state("netherrack"), black = Fx.state("blackstone"), brick = Fx.state("polished_blackstone_bricks"), magma = Fx.state("magma_block"),
+    /** Вид клетки колонны (0, y, 0): 0 - свободно, 1 - твёрдо, 2 - жидкость. */
+    static int classify(ServerLevel l, int y) {
+        BlockPos p = new BlockPos(0, y, 0);
+        BlockState s = l.m_8055_(p);
+        if (!s.m_60819_().m_76178_()) return 2;
+        if (s.m_60734_() instanceof HellBlock hb && hb.kind == HellBlock.Kind.valueOf("LEAVES")) return 0;     // крона - не пол
+        return s.m_60812_(l, p).m_83281_() ? 0 : 1;
+    }
+
+    /**
+     * Высота пола площадки; строит площадку при первом входе и возвращает floorY (хранится в HellData).
+     * Обратный портал проверяется при каждом входе и восстанавливается, если смыт/сломан.
+     */
+    static int ensureHell(ServerLevel hell) {
+        for (int cx = -1; cx <= 0; cx++) for (int cz = -1; cz <= 0; cz++) hell.m_6325_(cx, cz);
+        HellData d = HellData.get(hell);
+        if (d.floorY <= 0) {
+            if (floorOf(hell) <= 0) { int f0 = pickFloor(y -> classify(hell, y)); buildPlatform(hell, f0); d.set(f0); }     // иначе floorOf узнал площадку 3.0.x
+        }
+        int f = d.floorY;
+        BlockPos sock = socketAt(f);
+        if (!intact(sock, 0, b -> kind(hell.m_8055_(b)))) buildLit(hell, sock, 0);
+        return f;
+    }
+
+    /** Круг радиуса 9 из блоков Ада с оградой по краю; пол на высоте f, ниже - 3 слоя камня (закрывают лаву и пустоты), выше - 11 клеток воздуха. */
+    static void buildPlatform(ServerLevel hell, int f) {
+        BlockState rock = HellBlocks.state("eclipse_stone"), black = HellBlocks.state("eclipse_cobblestone"), brick = HellBlocks.state("eclipse_bricks"), slag = HellBlocks.state("slag"),
                 fence = Fx.state("nether_brick_fence"), lava = Fx.state("lava"), lamp = Fx.state("shroomlight"), air = Fx.state("air");
         for (int x = -9; x <= 9; x++) for (int z = -9; z <= 9; z++) {
             int r2 = x * x + z * z;
             if (r2 > 81) continue;
             int h = Math.floorMod(x * 7 + z * 13 + x * z, 11);
-            BlockState top = h < 4 ? rock : h < 7 ? black : h < 9 ? brick : magma;
-            hell.m_7731_(new BlockPos(x, 63, z), top, 3);
-            hell.m_7731_(new BlockPos(x, 62, z), rock, 3);
-            for (int y = 64; y <= 74; y++) hell.m_7731_(new BlockPos(x, y, z), air, 3);
-            if (r2 >= 64) hell.m_7731_(new BlockPos(x, 64, z), fence, 3);
+            BlockState top = h < 4 ? rock : h < 7 ? black : h < 9 ? brick : slag;
+            hell.m_7731_(new BlockPos(x, f, z), top, 3);
+            for (int dy = 1; dy <= 3; dy++) hell.m_7731_(new BlockPos(x, f - dy, z), rock, 3);
+            for (int y = f + 1; y <= f + 11; y++) hell.m_7731_(new BlockPos(x, y, z), air, 3);
+            if (r2 >= 64) hell.m_7731_(new BlockPos(x, f + 1, z), fence, 3);
         }
-        for (int x = 4; x <= 5; x++) for (int z = 3; z <= 4; z++) hell.m_7731_(new BlockPos(x, 63, z), lava, 3);
-        for (int[] c : new int[][]{{-5, 5}, {5, -5}, {-5, -5}, {6, 6}}) { hell.m_7731_(new BlockPos(c[0], 64, c[1]), brick, 3); hell.m_7731_(new BlockPos(c[0], 65, c[1]), lamp, 3); }
-        hell.m_7731_(MARKER, Fx.state("bedrock"), 3);
+        for (int x = 4; x <= 5; x++) for (int z = 3; z <= 4; z++) hell.m_7731_(new BlockPos(x, f, z), lava, 3);
+        for (int[] c : new int[][]{{-5, 5}, {5, -5}, {-5, -5}, {6, 6}}) { hell.m_7731_(new BlockPos(c[0], f + 1, c[1]), brick, 3); hell.m_7731_(new BlockPos(c[0], f + 2, c[1]), lamp, 3); }
     }
 }

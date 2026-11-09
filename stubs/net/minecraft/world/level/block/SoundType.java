@@ -1,0 +1,1 @@
+package net.minecraft.world.level.block; public class SoundType { public static final SoundType f_56740_ = new SoundType(), f_56736_ = new SoundType(), f_56746_ = new SoundType(), f_56714_ = new SoundType(), f_154655_ = new SoundType(), f_56724_ = new SoundType(), f_56757_ = new SoundType(), f_56759_ = new SoundType(); }

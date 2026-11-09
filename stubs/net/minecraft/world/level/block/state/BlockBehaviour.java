@@ -2,6 +2,15 @@ package net.minecraft.world.level.block.state; import net.minecraft.world.level.
 public abstract class BlockBehaviour { public BlockBehaviour(Properties p){}
  public boolean m_6104_(BlockState s, BlockState adj, net.minecraft.core.Direction d){return false;}
  public void m_7892_(BlockState s, Level l, BlockPos p, net.minecraft.world.entity.Entity e){}
- public static class Properties { public static Properties m_284310_(){return null;} public Properties m_60910_(){return this;} public Properties m_60955_(){return this;} public Properties m_60913_(float a, float b){return this;} public Properties m_60953_(java.util.function.ToIntFunction<BlockState> f){return this;} public Properties m_222994_(){return this;} public Properties m_280606_(){return this;} }
+ public void m_213898_(BlockState s, net.minecraft.server.level.ServerLevel l, BlockPos p, net.minecraft.util.RandomSource r){}
+ public void m_213897_(BlockState s, net.minecraft.server.level.ServerLevel l, BlockPos p, net.minecraft.util.RandomSource r){}
+ public void m_6807_(BlockState s, Level l, BlockPos p, BlockState old, boolean moving){}
+ public net.minecraft.world.InteractionResult m_6227_(BlockState s, Level l, BlockPos p, net.minecraft.world.entity.player.Player pl, net.minecraft.world.InteractionHand h, net.minecraft.world.phys.BlockHitResult hit){return null;}
+ public boolean m_7898_(BlockState s, LevelReader l, BlockPos p){return true;}
+ public BlockState m_7417_(BlockState s, net.minecraft.core.Direction d, BlockState nb, LevelAccessor l, BlockPos p, BlockPos np){return s;}
+ public net.minecraft.world.phys.shapes.VoxelShape m_5940_(BlockState s, BlockGetter g, BlockPos p, net.minecraft.world.phys.shapes.CollisionContext c){return null;}
+ public static class Properties { public static Properties m_284310_(){return null;} public Properties m_60910_(){return this;} public Properties m_60955_(){return this;} public Properties m_60913_(float a, float b){return this;} public Properties m_60953_(java.util.function.ToIntFunction<BlockState> f){return this;} public Properties m_222994_(){return this;} public Properties m_280606_(){return this;}
+  public Properties m_60977_(){return this;} public Properties m_60999_(){return this;} public Properties m_60966_(){return this;} public Properties m_60918_(net.minecraft.world.level.block.SoundType t){return this;} }
  public abstract static class BlockStateBase extends StateHolder<net.minecraft.world.level.block.Block, BlockState> { public boolean m_60795_(){return false;} public void m_222972_(net.minecraft.server.level.ServerLevel l, BlockPos p, net.minecraft.util.RandomSource r){} public net.minecraft.world.phys.shapes.VoxelShape m_60812_(BlockGetter g, BlockPos p){return null;} public net.minecraft.world.level.material.MapColor m_284242_(BlockGetter g, BlockPos p){return null;} public float m_60800_(BlockGetter g, BlockPos p){return 0;} public boolean m_155947_(){return false;} public FluidState m_60819_(){return null;}
- public net.minecraft.world.level.block.Block m_60734_(){return null;} public boolean m_60710_(LevelReader r, BlockPos p){return false;} } }
+ public net.minecraft.world.level.block.Block m_60734_(){return null;} public boolean m_60710_(LevelReader r, BlockPos p){return false;}
+ public boolean m_60783_(BlockGetter g, BlockPos p, net.minecraft.core.Direction d){return false;} public boolean m_60838_(BlockGetter g, BlockPos p){return false;} } }

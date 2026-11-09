@@ -1,0 +1,1 @@
+package net.minecraft.world.food; public class FoodProperties { public static class Builder { public Builder m_38760_(int n){return this;} public Builder m_38758_(float f){return this;} public FoodProperties m_38767_(){return null;} } }
