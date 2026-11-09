@@ -60,7 +60,7 @@ public class CitadelTest {
         List<DungeonTemplate> ts = d.templates();
         int total = 0;
         for (DungeonTemplate t : ts) total += t.count();
-        check(total == 1484772, "блоков в шаблонах: " + total);
+        check(total == 1485126, "блоков в шаблонах: " + total);
         int[] b = d.bounds();
         check(b[0] >= -116 && b[3] <= 117 && b[2] >= -116 && b[5] <= 117 && b[0] < -112 && b[3] > 112 && b[1] == -7, "габарит: " + Arrays.toString(b));
         check(d.start() != null && d.start().x == -97 && d.start().y == 0 && d.start().z == -56, "метка start");
@@ -193,8 +193,8 @@ public class CitadelTest {
                 "explosionwand/models/item/throne_seal.json", "explosionwand/textures/item/throne_seal.png"})
             check(Files.exists(Path.of("resources/assets/" + s)), "нет файла " + s);
         check(Files.exists(Path.of("resources/data/explosionwand/recipes/eclipse_seal_shard.json")), "рецепт осколка");
-        check(read("resources/META-INF/mods.toml").contains("version=\"3.4.0\""), "версия мода 3.4.0");
-        check(read("docs/history.md").contains("## 3.4.0"), "запись в docs/history.md");
+        check(read("resources/META-INF/mods.toml").contains("version=\"3.4.1\""), "версия мода 3.4.1");
+        check(read("docs/history.md").contains("## 3.4.1") && read("docs/history.md").contains("## 3.4.0"), "записи 3.4.1 и 3.4.0 в docs/history.md");
 
         if (fails > 0) { System.out.println(fails + " FAIL"); System.exit(1); }
         System.out.println("citadel ok: " + total + " блоков в 6 частях, потоковый разбор, метки и блоки под ними, часы (одно решение), место в кольце, ресурсы");
