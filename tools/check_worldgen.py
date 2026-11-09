@@ -2,7 +2,7 @@
 """Проверка JSON датапака Мира Ада: валидность, типы (реестры 1.20.1), ссылки на блоки/файлы/шумы/частицы/звуки.
 Блоки explosionwand: берутся из таблицы docs/hell_blocks.md и ExplosionWandMod.java (не из реестров игры).
 Запуск: python tools/check_worldgen.py"""
-import json, re, sys
+import json, os, re, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lookup
 lookup.ensure()
 reg = {k: set(v) for k, v in json.load(open(lookup.MAPS / "reg.json", encoding="utf-8")).items() if isinstance(v, list)}
-DATA = ROOT / "resources" / "data" / "explosionwand"
+DATA = Path(os.environ.get("EW_WORLDGEN_DATA") or ROOT / "resources" / "data" / "explosionwand")  # переопределение - для самопроверки на плохих копиях в build/
 
 mod_blocks = set(re.findall(r"^\| `([a-z0-9_]+)` \|", (ROOT / "docs" / "hell_blocks.md").read_text(encoding="utf-8"), re.M))
 mod_blocks |= {"seal_stone", "phoenix_embers"}
@@ -66,6 +66,90 @@ def walk(f, o, key=""):
     elif isinstance(o, str) and key in ("vegetation", "continents", "erosion", "ridges", "final_density", "initial_density_without_jaggedness", "argument", "argument1", "argument2", "input"):
         if o.startswith("explosionwand:") and not ref_ok(o, "worldgen/density_function"): err(f, f"density function '{o}' нет файла")
 
+# --- формат configured_carver 1.20.1 (ванильного jar в кэше нет, формат описан вручную по cave.json/canyon.json) ---
+def num(x): return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+def chk_float(f, v, path):
+    """FloatProvider: число | constant{value} | uniform{value:{min_inclusive,max_exclusive}} | trapezoid{value:{min,max,plateau}}."""
+    if num(v): return
+    if not isinstance(v, dict) or "type" not in v: err(f, f"{path}: не float-провайдер"); return
+    t = v["type"].partition(":")[2]
+    extra = lambda ok: [k for k in v if k not in ok]
+    if t == "constant":
+        if not num(v.get("value")): err(f, f"{path}: constant без числового value")
+    elif t == "uniform":
+        w = v.get("value")
+        if not isinstance(w, dict): err(f, f"{path}: uniform без объекта value (формат 1.20.1: value{{min_inclusive,max_exclusive}})"); return
+        if set(w) != {"min_inclusive", "max_exclusive"} or not all(num(x) for x in w.values()): err(f, f"{path}: uniform.value должен быть {{min_inclusive,max_exclusive}} числами")
+        elif w["min_inclusive"] >= w["max_exclusive"]: err(f, f"{path}: uniform min_inclusive >= max_exclusive")
+    elif t == "trapezoid":
+        w = v.get("value")
+        if not isinstance(w, dict): err(f, f"{path}: trapezoid без объекта value (формат 1.20.1: value{{min,max,plateau}})"); return
+        if set(w) != {"min", "max", "plateau"} or not all(num(x) for x in w.values()): err(f, f"{path}: trapezoid.value должен быть {{min,max,plateau}} числами")
+        elif w["min"] > w["max"] or w["plateau"] < 0 or w["plateau"] > w["max"] - w["min"]: err(f, f"{path}: trapezoid min/max/plateau несовместимы")
+    else: err(f, f"{path}: неизвестный float-провайдер '{v['type']}'"); return
+    if extra({"type", "value"}): err(f, f"{path}: лишние поля {extra({'type', 'value'})} на уровне провайдера (min_inclusive и т.п. должны быть внутри value)")
+
+def chk_anchor(f, v, path):
+    if not isinstance(v, dict) or len(v) != 1 or next(iter(v)) not in ("absolute", "above_bottom", "below_top") or not isinstance(next(iter(v.values())), int):
+        err(f, f"{path}: якорь высоты = ровно одно из absolute/above_bottom/below_top (целое)")
+
+def chk_height(f, v, path):
+    if isinstance(v, dict) and "type" in v:
+        t = v["type"].partition(":")[2]
+        if t == "uniform":
+            if set(v) != {"type", "min_inclusive", "max_inclusive"}: err(f, f"{path}: height uniform = type+min_inclusive+max_inclusive"); return
+            chk_anchor(f, v["min_inclusive"], path + ".min_inclusive"); chk_anchor(f, v["max_inclusive"], path + ".max_inclusive")
+            a, b = v["min_inclusive"], v["max_inclusive"]
+            if "absolute" in a and "absolute" in b and a["absolute"] > b["absolute"]: err(f, f"{path}: min > max")
+        elif t == "constant":
+            if "value" not in v: err(f, f"{path}: constant без value")
+            else: chk_anchor(f, v["value"], path + ".value")
+        elif t in ("biased_to_bottom", "very_biased_to_bottom", "trapezoid"):
+            for k in ("min_inclusive", "max_inclusive"):
+                if k in v: chk_anchor(f, v[k], f"{path}.{k}")
+        else: err(f, f"{path}: неизвестный height provider '{v['type']}'")
+    else: chk_anchor(f, v, path)
+
+CARVER_COMMON = {"probability": "prob", "y": "height", "yScale": "float", "lava_level": "anchor", "replaceable": "tag"}
+CARVER_REQ = {
+    "minecraft:cave": {"horizontal_radius_multiplier": "float", "vertical_radius_multiplier": "float", "floor_level": "float"},
+    "minecraft:canyon": {"vertical_rotation": "float", "shape": "shape"},
+}
+SHAPE_REQ = {"distance_factor": "float", "thickness": "float", "width_smoothness": "int",
+             "horizontal_radius_factor": "float", "vertical_radius_default_factor": "float", "vertical_radius_center_factor": "float"}
+
+def chk_field(f, kind, v, path):
+    if kind == "float": chk_float(f, v, path)
+    elif kind == "height": chk_height(f, v, path)
+    elif kind == "anchor": chk_anchor(f, v, path)
+    elif kind == "prob":
+        if not num(v) or not 0 <= v <= 1: err(f, f"{path}: вероятность 0..1")
+    elif kind == "int":
+        if not isinstance(v, int) or isinstance(v, bool): err(f, f"{path}: нужно целое")
+    elif kind == "tag":
+        if not isinstance(v, str) or not v.startswith("#"): err(f, f"{path}: нужен тег '#ns:name'")
+
+def chk_carver(f, o):
+    if set(o) != {"type", "config"}: err(f, f"корень карвера: ожидается только type+config, есть {sorted(o)}")
+    t = o.get("type"); c = o.get("config")
+    if t not in CARVER_REQ: err(f, f"формат для карвера '{t}' не описан в check_worldgen"); return
+    if not isinstance(c, dict): err(f, "config не объект"); return
+    spec = {**CARVER_COMMON, **CARVER_REQ[t]}
+    for k, kind in spec.items():
+        if k not in c: err(f, f"config без обязательного поля {k}")
+        else: chk_field(f, kind, c[k], "config." + k) if kind != "shape" else None
+    for k in c:
+        if k not in spec and k != "debug_settings": err(f, f"config: лишнее/неизвестное поле '{k}'")
+    if t == "minecraft:canyon" and isinstance(c.get("shape"), dict):
+        sh = c["shape"]
+        for k, kind in SHAPE_REQ.items():
+            if k not in sh: err(f, f"shape без {k}")
+            else: chk_field(f, kind, sh[k], "config.shape." + k)
+        for k in sh:
+            if k not in SHAPE_REQ: err(f, f"shape: лишнее поле '{k}'")
+    elif t == "minecraft:canyon" and "shape" in c: err(f, "shape не объект")
+
 n = 0
 for f in sorted(DATA.rglob("*.json")):
     rel = f.relative_to(DATA).as_posix()
@@ -74,6 +158,7 @@ for f in sorted(DATA.rglob("*.json")):
     try: o = json.loads(f.read_text(encoding="utf-8"))
     except Exception as e: err(f, f"невалидный JSON: {e}"); continue
     walk(f, o)
+    if rel.startswith("worldgen/configured_carver/"): chk_carver(f, o)
     if rel.startswith("worldgen/biome/"):
         fe = o["features"]
         if len(fe) != 11: err(f, "features: нужно 11 шагов")
