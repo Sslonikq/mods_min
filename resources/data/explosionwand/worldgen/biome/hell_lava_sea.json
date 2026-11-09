@@ -1,0 +1,62 @@
+{
+  "carvers": {},
+  "downfall": 0.0,
+  "has_precipitation": false,
+  "temperature": 2.0,
+  "effects": {
+    "fog_color": 13983770,
+    "sky_color": 11020816,
+    "water_color": 4856340,
+    "water_fog_color": 1706504,
+    "particle": {
+      "options": {
+        "type": "minecraft:lava"
+      },
+      "probability": 0.002
+    },
+    "mood_sound": {
+      "block_search_extent": 8,
+      "offset": 2.0,
+      "sound": "minecraft:ambient.nether_wastes.mood",
+      "tick_delay": 6000
+    },
+    "music": {
+      "max_delay": 24000,
+      "min_delay": 12000,
+      "replace_current_music": false,
+      "sound": "minecraft:music.nether.nether_wastes"
+    }
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "explosionwand:hell_blood_iron_ore",
+      "explosionwand:hell_crown_gem_ore"
+    ],
+    [],
+    [
+      "explosionwand:hell_lavafall"
+    ],
+    [
+      "explosionwand:hell_geyser",
+      "explosionwand:hell_fire_coral"
+    ],
+    []
+  ],
+  "spawn_costs": {},
+  "spawners": {
+    "ambient": [],
+    "axolotls": [],
+    "creature": [],
+    "misc": [],
+    "monster": [],
+    "underground_water_creature": [],
+    "water_ambient": [],
+    "water_creature": []
+  }
+}

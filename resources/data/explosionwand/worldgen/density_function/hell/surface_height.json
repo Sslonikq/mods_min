@@ -1,0 +1,108 @@
+{
+  "type": "minecraft:cache_2d",
+  "argument": {
+    "type": "minecraft:add",
+    "argument1": {
+      "type": "minecraft:add",
+      "argument1": 20.0,
+      "argument2": {
+        "type": "minecraft:mul",
+        "argument1": 36.0,
+        "argument2": "explosionwand:hell/land"
+      }
+    },
+    "argument2": {
+      "type": "minecraft:add",
+      "argument1": {
+        "type": "minecraft:add",
+        "argument1": {
+          "type": "minecraft:mul",
+          "argument1": {
+            "type": "minecraft:add",
+            "argument1": 1.0,
+            "argument2": {
+              "type": "minecraft:mul",
+              "argument1": -1.0,
+              "argument2": "explosionwand:hell/land"
+            }
+          },
+          "argument2": {
+            "type": "minecraft:mul",
+            "argument1": 30.0,
+            "argument2": {
+              "type": "minecraft:clamp",
+              "input": {
+                "type": "minecraft:mul",
+                "argument1": 4.0,
+                "argument2": {
+                  "type": "minecraft:add",
+                  "argument1": -0.15,
+                  "argument2": {
+                    "type": "minecraft:noise",
+                    "noise": "minecraft:surface",
+                    "xz_scale": 1.0,
+                    "y_scale": 0.0
+                  }
+                }
+              },
+              "min": 0.0,
+              "max": 1.0
+            }
+          }
+        },
+        "argument2": {
+          "type": "minecraft:mul",
+          "argument1": {
+            "type": "minecraft:mul",
+            "argument1": "explosionwand:hell/land",
+            "argument2": "explosionwand:hell/hilliness"
+          },
+          "argument2": {
+            "type": "minecraft:mul",
+            "argument1": 18.0,
+            "argument2": {
+              "type": "minecraft:noise",
+              "noise": "minecraft:ridge",
+              "xz_scale": 0.5,
+              "y_scale": 0.0
+            }
+          }
+        }
+      },
+      "argument2": {
+        "type": "minecraft:mul",
+        "argument1": {
+          "type": "minecraft:mul",
+          "argument1": "explosionwand:hell/peaks",
+          "argument2": "explosionwand:hell/land"
+        },
+        "argument2": {
+          "type": "minecraft:add",
+          "argument1": 20.0,
+          "argument2": {
+            "type": "minecraft:mul",
+            "argument1": 85.0,
+            "argument2": {
+              "type": "minecraft:clamp",
+              "input": {
+                "type": "minecraft:mul",
+                "argument1": 2.2,
+                "argument2": {
+                  "type": "minecraft:abs",
+                  "argument": {
+                    "type": "minecraft:noise",
+                    "noise": "minecraft:ridge",
+                    "xz_scale": 1.5,
+                    "y_scale": 0.0
+                  }
+                }
+              },
+              "min": 0.0,
+              "max": 1.0
+            }
+          }
+        }
+      }
+    }
+  }
+}

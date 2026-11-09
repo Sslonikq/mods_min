@@ -1,18 +1,117 @@
 {
   "type": "explosionwand:hell",
   "generator": {
-    "type": "minecraft:flat",
-    "settings": {
-      "biome": "explosionwand:hell",
-      "features": false,
-      "lakes": false,
-      "layers": [
+    "type": "minecraft:noise",
+    "settings": "explosionwand:hell",
+    "biome_source": {
+      "type": "minecraft:multi_noise",
+      "biomes": [
         {
-          "block": "minecraft:air",
-          "height": 1
+          "biome": "explosionwand:hell_lava_sea",
+          "parameters": {
+            "temperature": 0.0,
+            "humidity": [
+              -2.0,
+              2.0
+            ],
+            "continentalness": [
+              -2.0,
+              -0.35
+            ],
+            "erosion": [
+              -2.0,
+              2.0
+            ],
+            "depth": 0.0,
+            "weirdness": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "explosionwand:hell_basalt_peaks",
+          "parameters": {
+            "temperature": 0.0,
+            "humidity": [
+              -2.0,
+              2.0
+            ],
+            "continentalness": [
+              -0.35,
+              2.0
+            ],
+            "erosion": [
+              -2.0,
+              -0.3
+            ],
+            "depth": 0.0,
+            "weirdness": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "explosionwand:hell_soul_valley",
+          "parameters": {
+            "temperature": 0.0,
+            "humidity": [
+              -2.0,
+              2.0
+            ],
+            "continentalness": [
+              -0.35,
+              2.0
+            ],
+            "erosion": [
+              0.35,
+              2.0
+            ],
+            "depth": 0.0,
+            "weirdness": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "explosionwand:hell_ash_wastes",
+          "parameters": {
+            "temperature": 0.0,
+            "humidity": [
+              -2.0,
+              0.05
+            ],
+            "continentalness": [
+              -0.35,
+              2.0
+            ],
+            "erosion": [
+              -0.3,
+              0.35
+            ],
+            "depth": 0.0,
+            "weirdness": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "explosionwand:hell_smoldering_forest",
+          "parameters": {
+            "temperature": 0.0,
+            "humidity": [
+              0.05,
+              2.0
+            ],
+            "continentalness": [
+              -0.35,
+              2.0
+            ],
+            "erosion": [
+              -0.3,
+              0.35
+            ],
+            "depth": 0.0,
+            "weirdness": 0.0,
+            "offset": 0.0
+          }
         }
-      ],
-      "structure_overrides": []
+      ]
     }
   }
 }

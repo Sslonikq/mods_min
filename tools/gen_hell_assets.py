@@ -155,22 +155,12 @@ if __name__ == "__main__":
     # занятое гнездо при разрушении возвращает Угли Феникса
     put(D / "explosionwand" / "loot_tables" / "blocks" / "hell_socket.json", {"type": "minecraft:block", "pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": "explosionwand:phoenix_embers"}]}]})
     put(A / "models" / "item" / "hell_key.json", {"parent": "minecraft:item/generated", "textures": {"layer0": "explosionwand:item/hell_key"}})
-    put(D / "minecraft" / "tags" / "blocks" / "mineable" / "pickaxe.json", {"replace": False, "values": ["explosionwand:seal_stone", "explosionwand:phoenix_embers"]})
+    _pk = D / "minecraft" / "tags" / "blocks" / "mineable" / "pickaxe.json"
+    _cur = json.loads(_pk.read_text(encoding="utf-8"))["values"] if _pk.exists() else []
+    put(_pk, {"replace": False, "values": _cur + [v for v in ("explosionwand:seal_stone", "explosionwand:phoenix_embers") if v not in _cur]})
     R = D / "explosionwand" / "recipes"
     put(R / "hell_key.json", {"type": "minecraft:crafting_shapeless", "category": "misc", "ingredients": [{"item": "explosionwand:rift_core"}, {"item": "explosionwand:dreaming_eye"}, {"item": "explosionwand:phoenix_feather"}], "result": {"item": "explosionwand:hell_key", "count": 1}})
     put(R / "seal_stone.json", {"type": "minecraft:crafting_shapeless", "category": "building", "ingredients": [{"item": "minecraft:stone_bricks"}, {"item": "minecraft:stone_bricks"}, {"item": "explosionwand:rift_dust"}, {"item": "explosionwand:ash_coal"}, {"item": "explosionwand:sleep_thread"}], "result": {"item": "explosionwand:seal_stone", "count": 3}})
     put(R / "phoenix_embers.json", {"type": "minecraft:crafting_shapeless", "category": "building", "ingredients": [{"item": "explosionwand:ash_coal"}, {"item": "explosionwand:ash_coal"}, {"item": "explosionwand:ash_coal"}, {"item": "explosionwand:phoenix_spark"}, {"item": "minecraft:magma_block"}], "result": {"item": "explosionwand:phoenix_embers", "count": 1}})
-    # измерение hell: тип как у eclipse, но жаркое (ultrawarm), свой биом без мобов
-    t = json.loads((D / "explosionwand" / "dimension_type" / "eclipse.json").read_text(encoding="utf-8"))
-    t.update({"ambient_light": 0.1, "ultrawarm": True})
-    put(D / "explosionwand" / "dimension_type" / "hell.json", t)
-    dim = json.loads((D / "explosionwand" / "dimension" / "eclipse.json").read_text(encoding="utf-8"))
-    dim["type"] = "explosionwand:hell"; dim["generator"]["settings"]["biome"] = "explosionwand:hell"
-    put(D / "explosionwand" / "dimension" / "hell.json", dim)
-    bio = json.loads((D / "explosionwand" / "worldgen" / "biome" / "eclipse.json").read_text(encoding="utf-8"))
-    e = bio["effects"]; e["fog_color"] = 3803653; e["sky_color"] = 3803653
-    e["mood_sound"]["sound"] = "minecraft:ambient.nether_wastes.mood"
-    e["music"] = {"max_delay": 0, "min_delay": 0, "replace_current_music": True, "sound": "minecraft:music.nether.nether_wastes"}
-    e["particle"]["options"]["type"] = "minecraft:white_ash"
-    put(D / "explosionwand" / "worldgen" / "biome" / "hell.json", bio)
+    # измерение, тип и биомы Ада теперь пишет tools/assets/gen_hell_world.py (фаза 5.1)
     print("ok")

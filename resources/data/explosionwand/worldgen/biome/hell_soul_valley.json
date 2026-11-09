@@ -1,0 +1,62 @@
+{
+  "carvers": {},
+  "downfall": 0.0,
+  "has_precipitation": false,
+  "temperature": 2.0,
+  "effects": {
+    "fog_color": 4173992,
+    "sky_color": 8003124,
+    "water_color": 1722954,
+    "water_fog_color": 532512,
+    "particle": {
+      "options": {
+        "type": "minecraft:soul"
+      },
+      "probability": 0.012
+    },
+    "mood_sound": {
+      "block_search_extent": 8,
+      "offset": 2.0,
+      "sound": "minecraft:ambient.soul_sand_valley.mood",
+      "tick_delay": 6000
+    },
+    "music": {
+      "max_delay": 24000,
+      "min_delay": 12000,
+      "replace_current_music": false,
+      "sound": "minecraft:music.nether.soul_sand_valley"
+    }
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "explosionwand:hell_blood_iron_ore"
+    ],
+    [],
+    [],
+    [
+      "explosionwand:hell_bone_tree",
+      "explosionwand:hell_ghost_moss",
+      "explosionwand:hell_ghost_flower",
+      "explosionwand:hell_soul_fire",
+      "explosionwand:hell_archmage_pillars"
+    ],
+    []
+  ],
+  "spawn_costs": {},
+  "spawners": {
+    "ambient": [],
+    "axolotls": [],
+    "creature": [],
+    "misc": [],
+    "monster": [],
+    "underground_water_creature": [],
+    "water_ambient": [],
+    "water_creature": []
+  }
+}

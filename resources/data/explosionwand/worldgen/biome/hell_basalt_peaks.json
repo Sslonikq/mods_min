@@ -1,0 +1,64 @@
+{
+  "carvers": {},
+  "downfall": 0.0,
+  "has_precipitation": false,
+  "temperature": 2.0,
+  "effects": {
+    "fog_color": 6959184,
+    "sky_color": 9181730,
+    "water_color": 3807780,
+    "water_fog_color": 1706512,
+    "particle": {
+      "options": {
+        "type": "minecraft:white_ash"
+      },
+      "probability": 0.04
+    },
+    "mood_sound": {
+      "block_search_extent": 8,
+      "offset": 2.0,
+      "sound": "minecraft:ambient.basalt_deltas.mood",
+      "tick_delay": 6000
+    },
+    "music": {
+      "max_delay": 24000,
+      "min_delay": 12000,
+      "replace_current_music": false,
+      "sound": "minecraft:music.nether.basalt_deltas"
+    }
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [
+      "explosionwand:hell_eclipse_geode"
+    ],
+    [],
+    [],
+    [
+      "explosionwand:hell_blood_iron_ore",
+      "explosionwand:hell_crown_gem_ore"
+    ],
+    [],
+    [
+      "explosionwand:hell_lavafall"
+    ],
+    [
+      "explosionwand:hell_eclipse_clusters",
+      "explosionwand:hell_spire"
+    ],
+    []
+  ],
+  "spawn_costs": {},
+  "spawners": {
+    "ambient": [],
+    "axolotls": [],
+    "creature": [],
+    "misc": [],
+    "monster": [],
+    "underground_water_creature": [],
+    "water_ambient": [],
+    "water_creature": []
+  }
+}

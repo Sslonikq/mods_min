@@ -1,0 +1,65 @@
+{
+  "carvers": {},
+  "downfall": 0.0,
+  "has_precipitation": false,
+  "temperature": 2.0,
+  "effects": {
+    "fog_color": 9062958,
+    "sky_color": 10231058,
+    "water_color": 4856340,
+    "water_fog_color": 1706504,
+    "particle": {
+      "options": {
+        "type": "minecraft:ash"
+      },
+      "probability": 0.02
+    },
+    "mood_sound": {
+      "block_search_extent": 8,
+      "offset": 2.0,
+      "sound": "minecraft:ambient.nether_wastes.mood",
+      "tick_delay": 6000
+    },
+    "music": {
+      "max_delay": 24000,
+      "min_delay": 12000,
+      "replace_current_music": false,
+      "sound": "minecraft:music.nether.nether_wastes"
+    }
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "explosionwand:hell_blood_iron_ore"
+    ],
+    [],
+    [
+      "explosionwand:hell_lavafall"
+    ],
+    [
+      "explosionwand:hell_charred_tree",
+      "explosionwand:hell_ash_layer",
+      "explosionwand:hell_dry_grass",
+      "explosionwand:hell_ember_bloom",
+      "explosionwand:hell_coal_berry",
+      "explosionwand:hell_petrified_bones"
+    ],
+    []
+  ],
+  "spawn_costs": {},
+  "spawners": {
+    "ambient": [],
+    "axolotls": [],
+    "creature": [],
+    "misc": [],
+    "monster": [],
+    "underground_water_creature": [],
+    "water_ambient": [],
+    "water_creature": []
+  }
+}
