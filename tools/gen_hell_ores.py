@@ -246,11 +246,11 @@ BIOMES = ["hell", "hell_ash_wastes", "hell_smoldering_forest", "hell_basalt_peak
 
 
 def carvers():
-    # формат 1.20.1 как у minecraft:cave / minecraft:canyon; lava_level absolute 14: пещеры не заливаются лавой выше дна (океан лавы на y=40 — не карвер); float uniform и trapezoid с "value"
+    # формат 1.20.1 как у minecraft:cave / minecraft:canyon; карверы выше лавового слоя (дно моря лавы y<28, лава до y=40: ниже 54 карвер вскрывал дно и лава сливалась в пещеры); lava_level absolute 14: пещеры не заливаются лавой выше дна (океан лавы на y=40 — не карвер); float uniform и trapezoid с "value"
     put(D / ID / "tags" / "blocks" / "hell_carver_replaceables.json", {"replace": False, "values": [f"{ID}:{b}" for b in CARVER_BLOCKS] + [f"minecraft:{b}" for b in CARVER_VANILLA]})
     cave = {"type": "minecraft:cave", "config": {
         "probability": 0.2,
-        "y": {"type": "minecraft:uniform", "min_inclusive": {"above_bottom": 8}, "max_inclusive": {"absolute": 160}},
+        "y": {"type": "minecraft:uniform", "min_inclusive": {"absolute": 54}, "max_inclusive": {"absolute": 160}},
         "yScale": {"type": "minecraft:uniform", "value": {"min_inclusive": 0.1, "max_exclusive": 0.9}},
         "lava_level": {"absolute": 14},
         "replaceable": f"#{ID}:hell_carver_replaceables",
@@ -259,7 +259,7 @@ def carvers():
         "floor_level": {"type": "minecraft:uniform", "value": {"min_inclusive": -1.0, "max_exclusive": -0.4}}}}
     canyon = {"type": "minecraft:canyon", "config": {
         "probability": 0.02,
-        "y": {"type": "minecraft:uniform", "min_inclusive": {"absolute": 20}, "max_inclusive": {"absolute": 100}},
+        "y": {"type": "minecraft:uniform", "min_inclusive": {"absolute": 64}, "max_inclusive": {"absolute": 110}},
         "yScale": 3.0,
         "lava_level": {"absolute": 14},
         "replaceable": f"#{ID}:hell_carver_replaceables",
