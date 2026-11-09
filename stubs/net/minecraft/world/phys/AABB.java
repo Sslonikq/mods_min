@@ -1,1 +1,1 @@
-package net.minecraft.world.phys; public class AABB { public AABB(double a,double b,double c,double d,double e,double f){} public AABB m_82369_(Vec3 v){return null;} public AABB m_82400_(double d){return null;} }
+package net.minecraft.world.phys; public class AABB { public double f_82288_,f_82289_,f_82290_,f_82291_,f_82292_,f_82293_; public AABB(double a,double b,double c,double d,double e,double f){} public AABB m_82369_(Vec3 v){return null;} public AABB m_82400_(double d){return null;} }

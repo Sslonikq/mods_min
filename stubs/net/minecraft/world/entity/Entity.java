@@ -1,5 +1,5 @@
 package net.minecraft.world.entity; import net.minecraft.world.phys.*; import net.minecraft.world.damagesource.DamageSource;
-public abstract class Entity { public boolean f_19864_; public float f_19789_;
+public abstract class Entity { public boolean f_19864_; public int f_19802_; public float f_19789_;
  public Vec3 m_146892_(){return null;} public final Vec3 m_20252_(float f){return null;} public final AABB m_20191_(){return null;}
  public boolean m_5833_(){return false;} public boolean m_6087_(){return false;} public final double m_20185_(){return 0;} public final double m_20186_(){return 0;} public final double m_20189_(){return 0;}
  public final Vec3 m_20182_(){return null;} public Vec3 m_20184_(){return null;} public void m_20256_(Vec3 v){} public void m_20242_(boolean b){}
@@ -12,6 +12,6 @@ public abstract class Entity { public boolean f_19864_; public float f_19789_;
  public java.util.Set<String> m_19880_(){return null;} public RemovalReason m_146911_(){return null;} public enum RemovalReason { KILLED, DISCARDED, UNLOADED_TO_CHUNK, UNLOADED_WITH_PLAYER, CHANGED_DIMENSION } public boolean m_20049_(String t){return false;} public void m_6842_(boolean b){} public boolean m_213877_(){return false;} public void m_146915_(boolean b){} public double m_20280_(Entity e){return 0;} public double m_20275_(double x,double y,double z){return 0;} public void m_5997_(double x,double y,double z){} public String m_20149_(){return null;}
  public net.minecraft.world.entity.EntityType<?> m_6095_(){return null;}
  public int m_19879_(){return 0;} public net.minecraft.nbt.CompoundTag getPersistentData(){return null;} public net.minecraft.world.entity.item.ItemEntity m_19983_(net.minecraft.world.item.ItemStack s){return null;}
- public boolean m_20068_(){return false;} public void m_20254_(int s){}
+ public boolean m_20068_(){return false;} public void m_20254_(int s){} public boolean m_5825_(){return false;}
  public void m_6021_(double x,double y,double z){} public void m_146870_(){} public java.util.UUID m_20148_(){return null;} public net.minecraft.world.level.Level m_9236_(){return null;} public float m_146908_(){return 0;}
  public Entity changeDimension(net.minecraft.server.level.ServerLevel l, net.minecraftforge.common.util.ITeleporter t){return null;}  public int m_20094_(){return 0;} public void m_7311_(int t){} }

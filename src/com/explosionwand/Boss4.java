@@ -541,6 +541,9 @@ public class Boss4 {
         }
     }
 
+    /** Палочка Смерти (AdminWands): сразу в гибель мимо фаз и щитов; добыча - обычной цепочкой гибели. Ложь, если уже умирает или хоста ещё нет. */
+    boolean adminKill() { if (host == null || stage == 3) return false; startDeath(); return true; }
+
     // ================= Гибель =================
     void startDeath() {
         stage = 3; dyingT = 0;

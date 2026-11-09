@@ -127,6 +127,7 @@ public class ExplosionWandMod {
     public static final RegistryObject<Block> SEAL_STONE = BLOCKS.register("seal_stone", () -> new Block(BlockBehaviour.Properties.m_284310_().m_60913_(3.0F, 6.0F)));
     public static final RegistryObject<Block> PHOENIX_EMBERS = BLOCKS.register("phoenix_embers", () -> new Block(BlockBehaviour.Properties.m_284310_().m_60913_(3.0F, 6.0F).m_60953_(s -> 8)));
     public static final RegistryObject<Block> HELL_SOCKET = BLOCKS.register("hell_socket", () -> new Block(BlockBehaviour.Properties.m_284310_().m_60913_(-1.0F, 3600000.0F).m_60953_(s -> 12).m_222994_()));
+    // Проём: без коллизии, но "твёрдый" (forceSolidOn): иначе вода и лава могут заменить блок портала.
     public static final RegistryObject<Block> HELL_PORTAL = BLOCKS.register("hell_portal", () -> new HellPortalBlock(BlockBehaviour.Properties.m_284310_().m_60910_().m_280606_().m_60955_().m_60913_(-1.0F, 3600000.0F).m_60953_(s -> 11).m_222994_()));
     public static final RegistryObject<Item> SEAL_STONE_ITEM = ITEMS.register("seal_stone", () -> new BlockItem(SEAL_STONE.get(), new Item.Properties().m_41497_(Rarity.valueOf("UNCOMMON"))));
     public static final RegistryObject<Item> PHOENIX_EMBERS_ITEM = ITEMS.register("phoenix_embers", () -> new BlockItem(PHOENIX_EMBERS.get(), new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
@@ -134,6 +135,10 @@ public class ExplosionWandMod {
 
     /** Дневник Архимага (4.13): выдаётся при первом входе в мир, крафтится из книги и аметиста. */
     public static final RegistryObject<Item> ARCHMAGE_JOURNAL = ITEMS.register("archmage_journal", () -> new JournalItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE"))));
+
+    /** Тестовые админ-палочки (3.2.0): без рецептов, выдаются командой или в креативе; регистрируются последними (конец вкладки «Магия»). */
+    public static final RegistryObject<Item> LIGHTNING_WAND = ITEMS.register("lightning_wand", () -> new LightningWandItem(props()));
+    public static final RegistryObject<Item> DEATH_WAND = ITEMS.register("death_wand", () -> new DeathWandItem(props()));
 
     /** Отдельная вкладка «Магия» — всё содержимое мода в порядке регистрации. */
     public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.f_279569_, "explosionwand");
@@ -149,6 +154,7 @@ public class ExplosionWandMod {
 
     public ExplosionWandMod() {
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+        HellBlocks.register(BLOCKS, ITEMS);     // 34 блока Ада (5.1), их предметы и углеягоды: после остальных предметов вкладки «Магия»
         BLOCKS.register(bus);
         ITEMS.register(bus);
         TABS.register(bus);
@@ -197,6 +203,8 @@ public class ExplosionWandMod {
         MinecraftForge.EVENT_BUS.addListener(ArmorSets::onLogout);
         MinecraftForge.EVENT_BUS.addListener(Journal::onLogin);
         MinecraftForge.EVENT_BUS.addListener(HellGate::onLogoutEvent);
-        MinecraftForge.EVENT_BUS.addListener(HellGate::onBreak);
+        // LOWEST: гасим проём, только если ломку не отменил чужой слушатель (приваты)
+        MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.valueOf("LOWEST"), HellGate::onBreak);
+        MinecraftForge.EVENT_BUS.addListener(HellGate::onDetonate);
     }
 }

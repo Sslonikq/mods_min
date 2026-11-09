@@ -1011,6 +1011,10 @@ public class Boss5 {
         diveCd = 140; volleyCd = 80; heatCd = 160; whirlCd = 150; sparkCd = 60; fold = 0; flapPh = 0;
     }
 
+    /** Палочка Смерти (AdminWands): сразу в гибель мимо фаз и щитов; добыча - обычной цепочкой гибели. Ложь, если уже умирает или хоста ещё нет. */
+    /** Феникс: яйцо и возрождение пропускаются (lethal в бою привёл бы к яйцу), сразу гибель. */
+    boolean adminKill() { if (host == null || st == St.DYING || st == St.SPAWN || st == St.FIND) return false; lethal = false; startDeath(); return true; }
+
     // ================= Гибель =================
     void startDeath() {
         st = St.DYING; stT = 0;

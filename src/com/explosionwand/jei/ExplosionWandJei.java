@@ -71,6 +71,9 @@ public class ExplosionWandJei implements IModPlugin {
         info(reg, new ItemStack(ExplosionWandMod.HELL_KEY.get()), "hell_key");
         info(reg, new ItemStack(ExplosionWandMod.SEAL_STONE_ITEM.get()), "seal_stone");
         info(reg, new ItemStack(ExplosionWandMod.PHOENIX_EMBERS_ITEM.get()), "phoenix_embers");
+        // тестовые админ-палочки (3.2.0)
+        info(reg, new ItemStack(ExplosionWandMod.LIGHTNING_WAND.get()), "lightning_wand");
+        info(reg, new ItemStack(ExplosionWandMod.DEATH_WAND.get()), "death_wand");
         // сеты брони данжей (4.12)
         info(reg, new ItemStack(ExplosionWandMod.CRYSTAL_HELMET.get()), "set_crystal");
         info(reg, new ItemStack(ExplosionWandMod.CRYSTAL_CHESTPLATE.get()), "set_crystal");
