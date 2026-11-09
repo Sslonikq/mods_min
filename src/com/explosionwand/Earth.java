@@ -432,6 +432,29 @@ final class Earth {
         return true;
     }
 
+    static int dropFails;
+
+    /**
+     * Добыча как алмазной киркой: список выпадения считаем сами (Block.getDrops), предметы кладём прямо в инвентарь игрока,
+     * что не влезло - бросаем под ноги блоку. Раньше шёл Block.dropResources: предметы падали в глубине тоннеля 3x3x8,
+     * в темноте их не видно и они лежали в 8 блоках от игрока, а сбой внутри Later.run глотался молча - выглядело как «блоки не выпадают».
+     * Опыт руды (spawnAfterBreak) сохранён. Сбой одного блока больше не обрывает срез.
+     */
+    static void giveDrops(ServerLevel sl, ServerPlayer p, BlockPos pos, BlockState st) {
+        try {
+            List<ItemStack> drops = Block.m_49874_(st, sl, pos, null, p, tool());
+            if (drops != null) for (ItemStack it : drops) {
+                if (it == null || it.m_41619_()) continue;
+                p.m_150109_().m_36054_(it);
+                if (!it.m_41619_()) Block.m_49840_(sl, pos, it);
+            }
+            st.m_222967_(sl, pos, tool(), true);
+        } catch (RuntimeException ex) {
+            dropFails++;
+            if (EarthLogic.warnDue(dropFails)) { System.err.println("[explosionwand] Копатель: сбой выпадения №" + dropFails + " (" + path(st) + "): " + ex); ex.printStackTrace(); }
+        }
+    }
+
     static int dig(ServerLevel sl, ServerPlayer p) {
         if (!canEdit(sl)) { deny(p, "blocked"); return 0; }
         Aim aim = Aim.of(sl, p, EarthLogic.DIG_RANGE);
@@ -450,7 +473,7 @@ final class Earth {
                     if (!sl.m_46805_(pos)) continue;
                     BlockState st = sl.m_8055_(pos);
                     if (!breakable(sl, sh, pos, st, Float.MAX_VALUE)) continue;
-                    if (!p.m_7500_()) Block.m_49881_(st, sl, pos, null, p, tool());
+                    if (!p.m_7500_()) giveDrops(sl, p, pos, st);
                     sl.m_46961_(pos, false);
                 }
                 int[] mid = slice.get(4);
