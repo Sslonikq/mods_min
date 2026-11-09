@@ -19,6 +19,17 @@ final class Later {
         List<Runnable> due = new ArrayList<>();
         Iterator<Task> it = TASKS.iterator();
         while (it.hasNext()) { Task t = it.next(); if (t.level == level && --t.ticks <= 0) { due.add(t.r); it.remove(); } }
-        for (Runnable r : due) try { r.run(); } catch (Exception ignored) {}
+        for (Runnable r : due) try { r.run(); } catch (Exception e) { fail(e); }
+    }
+
+    private static int failures;
+
+    /** Сбой отложенной задачи: поведение прежнее (задача пропущена), но след в логе - по 1, 10, 100... */
+    private static void fail(Exception e) {
+        int n = ++failures;
+        if (n == 1 || n == 10 || n == 100 || n == 1000) {
+            System.err.println("[explosionwand] Later: сбой отложенной задачи №" + n + ": " + e);
+            if (n == 1) e.printStackTrace();
+        }
     }
 }
