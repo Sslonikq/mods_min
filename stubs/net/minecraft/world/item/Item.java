@@ -2,6 +2,7 @@ package net.minecraft.world.item;
 import net.minecraft.world.*; import net.minecraft.world.level.*; import net.minecraft.world.entity.player.Player;
 public class Item implements ItemLike {
   public Item(Properties p){}
+  public float m_8102_(ItemStack s, net.minecraft.world.level.block.state.BlockState b){return 1.0F;}
   public InteractionResultHolder<ItemStack> m_7203_(Level l, Player p, InteractionHand h){return null;}
   public InteractionResult m_6225_(net.minecraft.world.item.context.UseOnContext c){return null;}
   public boolean m_5812_(ItemStack s){return false;}

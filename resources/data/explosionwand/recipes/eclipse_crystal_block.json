@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "##",
+    "##"
+  ],
+  "key": {
+    "#": {
+      "item": "explosionwand:eclipse_shard"
+    }
+  },
+  "result": {
+    "item": "explosionwand:eclipse_crystal_block",
+    "count": 1
+  }
+}

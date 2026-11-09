@@ -71,6 +71,16 @@ public class ExplosionWandJei implements IModPlugin {
         info(reg, new ItemStack(ExplosionWandMod.HELL_KEY.get()), "hell_key");
         info(reg, new ItemStack(ExplosionWandMod.SEAL_STONE_ITEM.get()), "seal_stone");
         info(reg, new ItemStack(ExplosionWandMod.PHOENIX_EMBERS_ITEM.get()), "phoenix_embers");
+        // руды Ада (5.2)
+        info(reg, new ItemStack(ExplosionWandMod.RAW_BLOOD_IRON.get()), "raw_blood_iron");
+        info(reg, new ItemStack(ExplosionWandMod.BLOOD_IRON_INGOT.get()), "blood_iron_ingot");
+        info(reg, new ItemStack(ExplosionWandMod.CROWN_GEM.get()), "crown_gem");
+        info(reg, new ItemStack(ExplosionWandMod.ECLIPSE_SHARD.get()), "eclipse_shard");
+        info(reg, new ItemStack(ExplosionWandMod.BLOOD_IRON_PICKAXE.get()), "blood_iron_pickaxe");
+        info(reg, new ItemStack(ExplosionWandMod.BLOOD_IRON_AXE.get()), "blood_iron_axe");
+        info(reg, new ItemStack(ExplosionWandMod.BLOOD_IRON_SHOVEL.get()), "blood_iron_shovel");
+        info(reg, new ItemStack(ExplosionWandMod.BLOOD_IRON_HOE.get()), "blood_iron_hoe");
+        info(reg, new ItemStack(ExplosionWandMod.BLOOD_IRON_SWORD.get()), "blood_iron_sword");
         // тестовые админ-палочки (3.2.0)
         info(reg, new ItemStack(ExplosionWandMod.LIGHTNING_WAND.get()), "lightning_wand");
         info(reg, new ItemStack(ExplosionWandMod.DEATH_WAND.get()), "death_wand");

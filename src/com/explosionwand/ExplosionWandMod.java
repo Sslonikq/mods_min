@@ -136,6 +136,17 @@ public class ExplosionWandMod {
     /** Дневник Архимага (4.13): выдаётся при первом входе в мир, крафтится из книги и аметиста. */
     public static final RegistryObject<Item> ARCHMAGE_JOURNAL = ITEMS.register("archmage_journal", () -> new JournalItem(new Item.Properties().m_41487_(1).m_41497_(Rarity.valueOf("RARE"))));
 
+    /** Руды Ада (5.2): предметы с руд и друз, слиток; инструменты из кровавого железа (BloodIron: между алмазом и незеритом). Рецепты и плавка - в resources. */
+    public static final RegistryObject<Item> RAW_BLOOD_IRON = ITEMS.register("raw_blood_iron", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("COMMON")), "raw_blood_iron"));
+    public static final RegistryObject<Item> BLOOD_IRON_INGOT = ITEMS.register("blood_iron_ingot", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("UNCOMMON")), "blood_iron_ingot"));
+    public static final RegistryObject<Item> CROWN_GEM = ITEMS.register("crown_gem", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("RARE")), "crown_gem"));
+    public static final RegistryObject<Item> ECLIPSE_SHARD = ITEMS.register("eclipse_shard", () -> new MaterialItem(new Item.Properties().m_41497_(Rarity.valueOf("UNCOMMON")), "eclipse_shard"));
+    public static final RegistryObject<Item> BLOOD_IRON_PICKAXE = ITEMS.register("blood_iron_pickaxe", () -> new BloodIron.Pick(new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> BLOOD_IRON_AXE = ITEMS.register("blood_iron_axe", () -> new BloodIron.Axe(new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> BLOOD_IRON_SHOVEL = ITEMS.register("blood_iron_shovel", () -> new BloodIron.Shovel(new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> BLOOD_IRON_HOE = ITEMS.register("blood_iron_hoe", () -> new BloodIron.Hoe(new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+    public static final RegistryObject<Item> BLOOD_IRON_SWORD = ITEMS.register("blood_iron_sword", () -> new BloodIron.Sword(new Item.Properties().m_41497_(Rarity.valueOf("RARE"))));
+
     /** Тестовые админ-палочки (3.2.0): без рецептов, выдаются командой или в креативе; регистрируются последними (конец вкладки «Магия»). */
     public static final RegistryObject<Item> LIGHTNING_WAND = ITEMS.register("lightning_wand", () -> new LightningWandItem(props()));
     public static final RegistryObject<Item> DEATH_WAND = ITEMS.register("death_wand", () -> new DeathWandItem(props()));

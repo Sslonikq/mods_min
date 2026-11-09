@@ -28,7 +28,7 @@
             },
             {
               "type": "minecraft:item",
-              "name": "minecraft:raw_iron",
+              "name": "explosionwand:raw_blood_iron",
               "functions": [
                 {
                   "function": "minecraft:set_count",

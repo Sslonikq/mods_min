@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:blasting",
+  "category": "misc",
+  "ingredient": {
+    "item": "explosionwand:raw_blood_iron"
+  },
+  "result": "explosionwand:blood_iron_ingot",
+  "experience": 0.9,
+  "cookingtime": 100
+}
