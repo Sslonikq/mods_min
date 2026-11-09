@@ -31,8 +31,15 @@ final class BloodIron {
         @Override public float m_6631_() { return DAMAGE; }
         @Override public int m_6604_() { return LEVEL; }
         @Override public int m_6601_() { return ENCHANT; }
-        @Override public Ingredient m_6282_() { return Ingredient.m_43929_(ForgeRegistries.ITEMS.getValue(new ResourceLocation("explosionwand", "blood_iron_ingot"))); }
+        @Override public Ingredient m_6282_() { return repair(); }
     };
+
+    private static Ingredient repairIngredient;
+    /** Ингредиент ремонта: слиток ищем в реестре один раз (предметы к первому вызову уже зарегистрированы). */
+    static Ingredient repair() {
+        if (repairIngredient == null) repairIngredient = Ingredient.m_43929_(ForgeRegistries.ITEMS.getValue(new ResourceLocation("explosionwand", "blood_iron_ingot")));
+        return repairIngredient;
+    }
 
     /** Скорость добычи: на блоках мода (Ад) - бонус, но только если инструмент вообще копает этот блок быстрее 1. */
     static float speed(float base, BlockState st) {

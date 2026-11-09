@@ -1,0 +1,1 @@
+package net.minecraft.world.level.block; public class DropExperienceBlock extends Block { public DropExperienceBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties p, net.minecraft.util.valueproviders.IntProvider xp){ super(p); } }
