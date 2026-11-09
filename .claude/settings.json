@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python tools/*)",
+      "PowerShell(python tools/*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "PowerShell(git status*)",
+      "PowerShell(git diff*)",
+      "PowerShell(git log*)",
+      "PowerShell(git show*)"
+    ],
+    "deny": [
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git reset*)",
+      "Bash(git checkout*)",
+      "Bash(git restore*)",
+      "Bash(git rebase*)",
+      "Bash(git merge*)",
+      "Bash(git stash*)",
+      "Bash(git clean*)",
+      "PowerShell(git add*)",
+      "PowerShell(git commit*)",
+      "PowerShell(git push*)",
+      "PowerShell(git reset*)",
+      "PowerShell(git checkout*)",
+      "PowerShell(git restore*)",
+      "PowerShell(git rebase*)",
+      "PowerShell(git merge*)",
+      "PowerShell(git stash*)",
+      "PowerShell(git clean*)"
+    ]
+  }
+}

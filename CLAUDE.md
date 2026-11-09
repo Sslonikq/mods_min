@@ -44,19 +44,30 @@ python tools/linkcheck.py             # члены net/minecraft*/forge из б�
 src/com/explosionwand/   # весь код мода (SRG-имена)
   ExplosionWandMod.java  # регистрация предметов, вкладки «Магия», слушателей событий
   Ticker.java            # общий тик: боссы, арены, посохи, лабиринт, бонус сета
-  Fx, Cmd, Disp, Aim, Later, Loot, Minions   # утилиты: реестр по ID, команды, кватернионы block_display, прицел, отложенные задачи, сундуки, приспешники
-  Boss, Boss2, Boss3, Boss4 + Arena2, Arena4  # боссы и арены (Boss/Boss3 живут в логовах данжей — Сердце Разлома, Монолит Сна; Boss2 — Затмение, Boss4 — Небесный Кит)
-  *WandItem / *StaffItem + логика            # палочки и посохи
-  Maze.java              # лабиринт Некто (портал Палки Некто)
-  Ash.java + tools/gen_ash.py  # Пепельное святилище: ключи, головоломка, шаблоны ash_*.nbt
+  Fx, Cmd, Disp, Aim, Later, Loot, Minions, Debris, Nbt   # утилиты: реестр по ID, команды, кватернионы block_display, прицел, отложенные задачи, сундуки, приспешники, летящие блоки, читатель NBT
+  Boss, Boss2, Boss3, Boss4, Boss5 + Arena2, Arena4, ArenaGuard, Altar  # боссы и арены: Boss — Сердце Разлома, Boss3 — Монолит Сна, Boss5 — Пепельный Феникс (живут в логовах данжей); Boss2 — Король Затмения, Boss4 — Небесный Кит (пока в своих измерениях, выключены через Altar.ENABLED)
+  Dungeons, DungeonTemplate, DungeonSite, DungeonData, DungeonGuard, DungeonMech  # конвейер данжей: сетка мест, шаблоны .nbt, реестр и возрождение, защита блоков, механики залов (см. docs/dungeons.md)
+  Rift*, City*, Ash*, Citadel   # данжи: Разлом, Город Спящих, Пепельное святилище (Земля), Цитадель Затмения (Ад); *Mobs/*MobsB — мобы, *Models — их облик, *Logic — чистая логика для тестов
+  Earth*, Mats, MaterialItem   # 16 палочек Земли и материалы данжей
+  *WandItem / *StaffItem + логика            # остальные палочки и посохи боссов (RiftStaff, DreamStaff, PhoenixStaff, EclipseStaff, WhaleStaff)
+  HellGate, HellPortalBlock, HellKeyItem, HellBlocks, HellData, BloodIron, EclipseClusterBlock  # Ад: алтарь-портал, блоки, руды, инструменты из кровавого железа
+  ArmorSets, SetArmorItem, SetMaterial, ArmorSetLogic   # сеты брони данжей (падают с мобов)
   Arcane*.java           # Облачение Архимага: материал, предметы, бонус сета
+  Journal, JournalItem   # Дневник Архимага
+  SealShardItem          # Осколки Печати: поиск ближайшего данжа
+  Maze.java              # лабиринт Некто (портал Палочки Некто)
   Dims.java              # наши измерения и переброска туда/обратно
+  AdminWands.java        # тестовые палочки Молнии и Смерти
+  jei/ExplosionWandJei   # плагин JEI (грузится только при установленном JEI)
 stubs/                   # заглушки API (компилируются первыми)
-resources/               # assets/ (текстуры, модели, lang), data/ (рецепты, измерения), META-INF/mods.toml, pack.mcmeta
-tools/                   # build.py, lookup.py, ids.py
-tests/                   # main-харнессы на заглушках (запускает build.py), напр. MazeTest
+resources/               # assets/ (текстуры, модели, lang), data/ (рецепты, измерения, worldgen, шаблоны данжей .nbt), META-INF/mods.toml, pack.mcmeta
+tools/                   # build.py, lookup.py, ids.py, linkcheck.py, classcheck.py, check_worldgen.py — сборка и проверки
+                         # gen_dungeons.py + gen_city.py, gen_ash.py, gen_citadel.py (+ citadel_walk.py) — шаблоны данжей .nbt
+                         # gen_*.py (materials, earth_wands, hell_*, journal_assets, admin_wands), assets/ — текстуры и модели без PIL
+tests/                   # main-харнессы на заглушках (запускает build.py): по тесту на данж, мобов, босса, палочки
 legacy/gradle-src/       # старые исходники времён Gradle — только для истории, не собираются
-docs/                    # history.md — что было в каждой версии
+docs/                    # world.md — дизайн (источник истины), dungeons.md — конвейер данжей, citadel_layout.md, hell_blocks.md,
+                         # balance_earth.md, jei.md, history.md — версии, ingame.md — что проверить в игре, roadmap_done.md — архив фаз, concepts/ — картинки
 reports/                 # логи работы: отчёт на каждый шаг (см. ниже)
 dist/  build/  .cache/   # артефакты, не в git
 ```
@@ -70,7 +81,19 @@ dist/  build/  .cache/   # артефакты, не в git
 1. `python tools/build.py` проходит: 0 неизвестных SRG-имён (в исходниках и байткоде), 0 проблем с ID, тесты OK.
 2. Каждое **новое** SRG-имя проверено по смыслу: `lookup.py --srg <имя>` возвращает именно тот метод/поле.
 3. Новые JSON (модели, рецепты, измерения, lang) валидны.
-4. В игре мод запускает пользователь — то, что нельзя проверить без игры, перечисли в отчёте в «Проверить в игре».
+4. В игре мод запускает пользователь — то, что нельзя проверить без игры, перечисли в отчёте в «Проверить в игре». Сводный список по всем отчётам — `docs/ingame.md` (обновляет `/ingame`).
+
+Игра пользователя: MultiMC, инстанс `C:\games\MultiMC\instances\1.20.1\.minecraft` (`mods/`, `logs/latest.log`, `crash-reports/`). Оттуда можно только читать логи; класть jar — только по просьбе пользователя.
+
+## Команды Claude (`.claude/commands/`)
+| Команда | Когда |
+|---|---|
+| `/next-phase` | начать или продолжить текущую фазу по полному циклу агентов |
+| `/fix <замечание>` | одна небольшая правка вне фазы: правка → сборка → отчёт → git-команды |
+| `/ingame` | собрать чек-лист «Проверить в игре» из отчётов; с ответом пользователя — отметить проверенное, завести замечания |
+| `/crash` | разобрать падение или ошибку из `latest.log` / crash-report игры |
+| `/release <версия>` | версия в `mods.toml`, запись в `docs/history.md`, сборка, git-команды |
+| `/build` | собрать и показать результат проверок |
 
 ## Отчёты (логи): ОБЯЗАТЕЛЬНО
 После **каждого** завершённого шага (фича, фикс, баланс, рефакторинг, эксперимент), будь то основная сессия или агент:
@@ -94,9 +117,9 @@ dist/  build/  .cache/   # артефакты, не в git
 ## Агенты (`.claude/agents/`)
 | Агент | Когда звать |
 |---|---|
-| `mod-engineer` | предметы, палочки и посохи, измерения, лабиринт, сет брони, общие утилиты, регистрация |
-| `boss-engineer` | боссы, арены, фазы, атаки, приспешники, добыча в сундуках, баланс боёв |
-| `asset-engineer` | текстуры (PNG через Python/PIL), модели, lang, рецепты, JSON измерений и биомов, mods.toml |
+| `mod-engineer` | предметы, палочки и посохи, измерения, данжи (конвейер, механики залов, защита), лабиринт, сеты брони, общие утилиты, регистрация |
+| `boss-engineer` | боссы и мобы данжей, арены, фазы, атаки, приспешники, добыча, баланс боёв |
+| `asset-engineer` | текстуры (PNG без PIL, через zlib), модели, lang, рецепты, JSON измерений, биомов и worldgen, постройка данжей (`tools/gen_*.py` → `.nbt`), mods.toml |
 | `build-engineer` | заглушки, SRG-имена, `tools/`, сборка и проверки, тесты-харнессы |
 | `code-reviewer` | ревью перед коммитом (только чтение, пишет только свой отчёт) |
 

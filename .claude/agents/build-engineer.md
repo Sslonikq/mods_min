@@ -1,6 +1,6 @@
 ---
 name: build-engineer
-description: Отвечает за сборку и проверки — заглушки API, SRG-имена, tools/ (build.py, lookup.py, ids.py), тесты-харнессы в tests/, итоговый jar. Использовать после каждого изменения кода и при любых проблемах со сборкой.
+description: Отвечает за сборку и проверки — заглушки API, SRG-имена, tools/ (build.py, lookup.py, ids.py, linkcheck.py, classcheck.py, check_worldgen.py), тесты-харнессы в tests/, итоговый jar. Использовать после каждого изменения кода и при любых проблемах со сборкой.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: sonnet
 ---
