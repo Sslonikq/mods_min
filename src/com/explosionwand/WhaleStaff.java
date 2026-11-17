@@ -220,6 +220,12 @@ final class WhaleStaff {
                 Fx.sound(l, x, y, z, "entity.blaze.shoot", 1.5F, 0.6F);
                 for (LivingEntity e : around(l, p, x, y, z, 4.5 * rm)) { e.m_6469_(src, 10.0F * dm); e.m_20254_(5); push(e, x, z, 0.3, 1.1); }
             }
+            case "earthquake_wand" -> {         // толчок: земля подбрасывает всех вокруг
+                Fx.send(l, Fx.particle("explosion"), x, y + 0.3, z, 6, 2.5 * rm, 0.2, 2.5 * rm, 0);
+                Fx.send(l, Fx.particle("large_smoke"), x, y + 0.3, z, 40, 3 * rm, 0.3, 3 * rm, 0.05);
+                Fx.sound(l, x, y, z, "entity.warden.attack_impact", 2.0F, 0.5F);
+                for (LivingEntity e : around(l, p, x, y, z, 6 * rm)) { e.m_6469_(src, 9.0F * dm); if (!Minions.bossPart(e)) push(e, x, z, 0.2, 1.0); }
+            }
             case "timestop_wand", "chronos_wand" -> {   // время замирает вокруг
                 ring(l, WHITE, x, y, z, 7 * rm);
                 Fx.send(l, Fx.particle("end_rod"), x, y + 1, z, 60, 3.5, 1.5, 3.5, 0.01);

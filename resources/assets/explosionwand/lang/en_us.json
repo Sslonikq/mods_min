@@ -483,5 +483,8 @@
   "explosionwand.citadel.prethrone_open": "All three stones are in place: the Moon Gate opens",
   "item.explosionwand.throne_seal": "Throne Seal",
   "item.explosionwand.throne_seal.desc": "Unlocks the door to the Throne Court of the Eclipse Citadel. Dropped by the Eclipsed Colossus.",
-  "explosionwand.jei.throne_seal": "Will appear in the Eclipse Citadel: dropped by the Eclipsed Colossus, guardian of the Pre-Throne Hall. Not craftable; for now only given by command."
+  "explosionwand.jei.throne_seal": "Will appear in the Eclipse Citadel: dropped by the Eclipsed Colossus, guardian of the Pre-Throne Hall. Not craftable; for now only given by command.",
+  "item.explosionwand.earthquake_wand": "Earthquake Wand",
+  "item.explosionwand.earthquake_wand.desc1": "Right-click: earthquake where you aim. The ground ripples, cracks open with magma, geysers erupt",
+  "item.explosionwand.earthquake_wand.desc2": "Shift + right-click: around yourself. After 7 s the cracks slam shut. 15 s cooldown"
 }

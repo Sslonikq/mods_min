@@ -2,7 +2,7 @@ package net.minecraft.world.entity; import net.minecraft.world.phys.*; import ne
 public abstract class Entity { public boolean f_19864_; public int f_19802_; public float f_19789_;
  public Vec3 m_146892_(){return null;} public final Vec3 m_20252_(float f){return null;} public final AABB m_20191_(){return null;}
  public boolean m_5833_(){return false;} public boolean m_6087_(){return false;} public final double m_20185_(){return 0;} public final double m_20186_(){return 0;} public final double m_20189_(){return 0;}
- public final Vec3 m_20182_(){return null;} public Vec3 m_20184_(){return null;} public void m_20256_(Vec3 v){} public void m_20242_(boolean b){}
+ public final Vec3 m_20182_(){return null;} public boolean m_20096_(){return false;} public Vec3 m_20184_(){return null;} public void m_20256_(Vec3 v){} public void m_20242_(boolean b){}
  public boolean m_6084_(){return false;} public boolean m_6469_(DamageSource s,float f){return false;}
  public int m_146888_(){return 0;} public void m_146917_(int i){} public int m_146891_(){return 0;} public boolean m_146890_(){return false;}
  public boolean m_20069_(){return false;} public boolean m_20142_(){return false;}

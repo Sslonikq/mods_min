@@ -38,6 +38,7 @@ public class ExplosionWandMod {
     public static final RegistryObject<Item> ECLIPSE_STAFF = ITEMS.register("eclipse_staff", () -> new EclipseStaffItem(props()));
 
     public static final RegistryObject<Item> COMET_WAND = ITEMS.register("comet_wand", () -> new CometWandItem(props()));
+    public static final RegistryObject<Item> EARTHQUAKE_WAND = ITEMS.register("earthquake_wand", () -> new EarthquakeWandItem(props()));
     public static final RegistryObject<Item> DREAMING_EYE = ITEMS.register("dreaming_eye", () -> new RiftCoreItem(new Item.Properties().m_41487_(16).m_41497_(Rarity.valueOf("EPIC"))));
 
     public static final RegistryObject<Item> DREAM_STAFF = ITEMS.register("dream_staff", () -> new DreamStaffItem(props()));

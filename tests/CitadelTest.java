@@ -193,7 +193,8 @@ public class CitadelTest {
                 "explosionwand/models/item/throne_seal.json", "explosionwand/textures/item/throne_seal.png"})
             check(Files.exists(Path.of("resources/assets/" + s)), "нет файла " + s);
         check(Files.exists(Path.of("resources/data/explosionwand/recipes/eclipse_seal_shard.json")), "рецепт осколка");
-        check(read("resources/META-INF/mods.toml").contains("version=\"3.4.1\""), "версия мода 3.4.1");
+        java.util.regex.Matcher ver = java.util.regex.Pattern.compile("(?m)^version=\"([0-9.]+)\"").matcher(read("resources/META-INF/mods.toml"));
+        check(ver.find() && read("docs/history.md").contains("## " + ver.group(1)), "у версии мода есть запись в docs/history.md");
         check(read("docs/history.md").contains("## 3.4.1") && read("docs/history.md").contains("## 3.4.0"), "записи 3.4.1 и 3.4.0 в docs/history.md");
 
         if (fails > 0) { System.out.println(fails + " FAIL"); System.exit(1); }
