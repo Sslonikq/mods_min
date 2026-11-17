@@ -39,6 +39,9 @@ public final class Ticker {
         WhaleStaff.tick(sl);
         run(Comet.ACTIVE, sl, c -> c.level, Comet::tick);
         run(Quake.ACTIVE, sl, q -> q.level, Quake::tick);
+        run(Parachute.ACTIVE, sl, c -> c.level, Parachute::tick);
+        Parachute.sweep(sl);
+        Gauntlet.tick(sl);
         PortalGun.tick(sl);
         Later.tick(sl);
         Dims.tickFixes(sl);

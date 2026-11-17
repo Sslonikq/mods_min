@@ -39,6 +39,10 @@ public class ExplosionWandMod {
 
     public static final RegistryObject<Item> COMET_WAND = ITEMS.register("comet_wand", () -> new CometWandItem(props()));
     public static final RegistryObject<Item> EARTHQUAKE_WAND = ITEMS.register("earthquake_wand", () -> new EarthquakeWandItem(props()));
+    /** Перчатка Бесконечности: семь камней из миров мода, без рецепта (Gauntlet). */
+    public static final RegistryObject<Item> INFINITY_GAUNTLET = ITEMS.register("infinity_gauntlet", () -> new InfinityGauntletItem(props()));
+    /** Парашют: купол в воздухе, прочность 64 (Parachute); рецепт - шерсть, нить, кожа. */
+    public static final RegistryObject<Item> PARACHUTE = ITEMS.register("parachute", () -> new ParachuteItem(new Item.Properties().m_41487_(1).m_41503_(64).m_41497_(Rarity.valueOf("UNCOMMON"))));
     public static final RegistryObject<Item> DREAMING_EYE = ITEMS.register("dreaming_eye", () -> new RiftCoreItem(new Item.Properties().m_41487_(16).m_41497_(Rarity.valueOf("EPIC"))));
 
     public static final RegistryObject<Item> DREAM_STAFF = ITEMS.register("dream_staff", () -> new DreamStaffItem(props()));
@@ -176,6 +180,7 @@ public class ExplosionWandMod {
         ITEMS.register(bus);
         TABS.register(bus);
         MinecraftForge.EVENT_BUS.addListener(Ticker::onLevelTick);
+        MinecraftForge.EVENT_BUS.addListener(Gauntlet::onFall);
         MinecraftForge.EVENT_BUS.addListener(CityMobsB::onLeave);
         MinecraftForge.EVENT_BUS.addListener(Inverted::onHurt);
         MinecraftForge.EVENT_BUS.addListener(Inverted::onHeal);

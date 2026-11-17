@@ -226,6 +226,14 @@ final class WhaleStaff {
                 Fx.sound(l, x, y, z, "entity.warden.attack_impact", 2.0F, 0.5F);
                 for (LivingEntity e : around(l, p, x, y, z, 6 * rm)) { e.m_6469_(src, 9.0F * dm); if (!Minions.bossPart(e)) push(e, x, z, 0.2, 1.0); }
             }
+            case "infinity_gauntlet" -> {       // вспышка камней: все цвета, урон и отброс
+                Gauntlet.init();
+                Fx.send(l, Fx.particle("flash"), x, y + 1, z, 1, 0, 0, 0, 0);
+                for (int i = 0; i < 49; i++) { double[] u = Fx.unit(); Fx.send(l, Gauntlet.DUST[i % Gauntlet.DUST.length], x, y + 1, z, 0, u[0], Math.abs(u[1]), u[2], 0.5); }
+                Fx.sound(l, x, y, z, "block.amethyst_block.chime", 1.5F, 0.6F);
+                Fx.sound(l, x, y, z, "entity.player.attack.crit", 1.2F, 0.7F);
+                for (LivingEntity e : around(l, p, x, y, z, 5 * rm)) { e.m_6469_(src, 10.0F * dm); if (!Minions.bossPart(e)) push(e, x, z, 0.6, 0.5); }
+            }
             case "timestop_wand", "chronos_wand" -> {   // время замирает вокруг
                 ring(l, WHITE, x, y, z, 7 * rm);
                 Fx.send(l, Fx.particle("end_rod"), x, y + 1, z, 60, 3.5, 1.5, 3.5, 0.01);
