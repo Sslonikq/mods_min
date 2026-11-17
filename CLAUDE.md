@@ -65,7 +65,6 @@ tools/                   # build.py, lookup.py, ids.py, linkcheck.py, classcheck
                          # gen_dungeons.py + gen_city.py, gen_ash.py, gen_citadel.py (+ citadel_walk.py) — шаблоны данжей .nbt
                          # gen_*.py (materials, earth_wands, hell_*, journal_assets, admin_wands), assets/ — текстуры и модели без PIL
 tests/                   # main-харнессы на заглушках (запускает build.py): по тесту на данж, мобов, босса, палочки
-legacy/gradle-src/       # старые исходники времён Gradle — только для истории, не собираются
 docs/                    # world.md — дизайн (источник истины), dungeons.md — конвейер данжей, citadel_layout.md, hell_blocks.md,
                          # balance_earth.md, jei.md, history.md — версии, ingame.md — что проверить в игре, roadmap_done.md — архив фаз, concepts/ — картинки
 reports/                 # логи работы: отчёт на каждый шаг (см. ниже)
